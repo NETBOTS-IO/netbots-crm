@@ -1,0 +1,721 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Phone,
+    Mail,
+    Globe,
+    MapPin,
+    Calendar,
+    User,
+    ArrowLeft,
+    CheckCircle2,
+    MessageSquare,
+    TrendingUp,
+    Clock,
+    Pencil,
+    Instagram,
+    Facebook,
+    Twitter,
+    Linkedin,
+    Youtube,
+    Star,
+    Link,
+    Info
+} from 'lucide-react';
+import api from '@/lib/api';
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/context/AuthContext';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const LeadDetails = () => {
+    const { id } = useParams();
+    const navigate = useNavigate();
+    const { toast } = useToast();
+    const { user: currentUser } = useAuth();
+    const [lead, setLead] = useState(null);
+    const [activities, setActivities] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [note, setNote] = useState('');
+    const [submittingNote, setSubmittingNote] = useState(false);
+    
+    // Conversion & Team states
+    const [team, setTeam] = useState([]);
+    const [isConvertOpen, setIsConvertOpen] = useState(false);
+    const [converting, setConverting] = useState(false);
+    const [conversionData, setConversionData] = useState({
+        planType: 'monthly_growth',
+        dealType: 'monthly_subscription',
+        monthlyAmount: '',
+        lifetimeAmount: '',
+        enterpriseAmount: '',
+        startDate: new Date().toISOString().split('T')[0],
+        closedBy: currentUser?.id || currentUser?._id || ''
+    });
+
+    // Sync closedBy when currentUser is loaded
+    useEffect(() => {
+        if (currentUser) {
+            setConversionData(prev => ({
+                ...prev,
+                closedBy: currentUser.id || currentUser._id || ''
+            }));
+        }
+    }, [currentUser]);
+
+    const stages = ['identify', 'qualify', 'nurture', 'close', 'onboard', 'retain', 'refer'];
+    const isPrivileged = currentUser?.role === 'admin';
+    const canConvert = currentUser?.role === 'admin' || currentUser?.role === 'sales';
+    const canEdit = currentUser?.role === 'admin' || currentUser?.permissions?.can_edit_leads;
+    const canView = currentUser?.role === 'admin' || currentUser?.permissions?.can_view_leads;
+
+    const getDealValueUSD = () => {
+        if (conversionData.dealType === 'monthly_subscription') return parseFloat(conversionData.monthlyAmount || 0);
+        if (conversionData.dealType === 'lifetime_deal') return parseFloat(conversionData.lifetimeAmount || 0);
+        if (conversionData.dealType === 'enterprise') return parseFloat(conversionData.enterpriseAmount || 0);
+        return 0;
+    };
+
+    useEffect(() => {
+        fetchLeadData();
+        const fetchTeam = async () => {
+            try {
+                const res = await api.get('/team');
+                if (res.success) setTeam(res.data);
+            } catch (err) {
+                console.error("Failed to load team", err);
+            }
+        };
+        fetchTeam();
+    }, [id]);
+
+    const fetchLeadData = async () => {
+        try {
+            const res = await api.get(`/leads/${id}`);
+            if (res.success) {
+                setLead(res.data.lead);
+                setActivities(res.data.activities);
+            }
+        } catch (err) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to load lead details" });
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleConversionChange = (name, value) => {
+        setConversionData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleConvertSubmit = async (e) => {
+        e.preventDefault();
+        setConverting(true);
+        try {
+            const body = {
+                planType: conversionData.planType,
+                dealType: conversionData.dealType,
+                startDate: conversionData.startDate,
+                closedBy: conversionData.closedBy || undefined,
+                monthlyAmount: conversionData.dealType === 'monthly_subscription' ? parseFloat(conversionData.monthlyAmount || 0) : undefined,
+                lifetimeAmount: conversionData.dealType === 'lifetime_deal' ? parseFloat(conversionData.lifetimeAmount || 0) : undefined,
+                enterpriseAmount: conversionData.dealType === 'enterprise' ? parseFloat(conversionData.enterpriseAmount || 0) : undefined,
+                upfrontPaid: parseFloat(conversionData.upfrontPaid || 0),
+                remainingAmount: parseFloat(conversionData.remainingAmount || 0),
+                engagedTeam: conversionData.engagedTeam || []
+            };
+
+            const res = await api.post(`/leads/${id}/convert`, body);
+            if (res.success) {
+                toast({ title: "Lead Converted", description: "This lead has been successfully converted into an active customer." });
+                setIsConvertOpen(false);
+                // If admin, we can go to clients, otherwise back to pipeline
+                navigate(isPrivileged ? '/clients' : '/leads');
+            } else {
+                toast({ variant: "destructive", title: "Error", description: res.error || "Failed to convert lead" });
+            }
+        } catch (err) {
+            toast({ variant: "destructive", title: "Error", description: err.error || "Connection failed" });
+        } finally {
+            setConverting(false);
+        }
+    };
+
+    const handleUpdateStage = async (newStage) => {
+        try {
+            const res = await api.put(`/leads/${id}/stage`, { stage: newStage });
+            if (res.success) {
+                toast({ title: "Success", description: `Stage updated to ${newStage}` });
+                fetchLeadData();
+            }
+        } catch (err) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to update stage" });
+        }
+    };
+
+    const handleAddNote = async (e) => {
+        e.preventDefault();
+        if (!note.trim()) return;
+        setSubmittingNote(true);
+        try {
+            const res = await api.post(`/leads/${id}/activity`, {
+                type: 'note',
+                description: 'Added a note',
+                notes: note
+            });
+            if (res.success) {
+                setNote('');
+                toast({ title: "Note added" });
+                fetchLeadData();
+            }
+        } catch (err) {
+            toast({ variant: "destructive", title: "Error", description: "Failed to add note" });
+        } finally {
+            setSubmittingNote(false);
+        }
+    };
+
+    if (loading) return <div className="p-8 text-center">Loading lead details...</div>;
+    if (!lead) return <div className="p-8 text-center">Lead not found</div>;
+
+    const currentStageIndex = stages.indexOf(lead.stage);
+
+    return (
+        <div className="space-y-6 max-w-6xl mx-auto">
+            <div className="flex items-center justify-between">
+                <Button variant="ghost" className="gap-2" onClick={() => navigate('/leads')}>
+                    <ArrowLeft size={16} /> Back to Pipeline
+                </Button>
+                <div className="flex gap-2">
+                    <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="gap-2" 
+                        onClick={() => navigate(`/leads/edit/${lead._id}`)}
+                        disabled={!canEdit}
+                        title={!canEdit ? "You do not have permission to edit leads." : ""}
+                    >
+                        <Pencil size={14} /> Edit Lead
+                    </Button>
+                    {canConvert && lead.stage !== 'onboard' && (
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={() => setIsConvertOpen(true)}>
+                            Convert to Client
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            <div className={`grid gap-6 md:grid-cols-3 ${!canView ? 'blur-sm select-none' : ''}`}>
+                {/* Main Info Card */}
+                <Card className="md:col-span-2">
+                    <CardHeader className="border-b bg-slate-50/50">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <CardTitle className="text-2xl font-bold">{lead.companyName}</CardTitle>
+                                <p className="text-slate-500 flex items-center gap-2 mt-1 italic">
+                                    <Globe size={14} /> {lead.website || 'No website'}
+                                </p>
+                            </div>
+                            <div className="flex flex-col items-end gap-2">
+                                <Badge variant="secondary" className="uppercase font-bold tracking-wider">
+                                    {lead.temperature}
+                                </Badge>
+                                <Badge variant="outline" className="capitalize">
+                                    {lead.industry || 'General Business'}
+                                </Badge>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="pt-6">
+                        {/* Stage Progress Bar */}
+                        <div className="mb-8">
+                            <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-widest">Pipeline Journey</h3>
+                            <div className="relative flex justify-between items-center px-2">
+                                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-100 -z-10" />
+                                <div
+                                    className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 bg-blue-500 transition-all duration-500 -z-10"
+                                    style={{ width: `${(currentStageIndex / (stages.length - 1)) * 100}%` }}
+                                />
+                                {stages.map((s, idx) => (
+                                    <div key={s} className="flex flex-col items-center">
+                                        <button
+                                            onClick={() => handleUpdateStage(s)}
+                                            className={`w-4 h-4 rounded-full border-2 transition-all ${idx <= currentStageIndex
+                                                    ? 'bg-blue-600 border-blue-600 scale-125'
+                                                    : 'bg-white border-slate-300 hover:border-blue-400'
+                                                }`}
+                                        />
+                                        <span className={`text-[10px] absolute translate-y-6 font-bold uppercase ${idx === currentStageIndex ? 'text-blue-600' : 'text-slate-400'
+                                            }`}>
+                                            {s}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-8 mt-12 pt-6 border-t font-medium text-slate-700">
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <User size={18} className="text-slate-400" />
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-black">Contact Person</p>
+                                        <p>{lead.contactName || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Phone size={18} className="text-slate-400" />
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-black">Phone / WhatsApp</p>
+                                        <p>{lead.phone}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Mail size={18} className="text-slate-400" />
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-black">Email</p>
+                                        <p>{lead.email || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="space-y-4">
+                                <div className="flex items-center gap-3">
+                                    <MapPin size={18} className="text-slate-400" />
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-black">Location</p>
+                                        <p>{lead.city || lead.address || 'N/A'}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <Calendar size={18} className="text-slate-400" />
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-black">Created On</p>
+                                        <p>{new Date(lead.createdAt).toLocaleDateString()}</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <TrendingUp size={18} className="text-slate-400" />
+                                    <div>
+                                        <p className="text-[10px] text-slate-400 uppercase font-black">Lead Source</p>
+                                        <p className="capitalize">{lead.source?.replace(/_/g, ' ')}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Social Media & Online Presence */}
+                        {(lead.instagram || lead.facebook || lead.twitter || lead.linkedin || lead.yelp || lead.youtube) && (
+                            <div className="mt-8 pt-6 border-t">
+                                <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-widest">Social Media & Web</h3>
+                                <div className="flex flex-wrap gap-3">
+                                    {lead.instagram && (
+                                        <a href={lead.instagram} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-pink-50/50 hover:bg-pink-50 text-pink-700 border-pink-200 text-xs font-semibold transition-colors">
+                                            <Instagram size={14} /> Instagram
+                                        </a>
+                                    )}
+                                    {lead.facebook && (
+                                        <a href={lead.facebook} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-blue-50/50 hover:bg-blue-50 text-blue-700 border-blue-200 text-xs font-semibold transition-colors">
+                                            <Facebook size={14} /> Facebook
+                                        </a>
+                                    )}
+                                    {lead.twitter && (
+                                        <a href={lead.twitter} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-sky-50/50 hover:bg-sky-50 text-sky-700 border-sky-200 text-xs font-semibold transition-colors">
+                                            <Twitter size={14} /> Twitter / X
+                                        </a>
+                                    )}
+                                    {lead.linkedin && (
+                                        <a href={lead.linkedin} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-indigo-50/50 hover:bg-indigo-50 text-indigo-700 border-indigo-200 text-xs font-semibold transition-colors">
+                                            <Linkedin size={14} /> LinkedIn
+                                        </a>
+                                    )}
+                                    {lead.yelp && (
+                                        <a href={lead.yelp} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-red-50/50 hover:bg-red-50 text-red-700 border-red-200 text-xs font-semibold transition-colors">
+                                            <Globe size={14} /> Yelp
+                                        </a>
+                                    )}
+                                    {lead.youtube && (
+                                        <a href={lead.youtube} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-1.5 rounded-full border bg-rose-50/50 hover:bg-rose-50 text-rose-700 border-rose-200 text-xs font-semibold transition-colors">
+                                            <Youtube size={14} /> YouTube
+                                        </a>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Local Business Details & Google Maps */}
+                        {(lead.category || lead.placeId || lead.cid || lead.reviewCount || lead.averageRating) && (
+                            <div className="mt-8 pt-6 border-t">
+                                <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-widest">Local Business Info (Google Maps)</h3>
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-6 text-sm text-slate-700 font-medium">
+                                    {lead.category && (
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 uppercase font-black">Category</p>
+                                            <p className="capitalize text-slate-800">{lead.category}</p>
+                                        </div>
+                                    )}
+                                    {lead.averageRating !== undefined && lead.averageRating !== null && (
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 uppercase font-black">Rating</p>
+                                            <div className="flex items-center gap-1 text-slate-800">
+                                                <Star size={14} className="fill-amber-400 text-amber-400" />
+                                                <span>{lead.averageRating} / 5.0</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {lead.reviewCount !== undefined && lead.reviewCount !== null && (
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 uppercase font-black">Reviews Count</p>
+                                            <p className="text-slate-800">{lead.reviewCount} reviews</p>
+                                        </div>
+                                    )}
+                                    {lead.placeId && (
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 uppercase font-black">Google Place ID</p>
+                                            <p className="text-xs font-mono text-slate-500 truncate max-w-[180px]">{lead.placeId}</p>
+                                        </div>
+                                    )}
+                                    {lead.cid && (
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 uppercase font-black">CID</p>
+                                            <p className="text-xs font-mono text-slate-500 truncate max-w-[180px]">{lead.cid}</p>
+                                        </div>
+                                    )}
+                                    {(lead.latitude || lead.longitude) && (
+                                        <div>
+                                            <p className="text-[10px] text-slate-400 uppercase font-black">Coordinates (Lat / Lng)</p>
+                                            <p className="text-xs font-mono text-slate-500">
+                                                {lead.latitude || 'N/A'}, {lead.longitude || 'N/A'}
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Working / Opening Hours */}
+                        {(lead.mondayHours || lead.tuesdayHours || lead.wednesdayHours || lead.thursdayHours || lead.fridayHours || lead.saturdayHours || lead.sundayHours) && (
+                            <div className="mt-8 pt-6 border-t">
+                                <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-widest">Working Hours</h3>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs font-semibold text-slate-600">
+                                    {lead.mondayHours && (
+                                        <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                                            <p className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Monday</p>
+                                            <p className="text-slate-800">{lead.mondayHours}</p>
+                                        </div>
+                                    )}
+                                    {lead.tuesdayHours && (
+                                        <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                                            <p className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Tuesday</p>
+                                            <p className="text-slate-800">{lead.tuesdayHours}</p>
+                                        </div>
+                                    )}
+                                    {lead.wednesdayHours && (
+                                        <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                                            <p className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Wednesday</p>
+                                            <p className="text-slate-800">{lead.wednesdayHours}</p>
+                                        </div>
+                                    )}
+                                    {lead.thursdayHours && (
+                                        <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                                            <p className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Thursday</p>
+                                            <p className="text-slate-800">{lead.thursdayHours}</p>
+                                        </div>
+                                    )}
+                                    {lead.fridayHours && (
+                                        <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                                            <p className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Friday</p>
+                                            <p className="text-slate-800">{lead.fridayHours}</p>
+                                        </div>
+                                    )}
+                                    {lead.saturdayHours && (
+                                        <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                                            <p className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Saturday</p>
+                                            <p className="text-slate-800">{lead.saturdayHours}</p>
+                                        </div>
+                                    )}
+                                    {lead.sundayHours && (
+                                        <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                                            <p className="text-[9px] uppercase text-slate-400 font-bold mb-0.5">Sunday</p>
+                                            <p className="text-slate-800">{lead.sundayHours}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Sidebar: Activity & Notes */}
+                <div className="space-y-6">
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Quick Note</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <form onSubmit={handleAddNote} className="space-y-3">
+                                <textarea
+                                    className="w-full min-h-[100px] p-3 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                    placeholder="Type important details here..."
+                                    value={note}
+                                    onChange={(e) => setNote(e.target.value)}
+                                />
+                                <Button className="w-full text-xs font-bold uppercase" disabled={submittingNote}>
+                                    {submittingNote ? 'Saving...' : 'Add Note'}
+                                </Button>
+                            </form>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="h-[430px] flex flex-col">
+                        <CardHeader className="pb-3 border-b">
+                            <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                                <Clock size={16} /> Activity History
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-1 overflow-y-auto pt-4 relative">
+                            <div className="absolute left-7 top-0 w-0.5 h-full bg-slate-100 -z-10" />
+                            <div className="space-y-6">
+                                {activities.map((act) => (
+                                    <div key={act._id} className="flex gap-4 group">
+                                        <div className="w-6 h-6 rounded-full bg-white border-2 border-slate-200 flex items-center justify-center shrink-0 z-10 group-hover:border-blue-500 shadow-sm transition-colors">
+                                            {act.type === 'note' ? <MessageSquare size={10} className="text-slate-600" /> : <CheckCircle2 size={10} className="text-blue-600" />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between mb-1">
+                                                <p className="text-[10px] font-black uppercase text-slate-600 tracking-tight">{act.description}</p>
+                                                <span className="text-[9px] text-slate-400">{new Date(act.createdAt).toLocaleDateString()}</span>
+                                            </div>
+                                            {act.notes && <p className="text-xs text-slate-700 bg-slate-50 p-2 rounded italic border-l-2 border-blue-200">{act.notes}</p>}
+                                            <p className="text-[9px] text-slate-400 mt-1 font-bold">BY {act.performedBy?.name || 'SYSTEM'}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+
+            <Dialog open={isConvertOpen} onOpenChange={setIsConvertOpen}>
+                <DialogContent className="max-w-md bg-white p-6 rounded-lg shadow-xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="text-xl font-bold">Convert Lead to Client</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleConvertSubmit} className="space-y-4 pt-2">
+                        {isPrivileged ? (
+                            <>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Deal Type</label>
+                                    <Select 
+                                        value={conversionData.dealType} 
+                                        onValueChange={(v) => {
+                                            handleConversionChange('dealType', v);
+                                            if (v === 'monthly_subscription') handleConversionChange('planType', 'monthly_growth');
+                                            else if (v === 'lifetime_deal') handleConversionChange('planType', 'lifetime_deal');
+                                            else if (v === 'enterprise') handleConversionChange('planType', 'enterprise');
+                                        }}
+                                    >
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="monthly_subscription">Monthly Subscription</SelectItem>
+                                            <SelectItem value="lifetime_deal">Lifetime Deal (One Time)</SelectItem>
+                                            <SelectItem value="enterprise">Enterprise Contract</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Plan Type</label>
+                                    <Select value={conversionData.planType} onValueChange={(v) => handleConversionChange('planType', v)}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            {conversionData.dealType === 'monthly_subscription' && (
+                                                <>
+                                                    <SelectItem value="monthly_starter">Monthly Starter</SelectItem>
+                                                    <SelectItem value="monthly_growth">Monthly Growth</SelectItem>
+                                                    <SelectItem value="monthly_pro">Monthly Pro</SelectItem>
+                                                </>
+                                            )}
+                                            {conversionData.dealType === 'lifetime_deal' && (
+                                                <SelectItem value="lifetime_deal">Lifetime Deal</SelectItem>
+                                            )}
+                                            {conversionData.dealType === 'enterprise' && (
+                                                <SelectItem value="enterprise">Enterprise</SelectItem>
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {conversionData.dealType === 'monthly_subscription' && (
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Monthly Subscription Amount (USD)</label>
+                                        <Input
+                                            type="number"
+                                            required
+                                            value={conversionData.monthlyAmount}
+                                            placeholder="e.g. 500"
+                                            onChange={(e) => handleConversionChange('monthlyAmount', e.target.value)}
+                                        />
+                                    </div>
+                                )}
+
+                                {conversionData.dealType === 'lifetime_deal' && (
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase">One Time Amount (USD)</label>
+                                        <Input
+                                            type="number"
+                                            required
+                                            value={conversionData.lifetimeAmount}
+                                            placeholder="e.g. 1500"
+                                            onChange={(e) => handleConversionChange('lifetimeAmount', e.target.value)}
+                                        />
+                                    </div>
+                                )}
+
+                                {conversionData.dealType === 'enterprise' && (
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Enterprise Value Amount (USD)</label>
+                                        <Input
+                                            type="number"
+                                            required
+                                            value={conversionData.enterpriseAmount}
+                                            placeholder="e.g. 5000"
+                                            onChange={(e) => handleConversionChange('enterpriseAmount', e.target.value)}
+                                        />
+                                    </div>
+                                )}
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Upfront Paid (USD)</label>
+                                        <Input
+                                            type="number"
+                                            value={conversionData.upfrontPaid || ''}
+                                            placeholder="e.g. 100"
+                                            onChange={(e) => handleConversionChange('upfrontPaid', e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Remaining Amount (USD)</label>
+                                        <Input
+                                            type="number"
+                                            value={conversionData.remainingAmount || ''}
+                                            placeholder="e.g. 400"
+                                            onChange={(e) => handleConversionChange('remainingAmount', e.target.value)}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Engaged Team Members & Commissions</label>
+                                    {(conversionData.engagedTeam || []).map((member, index) => (
+                                        <div key={index} className="flex gap-2 items-center mb-2 bg-slate-50 p-2 rounded border">
+                                            <div className="flex-1">
+                                                <Select 
+                                                    value={member.user} 
+                                                    onValueChange={(val) => {
+                                                        const updated = [...(conversionData.engagedTeam || [])];
+                                                        updated[index].user = val;
+                                                        handleConversionChange('engagedTeam', updated);
+                                                    }}
+                                                >
+                                                    <SelectTrigger><SelectValue placeholder="Select Team..." /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {team.map((t) => (
+                                                            <SelectItem key={t._id} value={t._id}>{t.name}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="w-32">
+                                                <Input
+                                                    type="number"
+                                                    placeholder="Commission %"
+                                                    value={member.commissionPercentage || ''}
+                                                    onChange={(e) => {
+                                                        const updated = [...(conversionData.engagedTeam || [])];
+                                                        updated[index].commissionPercentage = parseFloat(e.target.value || 0);
+                                                        handleConversionChange('engagedTeam', updated);
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="w-32 text-xs font-bold text-emerald-600 flex items-center justify-end px-2">
+                                                ${ ((getDealValueUSD() * (member.commissionPercentage || 0)) / 100).toFixed(2) }
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                className="text-red-500 hover:text-red-700 p-1 h-auto"
+                                                onClick={() => {
+                                                    const updated = (conversionData.engagedTeam || []).filter((_, i) => i !== index);
+                                                    handleConversionChange('engagedTeam', updated);
+                                                }}
+                                            >
+                                                Remove
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <Button 
+                                        type="button" 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="w-full text-xs font-bold uppercase mt-1"
+                                        onClick={() => {
+                                            const updated = [...(conversionData.engagedTeam || []), { user: '', commissionPercentage: 0 }];
+                                            handleConversionChange('engagedTeam', updated);
+                                        }}
+                                    >
+                                        + Add Engaged Team Member
+                                    </Button>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Start Date</label>
+                                    <Input
+                                        type="date"
+                                        required
+                                        value={conversionData.startDate}
+                                        onChange={(e) => handleConversionChange('startDate', e.target.value)}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Closed By (Sales Closer)</label>
+                                    <Select value={conversionData.closedBy} onValueChange={(v) => handleConversionChange('closedBy', v)}>
+                                        <SelectTrigger><SelectValue placeholder="Select Closer..." /></SelectTrigger>
+                                        <SelectContent>
+                                            {team.map((member) => (
+                                                <SelectItem key={member._id} value={member._id}>
+                                                    {member.name} ({member.role})
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-center py-6 text-slate-600">
+                                <p>Are you sure you want to convert this lead into a client?</p>
+                                <p className="text-sm mt-2">Only Admins can set deal values and commission breakdowns.</p>
+                            </div>
+                        )}
+
+                        <DialogFooter className="pt-4 gap-2">
+                            <Button type="button" variant="outline" onClick={() => setIsConvertOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={converting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                {converting ? 'Converting...' : 'Confirm Conversion'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+};
+
+export default LeadDetails;
