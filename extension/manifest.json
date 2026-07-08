@@ -3,7 +3,7 @@
   "name": "NetBots CRM Lead Scraper",
   "version": "1.0.0",
   "description": "Scrape business leads from Google Maps and import them directly into NetBots CRM.",
-  "permissions": ["activeTab", "storage"],
+  "permissions": ["activeTab", "storage", "scripting"],
   "host_permissions": ["https://www.google.com/maps/*", "https://www.google.com.pk/maps/*"],
   "action": {
     "default_popup": "popup.html",
