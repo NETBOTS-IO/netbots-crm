@@ -82,7 +82,7 @@ export default function TeamManagement() {
                         <Plus size={14} /> Add Member
                     </Button>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -130,7 +130,7 @@ export default function TeamManagement() {
                     <CardHeader>
                         <CardTitle className="text-xl font-bold">Active Screen Time</CardTitle>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>

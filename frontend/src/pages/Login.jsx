@@ -43,7 +43,7 @@ const LoginPage = () => {
         <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
             <Card className="w-full max-w-md">
                 <CardHeader className="space-y-1">
-                    <CardTitle className="text-2xl text-center font-bold">Accounta CRM</CardTitle>
+                    <CardTitle className="text-2xl text-center font-bold">NetBots CRM</CardTitle>
                     <CardDescription className="text-center">
                         Enter your credentials to access your dashboard
                     </CardDescription>
@@ -60,7 +60,7 @@ const LoginPage = () => {
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="ceo@accounta.pk"
+                                placeholder="saqlain@netbots.io"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 required

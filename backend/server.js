@@ -45,24 +45,22 @@ const limiter = rateLimit({
 });
 app.use('/api/', limiter);
 
-const allowedOrigins = [
-  'http://www.netbots.io', 'https://www.netbots.io',
-  'http://netbots.io', 'https://netbots.io',
-  'http://crm.netbots.io', 'https://crm.netbots.io',
-  'http://hotelsync.netbots.io', 'https://hotelsync.netbots.io',
-  'http://api.netbots.io', 'https://api.netbots.io',
-  'http://147.93.94.137', 'https://147.93.94.137',
-  'http://localhost:5173', 'http://localhost:5000'
-];
-
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
+    
+    // Whitelist check using regex
+    const isLocalhost = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|172\.\d+\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?$/.test(origin);
+    const isNetbots = /netbots\.io$/.test(origin);
+    const isServerIp = /^https?:\/\/147\.93\.94\.137(:\d+)?$/.test(origin);
+    const isExtension = /^chrome-extension:\/\//.test(origin);
+
+    if (isLocalhost || isNetbots || isServerIp || isExtension) {
+      return callback(null, true);
     }
-    return callback(null, true);
+
+    const msg = `The CORS policy for this site does not allow access from origin: ${origin}`;
+    return callback(new Error(msg), false);
   },
   credentials: true
 }));
@@ -85,7 +83,7 @@ app.use('/api/time-tracking', require('./routes/timeTracking'));
 app.use('/api/audit-logs',    require('./routes/auditLogs'));
 
 const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/accounta_crm';
+const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/netbots_crm';
 
 mongoose.connect(MONGO_URI)
   .then(() => {

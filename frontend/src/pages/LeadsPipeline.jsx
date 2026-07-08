@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import api from '@/lib/api';
-import { Plus, Pencil, Upload, Search, Calendar, CheckSquare, PhoneCall, TrendingUp, Trash2, Check, X } from 'lucide-react';
+import { Plus, Pencil, Upload, Search, Calendar, CheckSquare, PhoneCall, TrendingUp, Trash2, Check, X, Globe } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
 import { useAuth } from '@/context/AuthContext';
@@ -265,6 +265,9 @@ const LeadsPipeline = () => {
                         <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate('/import/leads')}>
                             <Upload size={14} /> Import CSV
                         </Button>
+                        <Button variant="outline" size="sm" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => window.open('https://www.google.com/maps', '_blank')}>
+                            <Globe size={14} /> Find New Lead
+                        </Button>
                         <Button 
                             size="sm" 
                             className="gap-2 bg-blue-600 hover:bg-blue-700" 
@@ -360,7 +363,7 @@ const LeadsPipeline = () => {
                 </div>
             )}
 
-            <div className="rounded-md border bg-white">
+            <div className="rounded-md border bg-white overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>

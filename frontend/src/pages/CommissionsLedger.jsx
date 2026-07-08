@@ -164,7 +164,7 @@ const CommissionsLedger = () => {
             </div>
 
             <Card>
-                <CardContent className="pt-6">
+                <CardContent className="pt-6 overflow-x-auto">
                     <Table>
                         <TableHeader>
                             <TableRow>

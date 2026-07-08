@@ -19,9 +19,10 @@ import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import TimeTrackerDisplay from './TimeTrackerDisplay';
 
-const SidebarLink = ({ to, icon: Icon, label, active }) => (
+const SidebarLink = ({ to, icon: Icon, label, active, onClick }) => (
     <Link
         to={to}
+        onClick={onClick}
         className={cn(
             "flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors rounded-lg",
             active
@@ -96,19 +97,34 @@ const Layout = () => {
     const filteredMenu = menuItems.filter(item => user?.role === 'admin' || user?.permissions?.[item.permission]);
 
     return (
-        <div className="flex min-h-screen bg-slate-50">
-            {/* Sidebar */}
-            <aside className="fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white hidden md:flex flex-col">
-                <div className="p-6">
+        <div className="flex min-h-screen bg-slate-50 overflow-x-hidden">
+            {/* Mobile Backdrop Overlay */}
+            {isMobileMenuOpen && (
+                <div 
+                    className="fixed inset-0 z-40 bg-black/50 md:hidden transition-opacity" 
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
+            {/* Sidebar (Responsive Drawer) */}
+            <aside className={cn(
+                "fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 md:fixed md:h-screen md:top-0",
+                isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+            )}>
+                <div className="p-6 flex items-center justify-between">
                     <h1 className="text-2xl font-bold tracking-tight">NetBots <span className="text-blue-500">CRM</span></h1>
+                    <Button variant="ghost" size="icon" className="md:hidden text-slate-400 hover:text-white" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Menu size={20} />
+                    </Button>
                 </div>
 
-                <nav className="flex-1 px-4 space-y-1">
+                <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
                     {filteredMenu.map((item) => (
                         <SidebarLink
                             key={item.to}
                             {...item}
                             active={location.pathname === item.to}
+                            onClick={() => setIsMobileMenuOpen(false)}
                         />
                     ))}
                 </nav>
@@ -136,11 +152,11 @@ const Layout = () => {
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 md:ml-64 flex flex-col">
+            <main className="flex-1 flex flex-col min-w-0 md:pl-64">
                 {/* Mobile Header */}
-                <header className="h-16 bg-white border-b flex items-center justify-between px-4 md:px-8 sticky top-0 z-40">
+                <header className="h-16 bg-white border-b flex items-center justify-between px-4 md:px-8">
                     <div className="flex items-center gap-4">
-                        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
+                        <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(true)}>
                             <Menu />
                         </Button>
                         <h2 className="text-lg font-semibold capitalize flex items-center gap-2">

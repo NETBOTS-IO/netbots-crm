@@ -96,4 +96,88 @@ router.post('/leads', auth, requireRole(['ceo', 'admin']), upload.single('file')
     });
 });
 
+// POST /api/import/extension-leads
+// Import leads from the NetBots Chrome extension scraper
+router.post('/extension-leads', auth, async (req, res) => {
+  try {
+    const { leads } = req.body;
+    if (!leads || !Array.isArray(leads) || leads.length === 0) {
+      return res.status(400).json({ success: false, error: 'No leads provided.' });
+    }
+
+    let successCount = 0;
+    const errors = [];
+
+    for (const raw of leads) {
+      try {
+        const companyName = (raw.Name || '').trim();
+        if (!companyName) {
+          errors.push({ name: raw.Name, error: 'Missing company name' });
+          continue;
+        }
+
+        // Duplicate check: same name + same phone
+        const dupeQuery = { companyName };
+        if (raw.Phone) dupeQuery.phone = raw.Phone.trim();
+        const existing = await Lead.findOne(dupeQuery);
+        if (existing) {
+          errors.push({ name: companyName, error: 'Duplicate lead' });
+          continue;
+        }
+
+        const leadData = {
+          companyName,
+          phone: (raw.Phone || '').trim() || undefined,
+          email: (raw.Email || '').trim() || undefined,
+          website: (raw.Website || '').trim() || undefined,
+          address: (raw.Address || '').trim() || undefined,
+          instagram: (raw.Instagram || '').trim() || undefined,
+          facebook: (raw.Facebook || '').trim() || undefined,
+          twitter: (raw.Twitter || '').trim() || undefined,
+          linkedin: (raw.Linkedin || '').trim() || undefined,
+          yelp: (raw.Yelp || '').trim() || undefined,
+          youtube: (raw.Youtube || '').trim() || undefined,
+          placeId: (raw.PlaceID || '').trim() || undefined,
+          cid: (raw.CID || '').trim() || undefined,
+          category: (raw.Category || '').trim() || undefined,
+          reviewCount: raw.ReviewCount ? parseInt(raw.ReviewCount) : undefined,
+          averageRating: raw.AverageRating ? parseFloat(raw.AverageRating) : undefined,
+          latitude: raw.Latitude ? parseFloat(raw.Latitude) : undefined,
+          longitude: raw.Longitude ? parseFloat(raw.Longitude) : undefined,
+          mondayHours: raw['1_Monday'] || undefined,
+          tuesdayHours: raw['2_Tuesday'] || undefined,
+          wednesdayHours: raw['3_Wednesday'] || undefined,
+          thursdayHours: raw['4_Thursday'] || undefined,
+          fridayHours: raw['5_Friday'] || undefined,
+          saturdayHours: raw['6_Saturday'] || undefined,
+          sundayHours: raw['7_Sunday'] || undefined,
+          submittedBy: req.user._id,
+          channel: 'google_maps_scraper',
+          notes: 'Imported via NetBots Chrome Extension'
+        };
+
+        const lead = new Lead(leadData);
+        await lead.save();
+        successCount++;
+      } catch (err) {
+        errors.push({ name: raw.Name, error: err.message });
+      }
+    }
+
+    res.json({
+      success: true,
+      summary: {
+        total: leads.length,
+        success: successCount,
+        failed: errors.length,
+        duplicates: errors.filter(e => e.error === 'Duplicate lead').length
+      },
+      errors: errors.slice(0, 10)
+    });
+  } catch (err) {
+    console.error('Extension import error:', err);
+    res.status(500).json({ success: false, error: 'Server error during import.' });
+  }
+});
+
 module.exports = router;

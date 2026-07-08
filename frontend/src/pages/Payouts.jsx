@@ -92,43 +92,45 @@ const Payouts = () => {
                     {payouts.length === 0 ? (
                         <div className="text-center p-8 text-slate-500">No payouts available. Create a batch from pending commissions.</div>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>Batch ID</TableHead>
-                                    <TableHead>Label</TableHead>
-                                    <TableHead>Total Amount</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Recipients</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {payouts.map((payout) => (
-                                    <TableRow key={payout._id}>
-                                        <TableCell className="font-mono text-xs">{payout._id.substring(0, 8)}...</TableCell>
-                                        <TableCell>{payout.weekLabel}</TableCell>
-                                        <TableCell className="font-bold text-emerald-600">${payout.totalAmount?.toLocaleString()}</TableCell>
-                                        <TableCell>
-                                            <Badge variant={payout.status === 'completed' ? 'success' : 'secondary'}>
-                                                {payout.status?.toUpperCase()}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{payout.totalRecipients}</TableCell>
-                                        <TableCell className="text-right flex items-center justify-end gap-2">
-                                            {payout.status !== 'completed' && (
-                                                <Button variant="outline" size="icon" title="Mark as Completed" onClick={() => handleMarkPaid(payout._id)} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
-                                                    <CheckCircle size={14} />
-                                                </Button>
-                                            )}
-                                            <Button variant="outline" size="icon" title="Delete Batch" onClick={() => handleDelete(payout._id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
-                                                <Trash2 size={14} />
-                                            </Button>
-                                        </TableCell>
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Batch ID</TableHead>
+                                        <TableHead>Label</TableHead>
+                                        <TableHead>Total Amount</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Recipients</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
                                     </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                </TableHeader>
+                                <TableBody>
+                                    {payouts.map((payout) => (
+                                        <TableRow key={payout._id}>
+                                            <TableCell className="font-mono text-xs">{payout._id.substring(0, 8)}...</TableCell>
+                                            <TableCell>{payout.weekLabel}</TableCell>
+                                            <TableCell className="font-bold text-emerald-600">${payout.totalAmount?.toLocaleString()}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={payout.status === 'completed' ? 'success' : 'secondary'}>
+                                                    {payout.status?.toUpperCase()}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{payout.totalRecipients}</TableCell>
+                                            <TableCell className="text-right flex items-center justify-end gap-2">
+                                                {payout.status !== 'completed' && (
+                                                    <Button variant="outline" size="icon" title="Mark as Completed" onClick={() => handleMarkPaid(payout._id)} className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50">
+                                                        <CheckCircle size={14} />
+                                                    </Button>
+                                                )}
+                                                <Button variant="outline" size="icon" title="Delete Batch" onClick={() => handleDelete(payout._id)} className="text-red-500 hover:text-red-700 hover:bg-red-50">
+                                                    <Trash2 size={14} />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </div>
                     )}
                 </CardContent>
             </Card>

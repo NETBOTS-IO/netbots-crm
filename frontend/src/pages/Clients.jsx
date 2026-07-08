@@ -253,7 +253,7 @@ const Clients = () => {
                 </div>
             </div>
 
-            <div className="rounded-md border bg-white overflow-hidden shadow-sm">
+            <div className="rounded-md border bg-white overflow-x-auto shadow-sm">
                 <Table>
                     <TableHeader className="bg-slate-50">
                         <TableRow>
