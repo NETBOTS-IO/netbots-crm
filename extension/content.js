@@ -1,12 +1,12 @@
 /* ===================================================================
-   NetBots CRM Lead Scraper — Content Script
+   NetBots CRM Lead Scraper — Content Script (v1.2)
    Injects scrape buttons into Google Maps search result panels.
+   Persists selections globally in chrome.storage.local.
    =================================================================== */
 
 (() => {
   'use strict';
 
-  const SELECTED_LEADS = {};   // keyed by placeId or name
   const PROCESSED_NODES = new WeakSet();
 
   /* ---------- helpers ---------- */
@@ -16,15 +16,27 @@
   /** Build a unique key for a business listing */
   const leadKey = (name, addr) => `${(name || '').trim().toLowerCase()}__${(addr || '').trim().toLowerCase()}`;
 
-  /** Safely grab innerText from a selector inside a container */
-  const txt = (container, sel) => {
-    const el = container.querySelector(sel);
-    return el ? el.innerText.trim() : '';
-  };
-
   /* ---------- icon SVG ---------- */
   const NB_ICON_CHECKED = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
   const NB_ICON_UNCHECKED = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="4"/><text x="6" y="17" font-size="11" font-weight="800" fill="#3b82f6" stroke="none" font-family="sans-serif">NB</text></svg>`;
+
+  /* ---------- Storage Helpers ---------- */
+
+  function getSavedLeads() {
+    return new Promise(resolve => {
+      chrome.storage.local.get({ nb_scraped_leads: {} }, (data) => {
+        resolve(data.nb_scraped_leads || {});
+      });
+    });
+  }
+
+  function saveLeads(leads) {
+    return new Promise(resolve => {
+      chrome.storage.local.set({ nb_scraped_leads: leads }, () => {
+        resolve();
+      });
+    });
+  }
 
   /* ---------- scrape one listing from the side panel ---------- */
 
@@ -90,11 +102,10 @@
     if (pidMatch) data.PlaceID = pidMatch[1];
     if (!data.PlaceID && cidMatch) data.PlaceID = cidMatch[0];
 
-    // Social media & hours — try info items
+    // Social media & info items
     const infoItems = document.querySelectorAll('div[class*="rogA2c"], a[data-item-id]');
     infoItems.forEach(item => {
       const href = (item.href || '').toLowerCase();
-      const label = (item.getAttribute('aria-label') || '').toLowerCase();
       if (href.includes('instagram.com')) data.Instagram = item.href;
       if (href.includes('facebook.com')) data.Facebook = item.href;
       if (href.includes('twitter.com') || href.includes('x.com')) data.Twitter = item.href;
@@ -129,16 +140,16 @@
   function scrapeResultCard(el) {
     const data = {};
 
-    // Name from the main link
+    // Name
     const nameEl = el.querySelector('.fontHeadlineSmall, .qBF1Pd');
     data.Name = nameEl ? nameEl.innerText.trim() : '';
 
     // Rating
-    const ratingEl = el.querySelector('.MW4etd');
+    const ratingEl = el.querySelector('.MW4etd, span.rating-number');
     data.AverageRating = ratingEl ? parseFloat(ratingEl.innerText) : 0;
 
     // Review count
-    const reviewEl = el.querySelector('.UY7F9');
+    const reviewEl = el.querySelector('.UY7F9, span.review-count');
     if (reviewEl) {
       const rText = reviewEl.innerText.replace(/[^0-9]/g, '');
       data.ReviewCount = parseInt(rText) || 0;
@@ -148,7 +159,7 @@
     const tags = el.querySelectorAll('.W4Efsd span, .DkEaL');
     if (tags.length > 0) data.Category = tags[0].innerText.trim().replace(/·/g, '').trim();
 
-    // Address (second W4Efsd row usually)
+    // Address
     const bodyDivs = el.querySelectorAll('.W4Efsd');
     if (bodyDivs.length > 1) {
       const parts = bodyDivs[1].innerText.split('·').map(s => s.trim());
@@ -156,7 +167,7 @@
       else data.Address = parts[0] || '';
     }
 
-    // Phone from body text
+    // Phone
     bodyDivs.forEach(div => {
       const phoneMatch = div.innerText.match(/(\+?\d[\d\s\-()]{7,})/);
       if (phoneMatch) data.Phone = phoneMatch[1].trim();
@@ -167,13 +178,12 @@
 
   /* ---------- inject buttons into result feed ---------- */
 
-  function injectButtons() {
-    // Google Maps result items
+  async function injectButtons() {
+    const savedLeads = await getSavedLeads();
     const resultItems = document.querySelectorAll('div.Nv2PK, div[jsaction*="mouseover"]');
 
     resultItems.forEach(item => {
       if (PROCESSED_NODES.has(item)) return;
-      if (item.querySelector('.nb-scrape-btn')) return;
 
       const nameEl = item.querySelector('.fontHeadlineSmall, .qBF1Pd');
       if (!nameEl) return;
@@ -183,56 +193,64 @@
       const basicData = scrapeResultCard(item);
       const key = leadKey(basicData.Name, basicData.Address);
 
-      // Create the NB button
+      if (item.querySelector('.nb-scrape-btn')) return;
+
       const btn = document.createElement('div');
       btn.className = 'nb-scrape-btn';
       btn.dataset.key = key;
-      btn.title = 'Add to NetBots CRM';
-      btn.innerHTML = SELECTED_LEADS[key] ? NB_ICON_CHECKED : NB_ICON_UNCHECKED;
+      btn.title = 'Add to NetBots Scraper';
+      
+      const isChecked = !!savedLeads[key];
+      btn.innerHTML = isChecked ? NB_ICON_CHECKED : NB_ICON_UNCHECKED;
+      if (isChecked) btn.classList.add('nb-checked');
 
       btn.addEventListener('click', async (e) => {
         e.preventDefault();
         e.stopPropagation();
 
-        if (SELECTED_LEADS[key]) {
+        const currentSaved = await getSavedLeads();
+
+        if (currentSaved[key]) {
           // Deselect
-          delete SELECTED_LEADS[key];
+          delete currentSaved[key];
+          await saveLeads(currentSaved);
           btn.innerHTML = NB_ICON_UNCHECKED;
-          btn.title = 'Add to NetBots CRM';
+          btn.title = 'Add to NetBots Scraper';
           btn.classList.remove('nb-checked');
         } else {
-          // Try clicking the item to open detail panel for richer data
+          // Click the listing to open details panel
           btn.innerHTML = `<div class="nb-loading"></div>`;
           
-          // Click the listing to open details
           const link = item.querySelector('a[href]');
           if (link) {
             link.click();
-            await sleep(2000); // wait for panel to load
+            await sleep(2200); // wait for details panel
           }
 
-          // Scrape detailed data (merges with basic)
+          // Scrape detailed data
           const detailedData = scrapeDetailPanel();
           const merged = { ...basicData, ...detailedData };
-
-          // Ensure Name is captured
           if (!merged.Name) merged.Name = basicData.Name;
 
-          SELECTED_LEADS[key] = merged;
+          const updatedSaved = await getSavedLeads();
+          updatedSaved[key] = merged;
+          await saveLeads(updatedSaved);
+
           btn.innerHTML = NB_ICON_CHECKED;
-          btn.title = 'Added to NetBots CRM (click to remove)';
+          btn.title = 'Added (click to remove)';
           btn.classList.add('nb-checked');
         }
 
-        // Notify popup of count change
+        // Notify popup of update
+        const finalSaved = await getSavedLeads();
         chrome.runtime.sendMessage({
           type: 'NB_LEADS_UPDATE',
-          count: Object.keys(SELECTED_LEADS).length,
-          leads: Object.values(SELECTED_LEADS)
+          count: Object.keys(finalSaved).length,
+          leads: Object.values(finalSaved)
         }).catch(() => {});
       });
 
-      // Insert button — try to place it next to the actions area
+      // Position logic
       const actionsArea = item.querySelector('.lI9IFe, .bfdHYd, .UaQhfb');
       if (actionsArea) {
         actionsArea.style.position = 'relative';
@@ -244,29 +262,44 @@
     });
   }
 
+  /* ---------- sync UI states with background storage ---------- */
+
+  async function syncButtonsUI() {
+    const savedLeads = await getSavedLeads();
+    document.querySelectorAll('.nb-scrape-btn').forEach(btn => {
+      const key = btn.dataset.key;
+      const isChecked = !!savedLeads[key];
+      btn.innerHTML = isChecked ? NB_ICON_CHECKED : NB_ICON_UNCHECKED;
+      if (isChecked) {
+        btn.classList.add('nb-checked');
+      } else {
+        btn.classList.remove('nb-checked');
+      }
+    });
+  }
+
   /* ---------- listen for messages from popup ---------- */
 
   chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     if (msg.type === 'NB_GET_LEADS') {
-      sendResponse({
-        count: Object.keys(SELECTED_LEADS).length,
-        leads: Object.values(SELECTED_LEADS)
+      getSavedLeads().then(leads => {
+        sendResponse({
+          count: Object.keys(leads).length,
+          leads: Object.values(leads)
+        });
       });
+      return true;
     }
     if (msg.type === 'NB_CLEAR_LEADS') {
-      // Clear all selections
-      Object.keys(SELECTED_LEADS).forEach(k => delete SELECTED_LEADS[k]);
-      document.querySelectorAll('.nb-scrape-btn').forEach(btn => {
-        btn.innerHTML = NB_ICON_UNCHECKED;
-        btn.classList.remove('nb-checked');
+      saveLeads({}).then(() => {
+        syncButtonsUI();
+        sendResponse({ success: true });
       });
-      sendResponse({ success: true });
+      return true;
     }
-    return true; // keep channel open for async
   });
 
-  /* ---------- mutation observer for dynamic loading ---------- */
-
+  // Observe page shifts/updates
   const observer = new MutationObserver(() => {
     injectButtons();
   });
@@ -276,8 +309,8 @@
     subtree: true
   });
 
-  // Initial inject
-  setTimeout(injectButtons, 2000);
-  setTimeout(injectButtons, 5000);
+  // Initial runs
+  setTimeout(injectButtons, 1500);
+  setTimeout(injectButtons, 3000);
 
 })();

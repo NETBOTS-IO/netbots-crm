@@ -57,25 +57,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  /* ---------- Fetch leads from content script ---------- */
+  /* ---------- Fetch leads from storage ---------- */
 
-  async function fetchLeadsFromTab() {
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab || !tab.url?.includes('google.com/maps')) {
-        renderLeads([]);
-        return;
-      }
-      chrome.tabs.sendMessage(tab.id, { type: 'NB_GET_LEADS' }, (response) => {
-        if (chrome.runtime.lastError || !response) {
-          renderLeads([]);
-          return;
-        }
-        renderLeads(response.leads || []);
-      });
-    } catch {
-      renderLeads([]);
-    }
+  function fetchLeadsFromStorage() {
+    chrome.storage.local.get({ nb_scraped_leads: {} }, (data) => {
+      const leads = Object.values(data.nb_scraped_leads || {});
+      renderLeads(leads);
+    });
   }
 
   /* ---------- Grab Token from CRM tab ---------- */
@@ -172,11 +160,14 @@ document.addEventListener('DOMContentLoaded', () => {
         showResult(`Imported ${data.summary.success} of ${data.summary.total} leads!`, true);
 
         // Clear selections
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab) {
-          chrome.tabs.sendMessage(tab.id, { type: 'NB_CLEAR_LEADS' }).catch(() => {});
-        }
-        renderLeads([]);
+        chrome.storage.local.set({ nb_scraped_leads: {} }, () => {
+          renderLeads([]);
+          chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+            if (tabs[0]) {
+              chrome.tabs.sendMessage(tabs[0].id, { type: 'NB_CLEAR_LEADS' }).catch(() => {});
+            }
+          });
+        });
       } else {
         showResult(data.error || 'Import failed.', false);
       }
@@ -191,11 +182,14 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ---------- Clear ---------- */
 
   btnClear.addEventListener('click', async () => {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    if (tab) {
-      chrome.tabs.sendMessage(tab.id, { type: 'NB_CLEAR_LEADS' }).catch(() => {});
-    }
-    renderLeads([]);
+    chrome.storage.local.set({ nb_scraped_leads: {} }, () => {
+      renderLeads([]);
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, { type: 'NB_CLEAR_LEADS' }).catch(() => {});
+        }
+      });
+    });
   });
 
   /* ---------- Listen for live updates from content script ---------- */
@@ -208,5 +202,5 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ---------- Init ---------- */
 
-  fetchLeadsFromTab();
+  fetchLeadsFromStorage();
 });
