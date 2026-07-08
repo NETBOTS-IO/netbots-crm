@@ -162,9 +162,11 @@
       btn.innerHTML = isChecked ? NB_ICON_CHECKED : NB_ICON_UNCHECKED;
       if (isChecked) btn.classList.add('nb-checked');
 
-      btn.addEventListener('click', async (e) => {
+      const clickHandler = async (e) => {
         e.preventDefault();
         e.stopPropagation();
+        
+        console.log('[NetBots Scraper] Click registered for:', key);
 
         const currentSaved = await getSavedLeads();
 
@@ -175,11 +177,10 @@
           btn.innerHTML = NB_ICON_UNCHECKED;
           btn.title = 'Add to NetBots Scraper';
           btn.classList.remove('nb-checked');
+          console.log('[NetBots Scraper] Removed lead:', basicData.Name);
         } else {
           // Scrape and save immediately (no auto-clicking)
-          // We re-scrape to get any newly rendered data
           const freshData = scrapeResultCard(item);
-          // Ensure Name is captured
           if (!freshData.Name) freshData.Name = basicData.Name;
 
           const updatedSaved = await getSavedLeads();
@@ -189,6 +190,7 @@
           btn.innerHTML = NB_ICON_CHECKED;
           btn.title = 'Added (click to remove)';
           btn.classList.add('nb-checked');
+          console.log('[NetBots Scraper] Added lead:', freshData.Name);
         }
 
         // Notify popup of update
@@ -198,7 +200,11 @@
           count: Object.keys(finalSaved).length,
           leads: Object.values(finalSaved)
         }).catch(() => {});
-      });
+      };
+
+      // Listen on both container and button in capture phase to guarantee interception
+      btnContainer.addEventListener('click', clickHandler, true);
+      btn.addEventListener('click', clickHandler, true);
 
       btnContainer.appendChild(btn);
       item.appendChild(btnContainer);
