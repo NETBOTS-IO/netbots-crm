@@ -3,7 +3,6 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const { initCronJobs } = require('./services/cronJobs');
 
 const app = express();
@@ -37,13 +36,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 200, // Limit each IP to 200 requests per 15 mins
-  message: { success: false, error: 'Too many requests, please try again later.' }
-});
-app.use('/api/', limiter);
 
 app.use(cors({
   origin: function (origin, callback) {
