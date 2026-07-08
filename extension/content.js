@@ -1,5 +1,5 @@
 /* ===================================================================
-   NetBots CRM Lead Scraper — Content Script (v1.2)
+   NetBots CRM Lead Scraper — Content Script (v1.3)
    Injects scrape buttons into Google Maps search result panels.
    Persists selections globally in chrome.storage.local.
    =================================================================== */
@@ -7,11 +7,7 @@
 (() => {
   'use strict';
 
-  const PROCESSED_NODES = new WeakSet();
-
   /* ---------- helpers ---------- */
-
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   /** Build a unique key for a business listing */
   const leadKey = (name, addr) => `${(name || '').trim().toLowerCase()}__${(addr || '').trim().toLowerCase()}`;
@@ -38,140 +34,86 @@
     });
   }
 
-  /* ---------- scrape one listing from the side panel ---------- */
-
-  function scrapeDetailPanel() {
-    const data = {};
-
-    // Name
-    const nameEl = document.querySelector('h1.DUwDvf, h1.fontHeadlineLarge');
-    data.Name = nameEl ? nameEl.innerText.trim() : '';
-
-    // Category
-    const catEl = document.querySelector('button[jsaction*="category"] span, .DkEaL');
-    data.Category = catEl ? catEl.innerText.trim() : '';
-
-    // Address
-    const addressBtns = document.querySelectorAll('button[data-item-id="address"]');
-    addressBtns.forEach(btn => {
-      const ariaLabel = btn.getAttribute('aria-label') || '';
-      if (ariaLabel) data.Address = ariaLabel.replace(/^Address:\s*/i, '');
-    });
-    if (!data.Address) {
-      const addrEl = document.querySelector('[data-item-id="address"] .fontBodyMedium');
-      data.Address = addrEl ? addrEl.innerText.trim() : '';
-    }
-
-    // Phone
-    const phoneBtns = document.querySelectorAll('button[data-item-id^="phone:"]');
-    phoneBtns.forEach(btn => {
-      const ariaLabel = btn.getAttribute('aria-label') || '';
-      if (ariaLabel) data.Phone = ariaLabel.replace(/^Phone:\s*/i, '');
-    });
-
-    // Website
-    const websiteBtns = document.querySelectorAll('a[data-item-id="authority"]');
-    websiteBtns.forEach(a => {
-      data.Website = a.href || '';
-    });
-
-    // Rating & Reviews
-    const ratingEl = document.querySelector('.fontDisplayLarge, .F7nice span[aria-hidden]');
-    if (ratingEl) data.AverageRating = parseFloat(ratingEl.innerText) || 0;
-
-    const reviewEl = document.querySelector('button[jsaction*="reviews"] span, .F7nice span:last-child');
-    if (reviewEl) {
-      const rText = reviewEl.innerText.replace(/[^0-9]/g, '');
-      data.ReviewCount = parseInt(rText) || 0;
-    }
-
-    // Place ID from URL
-    const url = window.location.href;
-    const placeMatch = url.match(/place\/[^/]+\/([-\d.]+),([-\d.]+)/);
-    if (placeMatch) {
-      data.Latitude = parseFloat(placeMatch[1]);
-      data.Longitude = parseFloat(placeMatch[2]);
-    }
-
-    // CID from URL (data parameter)
-    const cidMatch = url.match(/0x[0-9a-f]+:0x([0-9a-f]+)/i);
-    if (cidMatch) data.CID = cidMatch[0];
-
-    // PlaceId from URL (/place/ segment)
-    const pidMatch = url.match(/!1s(0x[^!]+)/);
-    if (pidMatch) data.PlaceID = pidMatch[1];
-    if (!data.PlaceID && cidMatch) data.PlaceID = cidMatch[0];
-
-    // Social media & info items
-    const infoItems = document.querySelectorAll('div[class*="rogA2c"], a[data-item-id]');
-    infoItems.forEach(item => {
-      const href = (item.href || '').toLowerCase();
-      if (href.includes('instagram.com')) data.Instagram = item.href;
-      if (href.includes('facebook.com')) data.Facebook = item.href;
-      if (href.includes('twitter.com') || href.includes('x.com')) data.Twitter = item.href;
-      if (href.includes('linkedin.com')) data.Linkedin = item.href;
-      if (href.includes('yelp.com')) data.Yelp = item.href;
-      if (href.includes('youtube.com')) data.Youtube = item.href;
-    });
-
-    // Business hours
-    const hoursTable = document.querySelector('table.eK4R0e, table.WgFkxc');
-    if (hoursTable) {
-      const rows = hoursTable.querySelectorAll('tr');
-      const dayMap = {
-        monday: '1_Monday', tuesday: '2_Tuesday', wednesday: '3_Wednesday',
-        thursday: '4_Thursday', friday: '5_Friday', saturday: '6_Saturday', sunday: '7_Sunday'
-      };
-      rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length >= 2) {
-          const day = cells[0].innerText.trim().toLowerCase();
-          const hours = cells[1].innerText.trim();
-          if (dayMap[day]) data[dayMap[day]] = hours;
-        }
-      });
-    }
-
-    return data;
-  }
-
-  /* ---------- scrape basic info from the result card ---------- */
+  /* ---------- scrape listing from the result card ---------- */
 
   function scrapeResultCard(el) {
     const data = {};
 
+    // Find the main link container
+    let linkEl = el.tagName.toLowerCase() === 'a' ? el : el.querySelector('a[href*="/maps/place/"]');
+    
     // Name
-    const nameEl = el.querySelector('.fontHeadlineSmall, .qBF1Pd');
-    data.Name = nameEl ? nameEl.innerText.trim() : '';
+    // Usually in an aria-label on the link, or the first prominent text element
+    if (linkEl && linkEl.getAttribute('aria-label')) {
+       data.Name = linkEl.getAttribute('aria-label').trim();
+    } else {
+       const nameEl = el.querySelector('.fontHeadlineSmall, .qBF1Pd, [role="heading"]');
+       data.Name = nameEl ? nameEl.innerText.trim() : '';
+    }
 
     // Rating
-    const ratingEl = el.querySelector('.MW4etd, span.rating-number');
+    const ratingEl = el.querySelector('.MW4etd, span.rating-number, [aria-label*="stars"]');
     data.AverageRating = ratingEl ? parseFloat(ratingEl.innerText) : 0;
+    if (isNaN(data.AverageRating) && ratingEl && ratingEl.getAttribute('aria-label')) {
+       const match = ratingEl.getAttribute('aria-label').match(/([\d.]+)\s*stars/);
+       if (match) data.AverageRating = parseFloat(match[1]);
+    }
 
     // Review count
-    const reviewEl = el.querySelector('.UY7F9, span.review-count');
+    const reviewEl = el.querySelector('.UY7F9, span.review-count, [aria-label*="reviews"]');
     if (reviewEl) {
       const rText = reviewEl.innerText.replace(/[^0-9]/g, '');
       data.ReviewCount = parseInt(rText) || 0;
     }
+    if (!data.ReviewCount && reviewEl && reviewEl.getAttribute('aria-label')) {
+        const match = reviewEl.getAttribute('aria-label').match(/([\d,]+)\s*reviews/);
+        if(match) data.ReviewCount = parseInt(match[1].replace(/,/g, ''));
+    }
 
-    // Category
-    const tags = el.querySelectorAll('.W4Efsd span, .DkEaL');
-    if (tags.length > 0) data.Category = tags[0].innerText.trim().replace(/·/g, '').trim();
+    // Category & Address
+    // They are often in a container with class W4Efsd or similar, separated by middle dots
+    const textBlocks = Array.from(el.querySelectorAll('.W4Efsd, .fontBodyMedium')).map(el => el.innerText.trim());
+    
+    for (const block of textBlocks) {
+        if (!block) continue;
+        const parts = block.split('·').map(s => s.trim());
+        
+        // Try to identify category
+        if (!data.Category && parts.length > 0 && !parts[0].includes('(') && !parts[0].match(/[\d+]/)) {
+            data.Category = parts[0];
+        }
 
-    // Address
-    const bodyDivs = el.querySelectorAll('.W4Efsd');
-    if (bodyDivs.length > 1) {
-      const parts = bodyDivs[1].innerText.split('·').map(s => s.trim());
-      if (parts.length > 1) data.Address = parts[parts.length - 1];
-      else data.Address = parts[0] || '';
+        // Try to identify address (usually comes after category or rating)
+        if (parts.length > 1) {
+            const potentialAddress = parts[parts.length - 1];
+            if (potentialAddress.length > 5 && !potentialAddress.match(/Opens|Closed|\d{2}:\d{2}/i)) {
+                 data.Address = potentialAddress;
+            }
+        }
     }
 
     // Phone
-    bodyDivs.forEach(div => {
-      const phoneMatch = div.innerText.match(/(\+?\d[\d\s\-()]{7,})/);
-      if (phoneMatch) data.Phone = phoneMatch[1].trim();
-    });
+    const allText = el.innerText;
+    const phoneMatch = allText.match(/(?:Phone: )?(\+?\d[\d\s\-()]{7,})/);
+    if (phoneMatch) {
+        data.Phone = phoneMatch[1].trim();
+    }
+    
+    // Website (sometimes available directly on the card as a button)
+    const websiteBtn = el.querySelector('a[href^="http"]:not([href*="google.com"])');
+    if(websiteBtn) {
+        data.Website = websiteBtn.href;
+    }
+
+    // Extract Place ID and GPS from URL if possible
+    if (linkEl && linkEl.href) {
+        const urlMatch = linkEl.href.match(/!1s(0x[^!]+)!.*!3d([-\d.]+)!4d([-\d.]+)/);
+        if (urlMatch) {
+            data.PlaceID = urlMatch[1];
+            data.Latitude = parseFloat(urlMatch[2]);
+            data.Longitude = parseFloat(urlMatch[3]);
+        }
+    }
 
     return data;
   }
@@ -180,21 +122,37 @@
 
   async function injectButtons() {
     const savedLeads = await getSavedLeads();
-    const resultItems = document.querySelectorAll('div.Nv2PK, div[jsaction*="mouseover"]');
-
-    resultItems.forEach(item => {
-      if (PROCESSED_NODES.has(item)) return;
-
-      const nameEl = item.querySelector('.fontHeadlineSmall, .qBF1Pd');
-      if (!nameEl) return;
-
-      PROCESSED_NODES.add(item);
+    
+    // Select result items. A reliable selector is the anchor link containing '/maps/place/'
+    // We want the parent container of that link.
+    const placeLinks = document.querySelectorAll('a[href*="/maps/place/"]');
+    
+    placeLinks.forEach(link => {
+      // Find a suitable parent container. Usually the grand-grand parent
+      let item = link.closest('div[jsaction*="mouseover"]') || link.closest('.Nv2PK') || link.parentElement.parentElement;
+      
+      if (!item || item.hasAttribute('data-nb-processed')) return;
 
       const basicData = scrapeResultCard(item);
+      if (!basicData.Name) return; // Need at least a name
+
       const key = leadKey(basicData.Name, basicData.Address);
 
-      if (item.querySelector('.nb-scrape-btn')) return;
+      if (item.querySelector('.nb-scrape-btn-container')) return;
 
+      // Mark as processed
+      item.setAttribute('data-nb-processed', 'true');
+      
+      // Ensure the item has relative positioning for absolute child
+      const currentPos = window.getComputedStyle(item).position;
+      if (currentPos === 'static') {
+          item.style.position = 'relative';
+      }
+
+      // Create button container
+      const btnContainer = document.createElement('div');
+      btnContainer.className = 'nb-scrape-btn-container';
+      
       const btn = document.createElement('div');
       btn.className = 'nb-scrape-btn';
       btn.dataset.key = key;
@@ -218,22 +176,14 @@
           btn.title = 'Add to NetBots Scraper';
           btn.classList.remove('nb-checked');
         } else {
-          // Click the listing to open details panel
-          btn.innerHTML = `<div class="nb-loading"></div>`;
-          
-          const link = item.querySelector('a[href]');
-          if (link) {
-            link.click();
-            await sleep(2200); // wait for details panel
-          }
-
-          // Scrape detailed data
-          const detailedData = scrapeDetailPanel();
-          const merged = { ...basicData, ...detailedData };
-          if (!merged.Name) merged.Name = basicData.Name;
+          // Scrape and save immediately (no auto-clicking)
+          // We re-scrape to get any newly rendered data
+          const freshData = scrapeResultCard(item);
+          // Ensure Name is captured
+          if (!freshData.Name) freshData.Name = basicData.Name;
 
           const updatedSaved = await getSavedLeads();
-          updatedSaved[key] = merged;
+          updatedSaved[key] = freshData;
           await saveLeads(updatedSaved);
 
           btn.innerHTML = NB_ICON_CHECKED;
@@ -250,15 +200,8 @@
         }).catch(() => {});
       });
 
-      // Position logic
-      const actionsArea = item.querySelector('.lI9IFe, .bfdHYd, .UaQhfb');
-      if (actionsArea) {
-        actionsArea.style.position = 'relative';
-        actionsArea.appendChild(btn);
-      } else {
-        item.style.position = 'relative';
-        item.appendChild(btn);
-      }
+      btnContainer.appendChild(btn);
+      item.appendChild(btnContainer);
     });
   }
 
@@ -299,9 +242,13 @@
     }
   });
 
-  // Observe page shifts/updates
+  // Debounced observer
+  let observerTimeout;
   const observer = new MutationObserver(() => {
-    injectButtons();
+    clearTimeout(observerTimeout);
+    observerTimeout = setTimeout(() => {
+        injectButtons();
+    }, 500); // 500ms debounce
   });
 
   observer.observe(document.body, {
