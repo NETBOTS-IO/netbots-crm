@@ -58,7 +58,7 @@ const Leaderboard = () => {
                                 <h3 className="font-bold text-lg">{user.name}</h3>
                                 <div className="flex gap-2">
                                     <Badge variant="outline" className="text-[10px] uppercase">{user.role}</Badge>
-                                    <Badge className="text-[10px] uppercase bg-blue-600">{user.rank?.currentRank || 'Trainee'}</Badge>
+                                    <Badge className="text-[10px] uppercase bg-blue-600">{user.rank ? user.rank.replace('_', ' ') : 'Trainee'}</Badge>
                                 </div>
                             </div>
 

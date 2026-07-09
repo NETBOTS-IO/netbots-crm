@@ -34,7 +34,10 @@ router.get('/', auth, async (req, res) => {
         contact = 'all'
     } = req.query;
 
-    let baseQuery = {};
+    let baseQuery = { 
+        convertedToClient: { $ne: true },
+        clientId: { $exists: false }
+    };
     if (req.user.role === 'lead_gen') {
       baseQuery.submittedBy = req.user._id;
     }
@@ -214,7 +217,8 @@ router.post('/', auth, async (req, res) => {
     const lead = new Lead({
       ...req.body,
       companyName,
-      submittedBy: req.user._id
+      submittedBy: req.user._id,
+      leadCollectedBy: req.user.name || req.user.email
     });
     await lead.save();
 
@@ -275,7 +279,19 @@ router.put('/:id', auth, async (req, res) => {
       return res.status(403).json({ success: false, error: 'Access denied: Cannot edit leads.' });
   }
   try {
-    const lead = await Lead.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updateData = { ...req.body };
+    updateData.contactedBy = req.user.name || req.user.email;
+    
+    // Auto-verify if temperature becomes warm or sql
+    if (['warm', 'sql'].includes(updateData.temperature)) {
+        const currentLead = await Lead.findById(req.params.id);
+        if (currentLead && !currentLead.leadVerifiedBy) {
+            updateData.leadVerifiedBy = req.user.name || req.user.email;
+            updateData.verifiedAt = Date.now();
+        }
+    }
+
+    const lead = await Lead.findByIdAndUpdate(req.params.id, updateData, { new: true });
     res.json({ success: true, data: lead });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Server error' });
@@ -299,6 +315,12 @@ router.put('/:id/stage', auth, async (req, res) => {
     // Auto temp update if stage is close or beyond
     if (stage === 'close') lead.temperature = 'sql';
     if (stage === 'onboard') lead.temperature = 'closed';
+
+    // Auto-verify if temperature is warm or sql and verifier is empty
+    if (['warm', 'sql'].includes(lead.temperature) && !lead.leadVerifiedBy) {
+        lead.leadVerifiedBy = req.user.name || req.user.email;
+        lead.verifiedAt = Date.now();
+    }
 
     await lead.save();
 
@@ -357,10 +379,14 @@ router.post('/:id/convert', auth, requireRole(['admin', 'sales']), async (req, r
         const lead = await Lead.findById(req.params.id);
         if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
         
+        const closerUser = await User.findById(closedBy || req.user._id);
+        const salesClosedByName = closerUser ? closerUser.name : (req.user.name || req.user.email);
+
         lead.temperature = 'closed';
         lead.stage = 'onboard';
         lead.convertedToClient = true;
         lead.convertedAt = Date.now();
+        lead.salesClosedBy = salesClosedByName;
         await lead.save();
 
         const client = new Client({
@@ -402,11 +428,24 @@ router.post('/:id/convert', auth, requireRole(['admin', 'sales']), async (req, r
             sundayHours: lead.sundayHours,
             upfrontPaid: parseFloat(upfrontPaid || 0),
             remainingAmount: parseFloat(remainingAmount || 0),
-            engagedTeam: engagedTeam || []
+            engagedTeam: engagedTeam || [],
+            
+            // Tracked Fields copy
+            targetService: lead.targetService,
+            leadCollectedBy: lead.leadCollectedBy,
+            leadVerifiedBy: lead.leadVerifiedBy || 'System',
+            leadVerifiedAt: lead.verifiedAt || Date.now(),
+            leadCreatedAt: lead.createdAt || Date.now(),
+            contactedBy: lead.contactedBy,
+            contactMethod: lead.contactMethod,
+            contactedAt: lead.contactedAt,
+            salesClosedBy: salesClosedByName
         });
         await client.save();
         
         lead.clientId = client._id;
+        lead.convertedToClient = true;
+        lead.convertedAt = Date.now();
         await lead.save();
 
         // Create Commission records for engaged team members
@@ -434,17 +473,24 @@ router.post('/:id/convert', auth, requireRole(['admin', 'sales']), async (req, r
         }
 
         // Points for conversion
-        const submitter = await User.findById(lead.submittedBy);
-        submitter.points += getPointsForEvent('deal_closed');
-        submitter.rank = calculateRank(submitter);
-        await submitter.save();
+        if (lead.submittedBy) {
+            const submitter = await User.findById(lead.submittedBy);
+            if (submitter) {
+                submitter.points += getPointsForEvent('deal_closed');
+                submitter.rank = calculateRank(submitter);
+                await submitter.save();
+            }
+        }
 
-        if (closedBy) {
-            const closer = await User.findById(closedBy);
-            closer.points += getPointsForEvent('deal_closed_closer');
-            closer.totalCloses += 1;
-            closer.rank = calculateRank(closer);
-            await closer.save();
+        const closerId = closedBy || req.user._id;
+        if (closerId && closerId !== '') {
+            const closer = await User.findById(closerId);
+            if (closer) {
+                closer.points += getPointsForEvent('deal_closed_closer');
+                closer.totalCloses += 1;
+                closer.rank = calculateRank(closer);
+                await closer.save();
+            }
         }
 
         // Trigger Commission Calculation (usually async, but here sync for simplicity or trigger via dedicated route)
@@ -490,11 +536,12 @@ router.post('/:id/activity', auth, async (req, res) => {
         });
         await activity.save();
 
-        // Update last contacted if it's a contact type
-        if (['call', 'email', 'meeting'].includes(type)) {
-            lead.lastContactedAt = Date.now();
-            await lead.save();
-        }
+        // Update last contacted details for any logged activity
+        lead.lastContactedAt = Date.now();
+        lead.contactedBy = req.user.name || req.user.email;
+        lead.contactMethod = type || 'note';
+        lead.contactedAt = Date.now();
+        await lead.save();
 
         res.json({ success: true, data: activity });
     } catch (err) {

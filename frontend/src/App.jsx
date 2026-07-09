@@ -16,6 +16,7 @@ import ImportWizard from './pages/ImportWizard';
 import LeadDetails from './pages/LeadDetails';
 import PermissionsManagement from './pages/PermissionsManagement';
 import AuditLogs from './pages/AuditLogs';
+import Performance from './pages/Performance';
 import { Toaster } from "@/components/ui/toaster"
 
 const PrivateRoute = ({ children }) => {
@@ -42,6 +43,7 @@ function App() {
             <Route path="leads/details/:id" element={<LeadDetails />} />
             <Route path="leads/edit/:id" element={<LeadForm />} />
             <Route path="clients" element={<Clients />} />
+            <Route path="performance" element={<Performance />} />
             <Route path="team" element={<TeamManagement />} />
             <Route path="permissions" element={<PermissionsManagement />} />
             <Route path="commissions" element={<CommissionsLedger />} />

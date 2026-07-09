@@ -42,8 +42,8 @@ const LoginPage = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
             <Card className="w-full max-w-md">
-                <CardHeader className="space-y-1">
-                    <CardTitle className="text-2xl text-center font-bold">NetBots CRM</CardTitle>
+                <CardHeader className="space-y-3 flex flex-col items-center">
+                    <img src="/logo.png" className="h-10 object-contain my-2" alt="Net Bots Logo" />
                     <CardDescription className="text-center">
                         Enter your credentials to access your dashboard
                     </CardDescription>

@@ -17,7 +17,7 @@ router.post('/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ success: false, error: 'Invalid credentials' });
 
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    res.json({ success: true, data: { token, user: { id: user._id, name: user.name, role: user.role } } });
+    res.json({ success: true, data: { token, user: { id: user._id, name: user.name, role: user.role, designation: user.designation, permissions: user.permissions, agreementSigned: user.agreementSigned, agreementPdfPath: user.agreementPdfPath } } });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Server error' });
   }
@@ -26,7 +26,7 @@ router.post('/login', async (req, res) => {
 // POST /api/auth/register
 // CEO creates new intern/partner accounts
 router.post('/register', auth, requireRole(['ceo', 'admin']), async (req, res) => {
-  const { name, email, password, role, archetype, phone, designation } = req.body;
+  const { name, email, password, role, archetype, phone, designation, rank } = req.body;
   if (!email || !email.toLowerCase().endsWith('@netbots.io')) {
       return res.status(400).json({ success: false, error: 'Only emails with the @netbots.io domain are allowed.' });
   }
@@ -35,7 +35,7 @@ router.post('/register', auth, requireRole(['ceo', 'admin']), async (req, res) =
     if (user) return res.status(400).json({ success: false, error: 'User already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    user = new User({ name, email, password: hashedPassword, role, archetype, phone, designation });
+    user = new User({ name, email, password: hashedPassword, role, archetype, phone, designation, rank });
     await user.save();
     res.json({ success: true, message: 'User created' });
   } catch (err) {

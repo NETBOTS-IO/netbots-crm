@@ -41,13 +41,13 @@ router.get('/:id', auth, async (req, res) => {
 // PUT /api/team/:id
 router.put('/:id', auth, requireRole(['admin']), async (req, res) => {
   try {
-    const { name, email, role, designation, phone } = req.body;
+    const { name, email, role, designation, phone, rank } = req.body;
     if (email && !email.toLowerCase().endsWith('@netbots.io')) {
         return res.status(400).json({ success: false, error: 'Only emails with the @netbots.io domain are allowed.' });
     }
     const user = await User.findByIdAndUpdate(
       req.params.id,
-      { $set: { name, email, role, designation, phone } },
+      { $set: { name, email, role, designation, phone, rank } },
       { new: true, runValidators: true }
     );
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });

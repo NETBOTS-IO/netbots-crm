@@ -56,7 +56,10 @@ const UserSchema = new mongoose.Schema({
     default: null
   },
   referralCode: { type: String, unique: true, sparse: true },
-  totalClientsReferred: { type: Number, default: 0 }
+  totalClientsReferred: { type: Number, default: 0 },
+  agreementSigned: { type: Boolean, default: false },
+  agreementSignedAt: { type: Date },
+  agreementPdfPath: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', UserSchema);

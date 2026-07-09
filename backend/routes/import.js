@@ -64,6 +64,8 @@ router.post('/leads', auth, requireRole(['ceo', 'admin']), upload.single('file')
             saturdayHours: getValue(['6_Saturday', 'saturdayHours', 'Saturday', 'saturday_hours']),
             sundayHours: getValue(['7_Sunday', 'sundayHours', 'Sunday', 'sunday_hours']),
             submittedBy: req.user._id, // Default to uploader
+            leadCollectedBy: req.user.name || req.user.email,
+            targetService: getValue(['TargetService', 'targetService', 'target_service', 'service']),
             source: 'bulk_import',
             notes: getValue(['Notes', 'notes']) || '',
           };
@@ -152,6 +154,8 @@ router.post('/extension-leads', auth, async (req, res) => {
           saturdayHours: raw['6_Saturday'] || undefined,
           sundayHours: raw['7_Sunday'] || undefined,
           submittedBy: req.user._id,
+          leadCollectedBy: req.user.name || req.user.email,
+          targetService: raw.TargetService || raw.targetService || raw.service || undefined,
           channel: 'google_maps_scraper',
           notes: 'Imported via NetBots Chrome Extension'
         };

@@ -42,6 +42,7 @@ const LeadDetails = () => {
     const [activities, setActivities] = useState([]);
     const [loading, setLoading] = useState(true);
     const [note, setNote] = useState('');
+    const [activityType, setActivityType] = useState('note');
     const [submittingNote, setSubmittingNote] = useState(false);
     
     // Conversion & Team states
@@ -75,9 +76,9 @@ const LeadDetails = () => {
     const canView = currentUser?.role === 'admin' || currentUser?.permissions?.can_view_leads;
 
     const getDealValueUSD = () => {
-        if (conversionData.dealType === 'monthly_subscription') return parseFloat(conversionData.monthlyAmount || 0);
-        if (conversionData.dealType === 'lifetime_deal') return parseFloat(conversionData.lifetimeAmount || 0);
-        if (conversionData.dealType === 'enterprise') return parseFloat(conversionData.enterpriseAmount || 0);
+        if (['monthly_subscription', 'weekly', 'monthly'].includes(conversionData.dealType)) return parseFloat(conversionData.monthlyAmount || 0);
+        if (['lifetime_deal', 'one_time'].includes(conversionData.dealType)) return parseFloat(conversionData.lifetimeAmount || 0);
+        if (['enterprise', 'annual'].includes(conversionData.dealType)) return parseFloat(conversionData.enterpriseAmount || 0);
         return 0;
     };
 
@@ -108,6 +109,19 @@ const LeadDetails = () => {
         }
     };
 
+    useEffect(() => {
+        const total = getDealValueUSD();
+        const upfront = parseFloat(conversionData.upfrontPaid || 0);
+        const remaining = Math.max(0, total - upfront);
+        setConversionData(prev => {
+            const remStr = remaining.toString();
+            if (prev.remainingAmount !== remStr) {
+                return { ...prev, remainingAmount: remStr };
+            }
+            return prev;
+        });
+    }, [conversionData.monthlyAmount, conversionData.lifetimeAmount, conversionData.enterpriseAmount, conversionData.dealType, conversionData.upfrontPaid]);
+
     const handleConversionChange = (name, value) => {
         setConversionData(prev => ({ ...prev, [name]: value }));
     };
@@ -117,13 +131,13 @@ const LeadDetails = () => {
         setConverting(true);
         try {
             const body = {
-                planType: conversionData.planType,
+                planType: conversionData.planType || conversionData.dealType,
                 dealType: conversionData.dealType,
                 startDate: conversionData.startDate,
                 closedBy: conversionData.closedBy || undefined,
-                monthlyAmount: conversionData.dealType === 'monthly_subscription' ? parseFloat(conversionData.monthlyAmount || 0) : undefined,
-                lifetimeAmount: conversionData.dealType === 'lifetime_deal' ? parseFloat(conversionData.lifetimeAmount || 0) : undefined,
-                enterpriseAmount: conversionData.dealType === 'enterprise' ? parseFloat(conversionData.enterpriseAmount || 0) : undefined,
+                monthlyAmount: ['monthly_subscription', 'weekly', 'monthly'].includes(conversionData.dealType) ? parseFloat(conversionData.monthlyAmount || 0) : undefined,
+                lifetimeAmount: ['lifetime_deal', 'one_time'].includes(conversionData.dealType) ? parseFloat(conversionData.lifetimeAmount || 0) : undefined,
+                enterpriseAmount: ['enterprise', 'annual'].includes(conversionData.dealType) ? parseFloat(conversionData.enterpriseAmount || 0) : undefined,
                 upfrontPaid: parseFloat(conversionData.upfrontPaid || 0),
                 remainingAmount: parseFloat(conversionData.remainingAmount || 0),
                 engagedTeam: conversionData.engagedTeam || []
@@ -162,18 +176,28 @@ const LeadDetails = () => {
         if (!note.trim()) return;
         setSubmittingNote(true);
         try {
+            const descMap = {
+                'note': 'Added a note',
+                'call': 'Logged a phone call',
+                'whatsapp': 'Logged a WhatsApp message',
+                'email': 'Logged an email sent',
+                'meeting': 'Logged a meeting / demo',
+                'sms': 'Logged an SMS text',
+                'social_media': 'Logged social media contact'
+            };
             const res = await api.post(`/leads/${id}/activity`, {
-                type: 'note',
-                description: 'Added a note',
+                type: activityType,
+                description: descMap[activityType] || 'Logged activity',
                 notes: note
             });
             if (res.success) {
                 setNote('');
-                toast({ title: "Note added" });
+                setActivityType('note');
+                toast({ title: "Success", description: activityType === 'note' ? "Note added" : "Activity logged successfully" });
                 fetchLeadData();
             }
         } catch (err) {
-            toast({ variant: "destructive", title: "Error", description: "Failed to add note" });
+            toast({ variant: "destructive", title: "Error", description: "Failed to log activity" });
         } finally {
             setSubmittingNote(false);
         }
@@ -215,9 +239,17 @@ const LeadDetails = () => {
                     <CardHeader className="border-b bg-slate-50/50">
                         <div className="flex justify-between items-start">
                             <div>
-                                <CardTitle className="text-2xl font-bold">{lead.companyName}</CardTitle>
+                                <CardTitle className="text-2xl font-bold">
+                                    <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.companyName)}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-blue-600 hover:text-blue-800" title="Click to search on Google Maps">
+                                        {lead.companyName}
+                                    </a>
+                                </CardTitle>
                                 <p className="text-slate-500 flex items-center gap-2 mt-1 italic">
-                                    <Globe size={14} /> {lead.website || 'No website'}
+                                    <Globe size={14} /> {lead.website ? (
+                                        <a href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-blue-600">
+                                            {lead.website}
+                                        </a>
+                                    ) : 'No website'}
                                 </p>
                             </div>
                             <div className="flex flex-col items-end gap-2">
@@ -271,14 +303,26 @@ const LeadDetails = () => {
                                     <Phone size={18} className="text-slate-400" />
                                     <div>
                                         <p className="text-[10px] text-slate-400 uppercase font-black">Phone / WhatsApp</p>
-                                        <p>{lead.phone}</p>
+                                        <p>
+                                            {lead.phone ? (
+                                                <a href={`https://web.whatsapp.com/send?phone=${lead.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline hover:text-emerald-800" title="Click to chat on WhatsApp Web">
+                                                    {lead.phone}
+                                                </a>
+                                            ) : 'N/A'}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <Mail size={18} className="text-slate-400" />
                                     <div>
                                         <p className="text-[10px] text-slate-400 uppercase font-black">Email</p>
-                                        <p>{lead.email || 'N/A'}</p>
+                                        <p>
+                                            {lead.email ? (
+                                                <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${lead.email}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline hover:text-blue-800" title="Click to email on Gmail Web">
+                                                    {lead.email}
+                                                </a>
+                                            ) : 'N/A'}
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -286,8 +330,14 @@ const LeadDetails = () => {
                                 <div className="flex items-center gap-3">
                                     <MapPin size={18} className="text-slate-400" />
                                     <div>
-                                        <p className="text-[10px] text-slate-400 uppercase font-black">Location</p>
-                                        <p>{lead.city || lead.address || 'N/A'}</p>
+                                        <p className="text-[10px] text-slate-400 uppercase font-black">Location / Address</p>
+                                        <p>
+                                            {lead.address || lead.city ? (
+                                                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(lead.address || lead.city)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline hover:text-blue-800" title="Click to locate on Google Maps">
+                                                    {lead.address || lead.city}
+                                                </a>
+                                            ) : 'N/A'}
+                                        </p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
@@ -298,11 +348,47 @@ const LeadDetails = () => {
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <TrendingUp size={18} className="text-slate-400" />
-                                    <div>
-                                        <p className="text-[10px] text-slate-400 uppercase font-black">Lead Source</p>
-                                        <p className="capitalize">{lead.source?.replace(/_/g, ' ')}</p>
-                                    </div>
+                                     <TrendingUp size={18} className="text-slate-400" />
+                                     <div>
+                                         <p className="text-[10px] text-slate-400 uppercase font-black">Lead Source</p>
+                                         <p className="capitalize">{lead.source?.replace(/_/g, ' ')}</p>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+
+                        {/* Service and Tracking Details */}
+                        <div className="mt-8 pt-6 border-t bg-slate-50/50 p-4 rounded-lg border border-slate-100">
+                            <h3 className="text-xs font-bold uppercase text-slate-500 mb-4 tracking-widest">Lead Tracking & Service Info</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-6 text-sm text-slate-700 font-medium">
+                                <div>
+                                    <p className="text-[10px] text-slate-400 uppercase font-black">Target Service</p>
+                                    <Badge variant="outline" className="mt-1 bg-blue-50 text-blue-700 border-blue-200 capitalize font-bold">
+                                        {lead.targetService ? lead.targetService.replace(/_/g, ' ') : 'Not Specified'}
+                                    </Badge>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-slate-400 uppercase font-black">Lead Collected By</p>
+                                    <p className="mt-1 text-slate-800 font-semibold">{lead.leadCollectedBy || lead.submittedBy?.name || 'Unknown'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-slate-400 uppercase font-black">Lead Verified By</p>
+                                    <p className="mt-1 text-slate-800 font-semibold">{lead.leadVerifiedBy || 'Not Verified Yet'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-slate-400 uppercase font-black">Last Contacted By</p>
+                                    <p className="mt-1 text-slate-800 font-semibold">
+                                        {lead.contactedBy ? (
+                                            <>
+                                                {lead.contactedBy} 
+                                                {lead.contactMethod && <span className="text-xs text-slate-500"> ({lead.contactMethod.replace(/_/g, ' ')})</span>}
+                                            </>
+                                        ) : 'No recorded contact'}
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-[10px] text-slate-400 uppercase font-black">Sales Closed By</p>
+                                    <p className="mt-1 text-slate-800 font-semibold">{lead.salesClosedBy || (lead.stage === 'onboard' ? 'Yes (Closer details unavailable)' : 'Not Closed Yet')}</p>
                                 </div>
                             </div>
                         </div>
@@ -453,18 +539,36 @@ const LeadDetails = () => {
                 <div className="space-y-6">
                     <Card>
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Quick Note</CardTitle>
+                            <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Log Activity / Add Note</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <form onSubmit={handleAddNote} className="space-y-3">
-                                <textarea
-                                    className="w-full min-h-[100px] p-3 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                                    placeholder="Type important details here..."
-                                    value={note}
-                                    onChange={(e) => setNote(e.target.value)}
-                                />
-                                <Button className="w-full text-xs font-bold uppercase" disabled={submittingNote}>
-                                    {submittingNote ? 'Saving...' : 'Add Note'}
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Activity Type</label>
+                                    <Select value={activityType} onValueChange={setActivityType}>
+                                        <SelectTrigger className="w-full bg-white"><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="note">Note / Remark</SelectItem>
+                                            <SelectItem value="call">Phone Call</SelectItem>
+                                            <SelectItem value="whatsapp">WhatsApp Message</SelectItem>
+                                            <SelectItem value="email">Email Sent</SelectItem>
+                                            <SelectItem value="meeting">Meeting / Demo</SelectItem>
+                                            <SelectItem value="sms">SMS Text</SelectItem>
+                                            <SelectItem value="social_media">Social Media DM</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-[10px] font-bold text-slate-400 uppercase">Notes / Details</label>
+                                    <textarea
+                                        className="w-full min-h-[80px] p-3 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        placeholder={activityType === 'note' ? "Type important details here..." : `Details about the ${activityType} contact...`}
+                                        value={note}
+                                        onChange={(e) => setNote(e.target.value)}
+                                    />
+                                </div>
+                                <Button className="w-full text-xs font-bold uppercase bg-blue-600 hover:bg-blue-700 text-white" disabled={submittingNote}>
+                                    {submittingNote ? 'Saving...' : (activityType === 'note' ? 'Add Note' : 'Log Activity')}
                                 </Button>
                             </form>
                         </CardContent>
@@ -501,22 +605,22 @@ const LeadDetails = () => {
             </div>
 
             <Dialog open={isConvertOpen} onOpenChange={setIsConvertOpen}>
-                <DialogContent className="max-w-md bg-white p-6 rounded-lg shadow-xl max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl bg-white p-6 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-bold">Convert Lead to Client</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleConvertSubmit} className="space-y-4 pt-2">
                         {isPrivileged ? (
-                            <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase">Deal Type</label>
                                     <Select 
                                         value={conversionData.dealType} 
                                         onValueChange={(v) => {
                                             handleConversionChange('dealType', v);
-                                            if (v === 'monthly_subscription') handleConversionChange('planType', 'monthly_growth');
-                                            else if (v === 'lifetime_deal') handleConversionChange('planType', 'lifetime_deal');
-                                            else if (v === 'enterprise') handleConversionChange('planType', 'enterprise');
+                                            if (['monthly_subscription', 'weekly', 'monthly'].includes(v)) handleConversionChange('planType', 'monthly_growth');
+                                            else if (['lifetime_deal', 'one_time'].includes(v)) handleConversionChange('planType', 'one_time');
+                                            else if (['enterprise', 'annual'].includes(v)) handleConversionChange('planType', 'annual');
                                         }}
                                     >
                                         <SelectTrigger><SelectValue /></SelectTrigger>
@@ -524,35 +628,18 @@ const LeadDetails = () => {
                                             <SelectItem value="monthly_subscription">Monthly Subscription</SelectItem>
                                             <SelectItem value="lifetime_deal">Lifetime Deal (One Time)</SelectItem>
                                             <SelectItem value="enterprise">Enterprise Contract</SelectItem>
+                                            <SelectItem value="one_time">One Time Deal</SelectItem>
+                                            <SelectItem value="weekly">Weekly Subscription</SelectItem>
+                                            <SelectItem value="monthly">Monthly Plan</SelectItem>
+                                            <SelectItem value="annual">Annual / Yearly Plan</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
 
-                                <div className="space-y-2">
-                                    <label className="text-xs font-bold text-slate-500 uppercase">Plan Type</label>
-                                    <Select value={conversionData.planType} onValueChange={(v) => handleConversionChange('planType', v)}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            {conversionData.dealType === 'monthly_subscription' && (
-                                                <>
-                                                    <SelectItem value="monthly_starter">Monthly Starter</SelectItem>
-                                                    <SelectItem value="monthly_growth">Monthly Growth</SelectItem>
-                                                    <SelectItem value="monthly_pro">Monthly Pro</SelectItem>
-                                                </>
-                                            )}
-                                            {conversionData.dealType === 'lifetime_deal' && (
-                                                <SelectItem value="lifetime_deal">Lifetime Deal</SelectItem>
-                                            )}
-                                            {conversionData.dealType === 'enterprise' && (
-                                                <SelectItem value="enterprise">Enterprise</SelectItem>
-                                            )}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
 
-                                {conversionData.dealType === 'monthly_subscription' && (
+                                {['monthly_subscription', 'weekly', 'monthly'].includes(conversionData.dealType) && (
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-500 uppercase">Monthly Subscription Amount (USD)</label>
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Subscription / Plan Amount (USD)</label>
                                         <Input
                                             type="number"
                                             required
@@ -563,9 +650,9 @@ const LeadDetails = () => {
                                     </div>
                                 )}
 
-                                {conversionData.dealType === 'lifetime_deal' && (
+                                {['lifetime_deal', 'one_time'].includes(conversionData.dealType) && (
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-500 uppercase">One Time Amount (USD)</label>
+                                        <label className="text-xs font-bold text-slate-500 uppercase">One Time / Lifetime Amount (USD)</label>
                                         <Input
                                             type="number"
                                             required
@@ -576,9 +663,9 @@ const LeadDetails = () => {
                                     </div>
                                 )}
 
-                                {conversionData.dealType === 'enterprise' && (
+                                {['enterprise', 'annual'].includes(conversionData.dealType) && (
                                     <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-500 uppercase">Enterprise Value Amount (USD)</label>
+                                        <label className="text-xs font-bold text-slate-500 uppercase">Contract / Enterprise Amount (USD)</label>
                                         <Input
                                             type="number"
                                             required
@@ -589,28 +676,27 @@ const LeadDetails = () => {
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-500 uppercase">Upfront Paid (USD)</label>
-                                        <Input
-                                            type="number"
-                                            value={conversionData.upfrontPaid || ''}
-                                            placeholder="e.g. 100"
-                                            onChange={(e) => handleConversionChange('upfrontPaid', e.target.value)}
-                                        />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold text-slate-500 uppercase">Remaining Amount (USD)</label>
-                                        <Input
-                                            type="number"
-                                            value={conversionData.remainingAmount || ''}
-                                            placeholder="e.g. 400"
-                                            onChange={(e) => handleConversionChange('remainingAmount', e.target.value)}
-                                        />
-                                    </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Upfront Paid (USD)</label>
+                                    <Input
+                                        type="number"
+                                        value={conversionData.upfrontPaid || ''}
+                                        placeholder="e.g. 100"
+                                        onChange={(e) => handleConversionChange('upfrontPaid', e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase">Remaining Amount (USD)</label>
+                                    <Input
+                                        type="number"
+                                        value={conversionData.remainingAmount || ''}
+                                        placeholder="Remaining..."
+                                        disabled
+                                        className="bg-slate-50 cursor-not-allowed font-bold"
+                                    />
                                 </div>
 
-                                <div className="space-y-2">
+                                <div className="space-y-2 md:col-span-2">
                                     <label className="text-xs font-bold text-slate-500 uppercase block mb-1">Engaged Team Members & Commissions</label>
                                     {(conversionData.engagedTeam || []).map((member, index) => (
                                         <div key={index} className="flex gap-2 items-center mb-2 bg-slate-50 p-2 rounded border">
@@ -697,7 +783,7 @@ const LeadDetails = () => {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                            </>
+                            </div>
                         ) : (
                             <div className="text-center py-6 text-slate-600">
                                 <p>Are you sure you want to convert this lead into a client?</p>

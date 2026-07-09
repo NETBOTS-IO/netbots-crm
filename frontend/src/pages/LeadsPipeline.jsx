@@ -17,6 +17,8 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import { exportTableToPDF } from '../utils/pdfExport';
+import { FileDown } from 'lucide-react';
 
 const LeadsPipeline = () => {
     const [leads, setLeads] = useState([]);
@@ -45,6 +47,20 @@ const LeadsPipeline = () => {
     const canAdd = currentUser?.role === 'admin' || currentUser?.permissions?.can_add_leads;
     const canEdit = currentUser?.role === 'admin' || currentUser?.permissions?.can_edit_leads;
     const canBulkManage = currentUser?.role === 'admin' || currentUser?.permissions?.can_bulk_manage_leads;
+
+    const handleExportPDF = () => {
+        const headers = ["Lead Name", "Business Name", "Phone", "Email", "Stage", "Priority", "Temp"];
+        const rows = leads.map(l => [
+            l.contactName || 'N/A',
+            l.companyName || 'N/A',
+            l.phone || 'N/A',
+            l.email || 'N/A',
+            l.stage || 'N/A',
+            l.priority || 'N/A',
+            l.temperature || 'N/A'
+        ]);
+        exportTableToPDF("Leads Pipeline Registry", headers, rows, `Leads_Export_${Date.now()}.pdf`);
+    };
 
     const fetchLeads = useCallback(async () => {
         setLoading(true);
@@ -262,6 +278,11 @@ const LeadsPipeline = () => {
                         />
                     </div>
                     <div className="flex gap-2 w-full md:w-auto items-center justify-end">
+                        {currentUser?.role === 'admin' && (
+                            <Button variant="outline" size="sm" className="gap-2 border-red-200 text-red-700 hover:bg-red-50" onClick={handleExportPDF}>
+                                <FileDown size={14} /> Export to PDF
+                            </Button>
+                        )}
                         <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate('/import/leads')}>
                             <Upload size={14} /> Import CSV
                         </Button>

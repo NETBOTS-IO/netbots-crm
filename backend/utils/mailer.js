@@ -130,7 +130,26 @@ const sendMonthlyProgressEmail = async (email, memberName, data) => {
     return sendMail(email, `Monthly Performance Report - ${memberName}`, html);
 };
 
+const sendMailWithAttachment = async (to, subject, html, attachments = []) => {
+    try {
+        const info = await transporter.sendMail({
+            from: `"NetBots CRM" <${process.env.SMTP_USER || 'crm@netbots.io'}>`,
+            to,
+            subject,
+            html,
+            attachments
+        });
+        console.log('Email sent: %s', info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('Mail sending failed:', error);
+        return { success: false, error };
+    }
+};
+
 module.exports = {
+    sendMail,
+    sendMailWithAttachment,
     sendDailySummary,
     sendLeadConversionEmail,
     sendMonthlyProgressEmail

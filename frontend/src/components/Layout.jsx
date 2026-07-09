@@ -12,12 +12,14 @@ import {
     ChevronRight,
     Trophy,
     Wallet,
-    FileText
+    FileText,
+    BarChart3
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import TimeTrackerDisplay from './TimeTrackerDisplay';
+import AgreementModal from './AgreementModal';
 
 const SidebarLink = ({ to, icon: Icon, label, active, onClick }) => (
     <Link
@@ -86,18 +88,20 @@ const Layout = () => {
         { to: '/', icon: LayoutDashboard, label: 'Dashboard', permission: 'view_dashboard' },
         { to: '/leads', icon: ClipboardList, label: 'Leads Pipeline', permission: 'can_view_leads' },
         { to: '/clients', icon: UserSquare2, label: 'Clients', permission: 'manage_clients' },
+        { to: '/performance', icon: BarChart3, label: 'Performance Stats', permission: 'view_dashboard' },
         { to: '/team', icon: Users, label: 'Team', permission: 'manage_team' },
         { to: '/permissions', icon: UserSquare2, label: 'Permissions', permission: 'manage_permissions' },
         { to: '/commissions', icon: IndianRupee, label: 'Commissions', permission: 'view_commissions' },
         { to: '/payouts', icon: Wallet, label: 'Payouts', permission: 'manage_payouts' },
         { to: '/leaderboard', icon: Trophy, label: 'Leaderboard', permission: 'view_leaderboard' },
-        { to: '/audit-logs', icon: FileText, label: 'Audit Logs', permission: 'manage_permissions' }, // reuse manage_permissions or check role === admin
+        { to: '/audit-logs', icon: FileText, label: 'Audit Logs', permission: 'manage_permissions' },
     ];
 
     const filteredMenu = menuItems.filter(item => user?.role === 'admin' || user?.permissions?.[item.permission]);
 
     return (
         <div className="flex min-h-screen bg-slate-50 overflow-x-hidden">
+            {user && !user.agreementSigned && <AgreementModal />}
             {/* Mobile Backdrop Overlay */}
             {isMobileMenuOpen && (
                 <div 
@@ -111,8 +115,10 @@ const Layout = () => {
                 "fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 md:fixed md:h-screen md:top-0",
                 isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
             )}>
-                <div className="p-6 flex items-center justify-between">
-                    <h1 className="text-2xl font-bold tracking-tight">NetBots <span className="text-blue-500">CRM</span></h1>
+                <div className="p-4 flex items-center justify-between border-b border-slate-800 mb-2">
+                    <div className="flex items-center gap-2">
+                        <img src="/logo.png" className="h-7 object-contain brightness-0 invert" alt="Net Bots Logo" />
+                    </div>
                     <Button variant="ghost" size="icon" className="md:hidden text-slate-400 hover:text-white" onClick={() => setIsMobileMenuOpen(false)}>
                         <Menu size={20} />
                     </Button>
@@ -159,13 +165,13 @@ const Layout = () => {
                         <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(true)}>
                             <Menu />
                         </Button>
-                        <h2 className="text-lg font-semibold capitalize flex items-center gap-2">
-                            <span className="font-extrabold text-blue-600">NetBots CRM</span>
+                        <div className="flex items-center gap-2">
+                            <img src="/logo.png" className="h-6 object-contain" alt="Net Bots Logo" />
                             <span className="text-slate-300">|</span>
-                            <span className="text-slate-500 font-normal">
+                            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">
                                 {location.pathname === '/' ? 'Dashboard' : location.pathname.split('/')[1].replace('-', ' ')}
                             </span>
-                        </h2>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -176,8 +182,8 @@ const Layout = () => {
                 <div className="p-4 md:p-8 flex-1 overflow-y-auto">
                     <Outlet />
                 </div>
-                <footer className="py-4 text-center text-xs text-slate-400 bg-white border-t">
-                    Developer and property of NetBots (SMC-Private) Limited
+                <footer className="py-4 text-center text-xs text-slate-400 bg-white border-t font-semibold">
+                    Intellectual property of Net Bots  (SMC-PRIVATE) LIMITED
                 </footer>
             </main>
         </div>

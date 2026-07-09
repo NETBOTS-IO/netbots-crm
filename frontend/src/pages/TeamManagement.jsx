@@ -10,18 +10,33 @@ import {
     TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileDown } from 'lucide-react';
 import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
 import { AddTeamMemberDialog } from '@/components/AddTeamMemberDialog';
+import { useAuth } from '@/context/AuthContext';
+import { exportTableToPDF } from '../utils/pdfExport';
 
 export default function TeamManagement() {
+    const { user } = useAuth();
     const [members, setMembers] = useState([]);
     const [stats, setStats] = useState([]);
     const [loading, setLoading] = useState(true);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [memberToEdit, setMemberToEdit] = useState(null);
     const { toast } = useToast();
+
+    const handleExportPDF = () => {
+        const headers = ["Name", "Email", "Role", "Designation", "Joining Date"];
+        const rows = members.map(m => [
+            m.name || 'N/A',
+            m.email || 'N/A',
+            m.role || 'N/A',
+            m.designation || 'N/A',
+            m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : 'N/A'
+        ]);
+        exportTableToPDF("Team Members Registry Report", headers, rows, `Team_Members_${Date.now()}.pdf`);
+    };
 
     const fetchTeam = async () => {
         setLoading(true);
@@ -78,9 +93,16 @@ export default function TeamManagement() {
             <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xl font-bold">Team Members</CardTitle>
-                    <Button size="sm" className="gap-2" onClick={() => { setMemberToEdit(null); setIsDialogOpen(true); }}>
-                        <Plus size={14} /> Add Member
-                    </Button>
+                    <div className="flex gap-2">
+                        {user?.role === 'admin' && (
+                            <Button variant="outline" size="sm" className="gap-2 border-red-200 text-red-700 hover:bg-red-50" onClick={handleExportPDF}>
+                                <FileDown size={14} /> Export to PDF
+                            </Button>
+                        )}
+                        <Button size="sm" className="gap-2" onClick={() => { setMemberToEdit(null); setIsDialogOpen(true); }}>
+                            <Plus size={14} /> Add Member
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent className="overflow-x-auto">
                     <Table>
@@ -105,7 +127,7 @@ export default function TeamManagement() {
                                     <TableCell className="capitalize">{member.role?.replace('_', ' ')}</TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className="capitalize">
-                                            {member.rank?.currentRank || 'Trainee'}
+                                            {member.rank ? member.rank.replace('_', ' ') : 'Trainee'}
                                         </Badge>
                                     </TableCell>
                                     <TableCell>{member.points || 0}</TableCell>

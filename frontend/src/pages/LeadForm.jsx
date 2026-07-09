@@ -9,9 +9,11 @@ import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Info } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 const LeadForm = () => {
     const { id } = useParams();
+    const { user: currentUser } = useAuth();
     const navigate = useNavigate();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
@@ -54,8 +56,20 @@ const LeadForm = () => {
         saturdayHours: '',
         sundayHours: '',
         lastContactedAt: '',
-        followUpDate: ''
+        followUpDate: '',
+        targetService: '',
+        contactedBy: '',
+        contactMethod: ''
     });
+
+    useEffect(() => {
+        if (!id && currentUser) {
+            setFormData(prev => ({
+                ...prev,
+                contactedBy: currentUser.name || currentUser.email || ''
+            }));
+        }
+    }, [id, currentUser]);
 
     useEffect(() => {
         if (id) {
@@ -74,7 +88,9 @@ const LeadForm = () => {
                             ...prev,
                             ...leadData,
                             lastContactedAt: formatDate(leadData.lastContactedAt),
-                            followUpDate: formatDate(leadData.followUpDate)
+                            followUpDate: formatDate(leadData.followUpDate),
+                            contactedBy: leadData.contactedBy || '',
+                            contactMethod: leadData.contactMethod || ''
                         }));
                     }
                 } catch (err) {
@@ -93,6 +109,25 @@ const LeadForm = () => {
             if (payload.lastContactedAt === '') payload.lastContactedAt = null;
             if (payload.followUpDate === '') payload.followUpDate = null;
             if (payload.demoDate === '') payload.demoDate = null;
+            
+            // Auto set contactedBy to the logged in user modifying the form
+            payload.contactedBy = currentUser?.name || currentUser?.email || 'Unknown';
+            
+            // Clean empty strings for numeric fields
+            const numericFields = ['reviewCount', 'averageRating', 'latitude', 'longitude'];
+            numericFields.forEach(field => {
+                if (payload[field] === '') {
+                    delete payload[field];
+                }
+            });
+
+            // Clean empty strings for enums to prevent validation errors
+            const enumFields = ['targetService', 'contactMethod', 'businessType'];
+            enumFields.forEach(field => {
+                if (payload[field] === '') {
+                    delete payload[field];
+                }
+            });
 
             const res = id
                 ? await api.put(`/leads/${id}`, payload)
@@ -491,6 +526,22 @@ const LeadForm = () => {
                             <TabsContent value="action" className="space-y-4 pt-2">
                                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Lead Action & Status Controls</h3>
                                 <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2 col-span-2 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                                        <Label className="font-bold text-blue-900">Target Service / Product Offered</Label>
+                                        <Select value={formData.targetService || ''} onValueChange={(v) => handleChange('targetService', v)}>
+                                            <SelectTrigger className="bg-white"><SelectValue placeholder="Select target service..." /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="google_business_seo">Google Business SEO</SelectItem>
+                                                <SelectItem value="website_seo">Website SEO</SelectItem>
+                                                <SelectItem value="social_media_management_marketing">Social Media Management & Marketing</SelectItem>
+                                                <SelectItem value="designing">Designing</SelectItem>
+                                                <SelectItem value="software_development">Software Development</SelectItem>
+                                                <SelectItem value="website_development">Website Development</SelectItem>
+                                                <SelectItem value="saas_product">SaaS Product</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-[10px] text-blue-700/80 mt-1">Specify which service or product this prospect is targeted for.</p>
+                                    </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="lastContactedAt">Last Contacted Date & Time</Label>
                                         <Input
@@ -499,7 +550,20 @@ const LeadForm = () => {
                                             value={formData.lastContactedAt || ''}
                                             onChange={(e) => handleChange('lastContactedAt', e.target.value)}
                                         />
-                                        <p className="text-[10px] text-slate-400">Determines if the lead count goes to "Contacted Today" statistic.</p>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Contact Method</Label>
+                                        <Select value={formData.contactMethod || ''} onValueChange={(v) => handleChange('contactMethod', v)}>
+                                            <SelectTrigger><SelectValue placeholder="Select contact method..." /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="call">Call</SelectItem>
+                                                <SelectItem value="whatsapp">WhatsApp</SelectItem>
+                                                <SelectItem value="email">Email</SelectItem>
+                                                <SelectItem value="meeting">Meeting</SelectItem>
+                                                <SelectItem value="sms">SMS</SelectItem>
+                                                <SelectItem value="social_media">Social Media</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="followUpDate">Next Scheduled Follow-up Date & Time</Label>

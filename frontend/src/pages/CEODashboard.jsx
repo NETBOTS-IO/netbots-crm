@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import {
     TrendingUp,
     Users,
@@ -14,6 +15,9 @@ import {
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/context/AuthContext';
+import { exportTableToPDF } from '../utils/pdfExport';
+import { FileDown } from 'lucide-react';
 
 const StatCard = ({ title, value, icon: Icon, colorClass = "text-slate-600 bg-slate-100" }) => (
     <Card className="hover:shadow-md transition-shadow">
@@ -30,6 +34,7 @@ const StatCard = ({ title, value, icon: Icon, colorClass = "text-slate-600 bg-sl
 );
 
 const CEODashboard = () => {
+    const { user } = useAuth();
     const [period, setPeriod] = useState('month');
     const [stats, setStats] = useState({
         totalLeads: 0,
@@ -44,6 +49,20 @@ const CEODashboard = () => {
     });
     const [loading, setLoading] = useState(true);
     const { toast } = useToast();
+
+    const handleExportPDF = () => {
+        const headers = ["Metric", "Value"];
+        const rows = [
+            ["Total Leads", stats.totalLeads],
+            ["Total Outreach Calls", stats.totalCalls],
+            ["Closed Deals / Sales", stats.closedLeads],
+            ["Commitment Status Leads", stats.commitmentLeads],
+            ["Total Sales Value (PKR)", `PKR ${stats.salesAmount.toLocaleString()}`],
+            ["Total Upfront Paid (PKR)", `PKR ${stats.totalUpfront.toLocaleString()}`],
+            ["Total Remaining (PKR)", `PKR ${stats.totalRemaining.toLocaleString()}`]
+        ];
+        exportTableToPDF("Admin Analytics Performance Report", headers, rows, `Dashboard_Analytics_${Date.now()}.pdf`);
+    };
 
     const fetchStats = useCallback(async () => {
         setLoading(true);
@@ -77,6 +96,11 @@ const CEODashboard = () => {
                     <p className="text-xs text-slate-500 font-bold uppercase">Real-Time Performance Overview</p>
                 </div>
                 <div className="flex items-center gap-2 self-start sm:self-auto">
+                    {user?.role === 'admin' && (
+                        <Button variant="outline" onClick={handleExportPDF} className="gap-1.5 h-9 border-red-200 text-red-700 hover:bg-red-50">
+                            <FileDown size={14} /> Export to PDF
+                        </Button>
+                    )}
                     <span className="text-xs font-bold text-slate-500 uppercase shrink-0">Filter by Time:</span>
                     <Select value={period} onValueChange={setPeriod}>
                         <SelectTrigger className="w-[140px] h-9">
@@ -145,8 +169,8 @@ const CEODashboard = () => {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-3xl font-black text-emerald-900">${(stats.salesAmount || 0).toLocaleString()}</div>
-                            <p className="text-[10px] text-emerald-700 font-bold uppercase mt-1">Total contract value in USD</p>
+                            <div className="text-3xl font-black text-emerald-900">PKR {(stats.salesAmount || 0).toLocaleString()}</div>
+                            <p className="text-[10px] text-emerald-700 font-bold uppercase mt-1">Total contract value in PKR</p>
                         </CardContent>
                     </Card>
 
@@ -158,8 +182,8 @@ const CEODashboard = () => {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-3xl font-black text-blue-900">${(stats.totalUpfront || 0).toLocaleString()}</div>
-                            <p className="text-[10px] text-blue-700 font-bold uppercase mt-1">Received collections</p>
+                            <div className="text-3xl font-black text-blue-900">PKR {(stats.totalUpfront || 0).toLocaleString()}</div>
+                            <p className="text-[10px] text-blue-700 font-bold uppercase mt-1">Received collections in PKR</p>
                         </CardContent>
                     </Card>
 
@@ -171,8 +195,8 @@ const CEODashboard = () => {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="text-3xl font-black text-rose-900">${(stats.totalRemaining || 0).toLocaleString()}</div>
-                            <p className="text-[10px] text-rose-700 font-bold uppercase mt-1">Outstanding receivables</p>
+                            <div className="text-3xl font-black text-rose-900">PKR {(stats.totalRemaining || 0).toLocaleString()}</div>
+                            <p className="text-[10px] text-rose-700 font-bold uppercase mt-1">Outstanding receivables in PKR</p>
                         </CardContent>
                     </Card>
                 </div>

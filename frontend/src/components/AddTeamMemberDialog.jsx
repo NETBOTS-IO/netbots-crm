@@ -27,7 +27,8 @@ export function AddTeamMemberDialog({ open, setOpen, onSuccess, memberToEdit = n
         password: memberToEdit ? '' : 'ChangeMe123!',
         role: memberToEdit?.role || 'lead_gen',
         designation: memberToEdit?.designation || '',
-        phone: memberToEdit?.phone || ''
+        phone: memberToEdit?.phone || '',
+        rank: memberToEdit?.rank || 'rookie'
     });
     const [loading, setLoading] = useState(false);
 
@@ -40,7 +41,8 @@ export function AddTeamMemberDialog({ open, setOpen, onSuccess, memberToEdit = n
                 password: '', // blank on edit means don't change
                 role: memberToEdit.role || 'lead_gen',
                 designation: memberToEdit.designation || '',
-                phone: memberToEdit.phone || ''
+                phone: memberToEdit.phone || '',
+                rank: memberToEdit.rank || 'rookie'
             });
         } else {
             setFormData({
@@ -49,7 +51,8 @@ export function AddTeamMemberDialog({ open, setOpen, onSuccess, memberToEdit = n
                 password: 'ChangeMe123!',
                 role: 'lead_gen',
                 designation: '',
-                phone: ''
+                phone: '',
+                rank: 'rookie'
             });
         }
     }, [memberToEdit]);
@@ -133,21 +136,51 @@ export function AddTeamMemberDialog({ open, setOpen, onSuccess, memberToEdit = n
                         </div>
                         <div className="space-y-2">
                             <Label htmlFor="designation">Designation</Label>
-                            <Input
-                                id="designation"
-                                placeholder="e.g. Intern"
+                            <Select
                                 value={formData.designation}
-                                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                            />
+                                onValueChange={(val) => setFormData({ ...formData, designation: val })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select designation" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="admin">Admin</SelectItem>
+                                    <SelectItem value="Supervisor">Supervisor</SelectItem>
+                                    <SelectItem value="LeadCollector">Lead Collector</SelectItem>
+                                    <SelectItem value="LeadVerifier">Lead Verifier</SelectItem>
+                                    <SelectItem value="LeadCloser">Lead Closer</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="phone">Phone (Optional)</Label>
-                        <Input
-                            id="phone"
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="phone">Phone (Optional)</Label>
+                            <Input
+                                id="phone"
+                                value={formData.phone}
+                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="rank">Rank / Tag</Label>
+                            <Select
+                                value={formData.rank}
+                                onValueChange={(val) => setFormData({ ...formData, rank: val })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select rank" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="rookie">Rookie</SelectItem>
+                                    <SelectItem value="hunter">Hunter</SelectItem>
+                                    <SelectItem value="closer">Closer</SelectItem>
+                                    <SelectItem value="elite_closer">Elite Closer</SelectItem>
+                                    <SelectItem value="gold_closer">Gold Closer</SelectItem>
+                                    <SelectItem value="champion">Champion</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
                     {!memberToEdit && (
                         <div className="space-y-2">

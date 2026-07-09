@@ -34,14 +34,32 @@ import {
 } from "lucide-react";
 import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from '@/context/AuthContext';
+import { exportTableToPDF } from '../utils/pdfExport';
+import { FileDown } from 'lucide-react';
 
 const Clients = () => {
+    const { user } = useAuth();
     const { toast } = useToast();
     const [clients, setClients] = useState([]);
     const [team, setTeam] = useState([]);
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [expandedRows, setExpandedRows] = useState({});
+
+    const handleExportPDF = () => {
+        const headers = ["Company Name", "Contact Name", "Email", "Phone", "Plan Type", "Deal Amount", "Contract Status"];
+        const rows = clients.map(c => [
+            c.companyName || 'N/A',
+            c.contactName || 'N/A',
+            c.email || 'N/A',
+            c.phone || 'N/A',
+            c.planType || 'N/A',
+            c.dealAmount ? c.dealAmount.toLocaleString() : '0',
+            c.contractStatus || 'N/A'
+        ]);
+        exportTableToPDF("Clients Directory Registry", headers, rows, `Clients_Export_${Date.now()}.pdf`);
+    };
 
     // CRUD States
     const [isAddEditOpen, setIsAddEditOpen] = useState(false);
@@ -103,6 +121,26 @@ const Clients = () => {
             [id]: !prev[id]
         }));
     };
+
+    const getClientFormTotal = () => {
+        if (['monthly_subscription', 'weekly', 'monthly'].includes(formData.dealType)) return parseFloat(formData.monthlyAmount || 0);
+        if (['lifetime_deal', 'one_time'].includes(formData.dealType)) return parseFloat(formData.lifetimeAmount || 0);
+        if (['enterprise', 'annual'].includes(formData.dealType)) return parseFloat(formData.enterpriseAmount || 0);
+        return 0;
+    };
+
+    useEffect(() => {
+        const total = getClientFormTotal();
+        const upfront = parseFloat(formData.upfrontPaid || 0);
+        const remaining = Math.max(0, total - upfront);
+        setFormData(prev => {
+            const remStr = remaining.toString();
+            if (prev.remainingAmount !== remStr) {
+                return { ...prev, remainingAmount: remStr };
+            }
+            return prev;
+        });
+    }, [formData.monthlyAmount, formData.lifetimeAmount, formData.enterpriseAmount, formData.dealType, formData.upfrontPaid]);
 
     const handleFormChange = (name, value) => {
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -172,9 +210,10 @@ const Clients = () => {
         e.preventDefault();
         const payload = {
             ...formData,
-            monthlyAmount: formData.dealType === 'monthly_subscription' ? parseFloat(formData.monthlyAmount || 0) : undefined,
-            lifetimeAmount: formData.dealType === 'lifetime_deal' ? parseFloat(formData.lifetimeAmount || 0) : undefined,
-            enterpriseAmount: formData.dealType === 'enterprise' ? parseFloat(formData.enterpriseAmount || 0) : undefined,
+            planType: formData.planType || formData.dealType,
+            monthlyAmount: ['monthly_subscription', 'weekly', 'monthly'].includes(formData.dealType) ? parseFloat(formData.monthlyAmount || 0) : undefined,
+            lifetimeAmount: ['lifetime_deal', 'one_time'].includes(formData.dealType) ? parseFloat(formData.lifetimeAmount || 0) : undefined,
+            enterpriseAmount: ['enterprise', 'annual'].includes(formData.dealType) ? parseFloat(formData.enterpriseAmount || 0) : undefined,
             upfrontPaid: parseFloat(formData.upfrontPaid || 0),
             remainingAmount: parseFloat(formData.remainingAmount || 0),
             engagedTeam: formData.engagedTeam
@@ -247,6 +286,11 @@ const Clients = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    {user?.role === 'admin' && (
+                        <Button variant="outline" onClick={handleExportPDF} className="gap-1.5 h-10 border-red-200 text-red-700 hover:bg-red-50">
+                            <FileDown size={16} /> Export to PDF
+                        </Button>
+                    )}
                     <Button onClick={handleOpenAdd} className="gap-1.5 h-10">
                         <Plus size={16} /> Add Client
                     </Button>
@@ -349,8 +393,24 @@ const Clients = () => {
 
                                                     {/* Basic info metadata */}
                                                     <div className="space-y-3 bg-white p-3 rounded border border-slate-100 shadow-sm">
-                                                        <h4 className="font-bold text-slate-800 border-b pb-1.5 uppercase tracking-wider text-[10px]">More Details</h4>
-                                                        <div className="grid grid-cols-2 gap-2">
+                                                        <h4 className="font-bold text-slate-800 border-b pb-1.5 uppercase tracking-wider text-[10px]">Lead Tracking & Assignment Details</h4>
+                                                        <div className="grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">Lead Collected By</span>
+                                                                <span className="font-semibold text-slate-800">{client.leadCollectedBy || 'Unknown'}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">Lead Verified By</span>
+                                                                <span className="font-semibold text-slate-800">{client.leadVerifiedBy || 'System/N/A'}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">Sales Closed By</span>
+                                                                <span className="font-semibold text-slate-800">{client.salesClosedBy || 'Unknown'}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">Lead Creation Date</span>
+                                                                <span className="font-semibold text-slate-800">{client.leadCreatedAt ? new Date(client.leadCreatedAt).toLocaleDateString() : 'N/A'}</span>
+                                                            </div>
                                                             <div>
                                                                 <span className="text-[10px] text-slate-400 font-bold uppercase block">Business Type</span>
                                                                 <span className="font-semibold text-slate-800">{client.businessType || 'N/A'}</span>
@@ -381,7 +441,7 @@ const Clients = () => {
 
             {/* Add / Edit Client Modal */}
             <Dialog open={isAddEditOpen} onOpenChange={setIsAddEditOpen}>
-                <DialogContent className="max-w-xl bg-white p-6 rounded-lg shadow-xl max-h-[85vh] overflow-y-auto">
+                <DialogContent className="max-w-2xl bg-white p-6 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-xl font-bold">{editingClient ? "Edit Client Details" : "Add Client Manually"}</DialogTitle>
                     </DialogHeader>
@@ -421,58 +481,41 @@ const Clients = () => {
 
                         <hr className="my-2" />
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-slate-500 uppercase">Deal Type</label>
-                                <Select value={formData.dealType} onValueChange={(val) => {
-                                    handleFormChange('dealType', val);
-                                    if (val === 'monthly_subscription') handleFormChange('planType', 'monthly_growth');
-                                    else if (val === 'lifetime_deal') handleFormChange('planType', 'lifetime_deal');
-                                    else if (val === 'enterprise') handleFormChange('planType', 'enterprise');
-                                }}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="monthly_subscription">Monthly Subscription</SelectItem>
-                                        <SelectItem value="lifetime_deal">Lifetime Deal</SelectItem>
-                                        <SelectItem value="enterprise">Enterprise</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs font-bold text-slate-500 uppercase">Plan Type</label>
-                                <Select value={formData.planType} onValueChange={(val) => handleFormChange('planType', val)}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {formData.dealType === 'monthly_subscription' && (
-                                            <>
-                                                <SelectItem value="monthly_starter">Monthly Starter</SelectItem>
-                                                <SelectItem value="monthly_growth">Monthly Growth</SelectItem>
-                                                <SelectItem value="monthly_pro">Monthly Pro</SelectItem>
-                                                <SelectItem value="annual">Annual Subscription</SelectItem>
-                                            </>
-                                        )}
-                                        {formData.dealType === 'lifetime_deal' && <SelectItem value="lifetime_deal">Lifetime Deal</SelectItem>}
-                                        {formData.dealType === 'enterprise' && <SelectItem value="enterprise">Enterprise</SelectItem>}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-slate-500 uppercase">Deal Type</label>
+                            <Select value={formData.dealType} onValueChange={(val) => {
+                                handleFormChange('dealType', val);
+                                if (['monthly_subscription', 'weekly', 'monthly'].includes(val)) handleFormChange('planType', 'monthly_growth');
+                                else if (['lifetime_deal', 'one_time'].includes(val)) handleFormChange('planType', 'one_time');
+                                else if (['enterprise', 'annual'].includes(val)) handleFormChange('planType', 'annual');
+                            }}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="monthly_subscription">Monthly Subscription</SelectItem>
+                                    <SelectItem value="lifetime_deal">Lifetime Deal</SelectItem>
+                                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                                    <SelectItem value="one_time">One Time Deal</SelectItem>
+                                    <SelectItem value="weekly">Weekly Subscription</SelectItem>
+                                    <SelectItem value="monthly">Monthly Plan</SelectItem>
+                                    <SelectItem value="annual">Annual / Yearly Plan</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         <div className="grid grid-cols-3 gap-4">
-                            {formData.dealType === 'monthly_subscription' && (
+                            {['monthly_subscription', 'weekly', 'monthly'].includes(formData.dealType) && (
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500 uppercase">Monthly Amt</label>
                                     <Input type="number" required value={formData.monthlyAmount} onChange={(e) => handleFormChange('monthlyAmount', e.target.value)} />
                                 </div>
                             )}
-                            {formData.dealType === 'lifetime_deal' && (
+                            {['lifetime_deal', 'one_time'].includes(formData.dealType) && (
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500 uppercase">Lifetime Amt</label>
                                     <Input type="number" required value={formData.lifetimeAmount} onChange={(e) => handleFormChange('lifetimeAmount', e.target.value)} />
                                 </div>
                             )}
-                            {formData.dealType === 'enterprise' && (
+                            {['enterprise', 'annual'].includes(formData.dealType) && (
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500 uppercase">Enterprise Amt</label>
                                     <Input type="number" required value={formData.enterpriseAmount} onChange={(e) => handleFormChange('enterpriseAmount', e.target.value)} />
@@ -486,7 +529,7 @@ const Clients = () => {
 
                             <div className="space-y-1">
                                 <label className="text-xs font-bold text-slate-500 uppercase">Remaining Amt</label>
-                                <Input type="number" value={formData.remainingAmount} onChange={(e) => handleFormChange('remainingAmount', e.target.value)} />
+                                <Input type="number" value={formData.remainingAmount} disabled className="bg-slate-50 cursor-not-allowed font-bold" />
                             </div>
                         </div>
 
@@ -569,7 +612,9 @@ const Clients = () => {
                 <DialogContent className="max-w-3xl bg-white p-6 rounded-lg shadow-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader className="border-b pb-4">
                         <DialogTitle className="text-xl font-bold flex justify-between items-center">
-                            <span>{selectedClientDetail?.companyName}</span>
+                            <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedClientDetail?.companyName)}`} target="_blank" rel="noopener noreferrer" className="hover:underline text-blue-600 hover:text-blue-800" title="Click to search on Google Maps">
+                                {selectedClientDetail?.companyName}
+                            </a>
                             <Badge className={selectedClientDetail?.isActive ? "bg-emerald-500" : "bg-slate-500"}>
                                 {selectedClientDetail?.isActive ? "ACTIVE CLIENT" : "CHURNED"}
                             </Badge>
@@ -583,20 +628,70 @@ const Clients = () => {
                                 <div>
                                     <h4 className="text-xs font-black uppercase text-slate-400 mb-2 tracking-wider">Client & Contact Info</h4>
                                     <div className="space-y-1.5 text-sm font-semibold">
-                                        <p><span className="text-slate-400">Contact:</span> {selectedClientDetail.contactName || 'N/A'}</p>
-                                        <p><span className="text-slate-400">Email:</span> {selectedClientDetail.email || 'N/A'}</p>
-                                        <p><span className="text-slate-400">Phone:</span> {selectedClientDetail.phone || 'N/A'}</p>
-                                        <p><span className="text-slate-400">City:</span> {selectedClientDetail.city || 'N/A'}</p>
+                                        <p><span className="text-slate-400 font-bold">Contact:</span> {selectedClientDetail.contactName || 'N/A'}</p>
+                                        <p>
+                                            <span className="text-slate-400 font-bold">Email:</span>{' '}
+                                            {selectedClientDetail.email ? (
+                                                <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${selectedClientDetail.email}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                                    {selectedClientDetail.email}
+                                                </a>
+                                            ) : 'N/A'}
+                                        </p>
+                                        <p>
+                                            <span className="text-slate-400 font-bold">Phone:</span>{' '}
+                                            {selectedClientDetail.phone ? (
+                                                <a href={`https://web.whatsapp.com/send?phone=${selectedClientDetail.phone.replace(/\D/g, '')}`} target="_blank" rel="noopener noreferrer" className="text-emerald-600 hover:underline">
+                                                    {selectedClientDetail.phone}
+                                                </a>
+                                            ) : 'N/A'}
+                                        </p>
+                                        <p>
+                                            <span className="text-slate-400 font-bold">Location:</span>{' '}
+                                            {selectedClientDetail.city || selectedClientDetail.billingAddress ? (
+                                                <a href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedClientDetail.billingAddress || selectedClientDetail.city)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                                                    {selectedClientDetail.city || selectedClientDetail.billingAddress}
+                                                </a>
+                                            ) : 'N/A'}
+                                        </p>
                                     </div>
                                 </div>
                                 <div>
                                     <h4 className="text-xs font-black uppercase text-slate-400 mb-2 tracking-wider">Contract Details</h4>
                                     <div className="space-y-1.5 text-sm font-semibold">
-                                        <p><span className="text-slate-400">Plan:</span> <span className="capitalize">{selectedClientDetail.planType?.replace(/_/g, ' ')}</span></p>
-                                        <p><span className="text-slate-400">Start Date:</span> {selectedClientDetail.startDate ? new Date(selectedClientDetail.startDate).toLocaleDateString() : 'N/A'}</p>
-                                        <p><span className="text-slate-400">Upfront Paid:</span> ${(selectedClientDetail.upfrontPaid || 0).toLocaleString()}</p>
-                                        <p><span className="text-slate-400">Remaining Amount:</span> ${(selectedClientDetail.remainingAmount || 0).toLocaleString()}</p>
+                                        <p><span className="text-slate-400 font-bold">Plan:</span> <span className="capitalize">{selectedClientDetail.planType?.replace(/_/g, ' ')}</span></p>
+                                        <p><span className="text-slate-400 font-bold">Start Date:</span> {selectedClientDetail.startDate ? new Date(selectedClientDetail.startDate).toLocaleDateString() : 'N/A'}</p>
+                                        <p><span className="text-slate-400 font-bold">Upfront Paid:</span> ${(selectedClientDetail.upfrontPaid || 0).toLocaleString()}</p>
+                                        <p><span className="text-slate-400 font-bold">Remaining Amount:</span> ${(selectedClientDetail.remainingAmount || 0).toLocaleString()}</p>
                                     </div>
+                                </div>
+                            </div>
+
+                            {/* Tracking & Service Info */}
+                            <div className="bg-slate-50/50 p-4 rounded-lg border border-slate-100 grid grid-cols-2 md:grid-cols-5 gap-4 text-xs font-semibold">
+                                <div>
+                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Target Service</span>
+                                    <Badge variant="outline" className="mt-1 bg-blue-50 text-blue-700 border-blue-200 capitalize font-bold">
+                                        {selectedClientDetail.targetService ? selectedClientDetail.targetService.replace(/_/g, ' ') : 'Not Specified'}
+                                    </Badge>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Lead Collected By</span>
+                                    <span className="text-slate-800 font-bold block mt-1">{selectedClientDetail.leadCollectedBy || 'N/A'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Lead Verified By</span>
+                                    <span className="text-slate-800 font-bold block mt-1">{selectedClientDetail.leadVerifiedBy || 'N/A'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Last Contacted By</span>
+                                    <span className="text-slate-800 font-bold block mt-1">
+                                        {selectedClientDetail.contactedBy || 'N/A'}
+                                        {selectedClientDetail.contactMethod && <span className="text-xs text-slate-500"> ({selectedClientDetail.contactMethod})</span>}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] text-slate-400 uppercase font-black block">Sales Closed By</span>
+                                    <span className="text-slate-800 font-bold block mt-1">{selectedClientDetail.salesClosedBy || 'N/A'}</span>
                                 </div>
                             </div>
 

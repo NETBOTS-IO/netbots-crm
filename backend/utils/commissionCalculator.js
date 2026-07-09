@@ -3,7 +3,7 @@ function calculateCommissions(client, lead) {
   const { dealType, monthlyAmount, lifetimeAmount, enterpriseAmount } = client;
 
   // ─── MONTHLY SUBSCRIPTION ───
-  if (dealType === 'monthly_subscription') {
+  if (['monthly_subscription', 'weekly', 'monthly'].includes(dealType)) {
     const amount = monthlyAmount;
 
     // Lead Researcher: 5% of Month 1 only
@@ -71,8 +71,8 @@ function calculateCommissions(client, lead) {
     }
   }
 
-  // ─── LIFETIME DEAL ───
-  if (dealType === 'lifetime_deal') {
+  // ─── LIFETIME DEAL / ONE TIME ───
+  if (['lifetime_deal', 'one_time'].includes(dealType)) {
     const amount = lifetimeAmount;
 
     if (lead.submittedBy) {
@@ -120,8 +120,8 @@ function calculateCommissions(client, lead) {
     }
   }
 
-  // ─── ENTERPRISE DEAL ───
-  if (dealType === 'enterprise') {
+  // ─── ENTERPRISE / ANNUAL DEAL ───
+  if (['enterprise', 'annual'].includes(dealType)) {
     const amount = enterpriseAmount;
 
     if (lead.submittedBy) {

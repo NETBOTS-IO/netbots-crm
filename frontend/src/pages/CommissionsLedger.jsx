@@ -27,9 +27,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { Pencil, Trash2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Plus, FileDown } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { exportTableToPDF } from '../utils/pdfExport';
 
 const CommissionsLedger = () => {
     const [commissions, setCommissions] = useState([]);
@@ -48,6 +49,18 @@ const CommissionsLedger = () => {
     const { user: currentUser } = useAuth();
     const { toast } = useToast();
     const isPrivileged = currentUser?.role === 'ceo' || currentUser?.role === 'admin';
+
+    const handleExportPDF = () => {
+        const headers = ["Contractor Name", "Commission Amount (PKR)", "Commission Role", "Status", "Date Earned"];
+        const rows = commissions.map(c => [
+            c.earnedBy?.name || 'N/A',
+            c.commissionAmount ? `PKR ${c.commissionAmount.toLocaleString()}` : '0',
+            c.commissionRole || 'N/A',
+            c.status || 'N/A',
+            c.createdAt ? new Date(c.createdAt).toLocaleDateString() : 'N/A'
+        ]);
+        exportTableToPDF("Commissions Ledger Report", headers, rows, `Commissions_Export_${Date.now()}.pdf`);
+    };
 
     const fetchCommissions = useCallback(async () => {
         setLoading(true);
@@ -156,11 +169,18 @@ const CommissionsLedger = () => {
                     <h2 className="text-xl font-bold text-slate-800">Commissions Ledger</h2>
                     <p className="text-xs text-slate-500 font-bold uppercase">View and manage team earnings</p>
                 </div>
-                {isPrivileged && (
-                    <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700" onClick={() => setIsAddOpen(true)}>
-                        <Plus size={14} /> Add Commission
-                    </Button>
-                )}
+                <div className="flex gap-2">
+                    {currentUser?.role === 'admin' && (
+                        <Button variant="outline" size="sm" className="gap-2 border-red-200 text-red-700 hover:bg-red-50" onClick={handleExportPDF}>
+                            <FileDown size={14} /> Export to PDF
+                        </Button>
+                    )}
+                    {isPrivileged && (
+                        <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700" onClick={() => setIsAddOpen(true)}>
+                            <Plus size={14} /> Add Commission
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <Card>

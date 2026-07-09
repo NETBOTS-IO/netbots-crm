@@ -13,12 +13,12 @@ const ClientSchema = new mongoose.Schema({
   taxId: { type: String },
   planType: {
     type: String,
-    enum: ['monthly_starter', 'monthly_growth', 'monthly_pro', 'lifetime_deal', 'enterprise', 'annual'],
-    required: true
+    enum: ['monthly_starter', 'monthly_growth', 'monthly_pro', 'lifetime_deal', 'enterprise', 'annual', 'one_time', 'weekly', 'monthly'],
+    required: false
   },
   dealType: {
     type: String,
-    enum: ['monthly_subscription', 'lifetime_deal', 'enterprise'],
+    enum: ['monthly_subscription', 'lifetime_deal', 'enterprise', 'one_time', 'weekly', 'monthly', 'annual'],
     required: true
   },
   monthlyAmount: { type: Number },
@@ -70,7 +70,21 @@ const ClientSchema = new mongoose.Schema({
   thursdayHours: { type: String },
   fridayHours: { type: String },
   saturdayHours: { type: String },
-  sundayHours: { type: String }
+  sundayHours: { type: String },
+  
+  // Robust Tracking Fields
+  targetService: {
+    type: String,
+    enum: ['google_business_seo', 'website_seo', 'social_media_management_marketing', 'designing', 'software_development', 'website_development', 'saas_product']
+  },
+  leadCollectedBy: { type: String },
+  leadVerifiedBy: { type: String },
+  leadVerifiedAt: { type: Date },
+  leadCreatedAt: { type: Date },
+  contactedBy: { type: String },
+  contactMethod: { type: String },
+  contactedAt: { type: Date },
+  salesClosedBy: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Client', ClientSchema);

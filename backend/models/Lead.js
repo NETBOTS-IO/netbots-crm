@@ -86,7 +86,20 @@ const LeadSchema = new mongoose.Schema({
   thursdayHours: { type: String },
   fridayHours: { type: String },
   saturdayHours: { type: String },
-  sundayHours: { type: String }
+  sundayHours: { type: String },
+  
+  // Robust Tracking Fields
+  targetService: {
+    type: String,
+    enum: ['google_business_seo', 'website_seo', 'social_media_management_marketing', 'designing', 'software_development', 'website_development', 'saas_product']
+  },
+  leadCollectedBy: { type: String },
+  leadVerifiedBy: { type: String },
+  verifiedAt: { type: Date },
+  contactedBy: { type: String },
+  contactMethod: { type: String },
+  contactedAt: { type: Date },
+  salesClosedBy: { type: String }
 }, { timestamps: true });
 
 LeadSchema.pre('save', function(next) {
