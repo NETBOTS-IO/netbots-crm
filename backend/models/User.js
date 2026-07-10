@@ -24,7 +24,7 @@ const UserSchema = new mongoose.Schema({
     view_leaderboard: { type: Boolean, default: true },
     can_bulk_manage_leads: { type: Boolean, default: false }
   },
-  designation: { type: String, default: null },
+  designation: { type: [String], default: [] },
   archetype: {
     type: String,
     enum: ['lead_researcher', 'facebook_manager', 'reddit_specialist', 'sales_closer', 'ca_recruiter', null],
@@ -32,8 +32,8 @@ const UserSchema = new mongoose.Schema({
   },
   rank: {
     type: String,
-    enum: ['rookie', 'hunter', 'closer', 'elite_closer', 'gold_closer', 'champion'],
-    default: 'rookie'
+    enum: [' ', 'hunter', 'closer', 'elite_closer', 'gold_closer', 'champion'],
+    default: ' '
   },
   points: { type: Number, default: 0 },
   totalLeadsSubmitted: { type: Number, default: 0 },

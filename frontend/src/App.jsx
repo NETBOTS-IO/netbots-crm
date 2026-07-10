@@ -17,6 +17,7 @@ import LeadDetails from './pages/LeadDetails';
 import PermissionsManagement from './pages/PermissionsManagement';
 import AuditLogs from './pages/AuditLogs';
 import Performance from './pages/Performance';
+import HelpPage from './pages/HelpPage';
 import { Toaster } from "@/components/ui/toaster"
 
 const PrivateRoute = ({ children }) => {
@@ -51,6 +52,7 @@ function App() {
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="import/leads" element={<ImportWizard />} />
             <Route path="audit-logs" element={<AuditLogs />} />
+            <Route path="help" element={<HelpPage />} />
           </Route>
         </Routes>
       </Router>

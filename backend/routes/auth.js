@@ -23,6 +23,34 @@ router.post('/login', async (req, res) => {
   }
 });
 
+const TEMPLATES = {
+    Supervisor: {
+        view_dashboard: true, can_view_leads: true, can_add_leads: true, can_edit_leads: true,
+        can_delete_leads: true, manage_clients: true, manage_team: true, manage_permissions: true,
+        view_commissions: true, manage_payouts: true, view_leaderboard: true, can_bulk_manage_leads: true
+    },
+    LeadCollector: {
+        view_dashboard: true, can_view_leads: true, can_add_leads: true, can_edit_leads: false,
+        can_delete_leads: false, manage_clients: false, manage_team: false, manage_permissions: false,
+        view_commissions: true, manage_payouts: false, view_leaderboard: true, can_bulk_manage_leads: false
+    },
+    LeadVerifier: {
+        view_dashboard: true, can_view_leads: true, can_add_leads: false, can_edit_leads: true,
+        can_delete_leads: false, manage_clients: false, manage_team: false, manage_permissions: false,
+        view_commissions: true, manage_payouts: false, view_leaderboard: true, can_bulk_manage_leads: false
+    },
+    LeadCloser: {
+        view_dashboard: true, can_view_leads: true, can_edit_leads: true, can_add_leads: false,
+        can_delete_leads: false, manage_clients: true, manage_team: false, manage_permissions: false,
+        view_commissions: true, manage_payouts: false, view_leaderboard: true, can_bulk_manage_leads: false
+    },
+    Reset: {
+        view_dashboard: false, can_view_leads: false, can_add_leads: false, can_edit_leads: false,
+        can_delete_leads: false, manage_clients: false, manage_team: false, manage_permissions: false,
+        view_commissions: false, manage_payouts: false, view_leaderboard: false, can_bulk_manage_leads: false
+    }
+};
+
 // POST /api/auth/register
 // CEO creates new intern/partner accounts
 router.post('/register', auth, requireRole(['ceo', 'admin']), async (req, res) => {
@@ -35,7 +63,26 @@ router.post('/register', auth, requireRole(['ceo', 'admin']), async (req, res) =
     if (user) return res.status(400).json({ success: false, error: 'User already exists' });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    user = new User({ name, email, password: hashedPassword, role, archetype, phone, designation, rank });
+    
+    // Calculate merged permissions from designations array
+    let mergedPermissions = { ...TEMPLATES.Reset };
+    const designationArray = Array.isArray(designation) ? designation : (designation ? [designation] : []);
+    
+    if (designationArray.length > 0) {
+        designationArray.forEach(desig => {
+            const template = TEMPLATES[desig];
+            if (template) {
+                Object.keys(template).forEach(key => {
+                    if (template[key]) mergedPermissions[key] = true;
+                });
+            }
+        });
+    } else {
+        // Fallback for generic roles if no designation selected
+        mergedPermissions = { view_dashboard: true, can_view_leads: true, can_add_leads: true, can_edit_leads: false, can_delete_leads: false, manage_clients: false, manage_team: false, manage_permissions: false, view_commissions: true, manage_payouts: false, view_leaderboard: true, can_bulk_manage_leads: false };
+    }
+    
+    user = new User({ name, email, password: hashedPassword, role, archetype, phone, designation: designationArray, rank, permissions: mergedPermissions });
     await user.save();
     res.json({ success: true, message: 'User created' });
   } catch (err) {

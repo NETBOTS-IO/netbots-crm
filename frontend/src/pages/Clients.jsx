@@ -629,7 +629,7 @@ const Clients = () => {
                                     <h4 className="text-xs font-black uppercase text-slate-400 mb-2 tracking-wider">Client & Contact Info</h4>
                                     <div className="space-y-1.5 text-sm font-semibold">
                                         <p><span className="text-slate-400 font-bold">Contact:</span> {selectedClientDetail.contactName || 'N/A'}</p>
-                                        <p>
+                                        <p className="break-all whitespace-normal">
                                             <span className="text-slate-400 font-bold">Email:</span>{' '}
                                             {selectedClientDetail.email ? (
                                                 <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${selectedClientDetail.email}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">

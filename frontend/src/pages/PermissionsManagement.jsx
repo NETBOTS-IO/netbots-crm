@@ -200,7 +200,7 @@ export default function PermissionsManagement() {
                                         <tr key={member._id} className="hover:bg-slate-50/50">
                                             <td className="px-6 py-4">
                                                 <div className="font-bold text-slate-900">{member.name}</div>
-                                                <div className="text-slate-500 text-[10px] uppercase font-semibold">{member.designation || member.role?.replace('_', ' ')}</div>
+                                                <div className="text-slate-500 text-[10px] uppercase font-semibold">{Array.isArray(member.designation) && member.designation.length > 0 ? member.designation.join(', ') : (member.designation || member.role?.replace('_', ' '))}</div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-wrap gap-1.5 justify-center">

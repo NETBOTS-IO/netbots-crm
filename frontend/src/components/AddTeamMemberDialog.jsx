@@ -26,7 +26,7 @@ export function AddTeamMemberDialog({ open, setOpen, onSuccess, memberToEdit = n
         email: memberToEdit?.email || '',
         password: memberToEdit ? '' : 'ChangeMe123!',
         role: memberToEdit?.role || 'lead_gen',
-        designation: memberToEdit?.designation || '',
+        designation: Array.isArray(memberToEdit?.designation) ? memberToEdit.designation : (memberToEdit?.designation ? [memberToEdit.designation] : []),
         phone: memberToEdit?.phone || '',
         rank: memberToEdit?.rank || 'rookie'
     });
@@ -40,7 +40,7 @@ export function AddTeamMemberDialog({ open, setOpen, onSuccess, memberToEdit = n
                 email: memberToEdit.email || '',
                 password: '', // blank on edit means don't change
                 role: memberToEdit.role || 'lead_gen',
-                designation: memberToEdit.designation || '',
+                designation: Array.isArray(memberToEdit.designation) ? memberToEdit.designation : (memberToEdit.designation ? [memberToEdit.designation] : []),
                 phone: memberToEdit.phone || '',
                 rank: memberToEdit.rank || 'rookie'
             });
@@ -50,7 +50,7 @@ export function AddTeamMemberDialog({ open, setOpen, onSuccess, memberToEdit = n
                 email: '',
                 password: 'ChangeMe123!',
                 role: 'lead_gen',
-                designation: '',
+                designation: [],
                 phone: '',
                 rank: 'rookie'
             });
@@ -134,23 +134,30 @@ export function AddTeamMemberDialog({ open, setOpen, onSuccess, memberToEdit = n
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="designation">Designation</Label>
-                            <Select
-                                value={formData.designation}
-                                onValueChange={(val) => setFormData({ ...formData, designation: val })}
-                            >
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select designation" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="admin">Admin</SelectItem>
-                                    <SelectItem value="Supervisor">Supervisor</SelectItem>
-                                    <SelectItem value="LeadCollector">Lead Collector</SelectItem>
-                                    <SelectItem value="LeadVerifier">Lead Verifier</SelectItem>
-                                    <SelectItem value="LeadCloser">Lead Closer</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="space-y-3">
+                            <Label>Designation (Roles)</Label>
+                            <div className="grid grid-cols-2 gap-2 mt-2 bg-slate-50 p-3 rounded-md border border-slate-100">
+                                {['admin', 'Supervisor', 'LeadCollector', 'LeadVerifier', 'LeadCloser'].map(role => (
+                                    <label key={role} className="flex items-center gap-2 text-xs font-medium cursor-pointer text-slate-700">
+                                        <input
+                                            type="checkbox"
+                                            className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-600"
+                                            checked={(Array.isArray(formData.designation) ? formData.designation : []).includes(role)}
+                                            onChange={(e) => {
+                                                const checked = e.target.checked;
+                                                setFormData(prev => {
+                                                    const current = Array.isArray(prev.designation) ? prev.designation : [];
+                                                    return {
+                                                        ...prev,
+                                                        designation: checked ? [...current, role] : current.filter(d => d !== role)
+                                                    };
+                                                });
+                                            }}
+                                        />
+                                        {role === 'admin' ? 'Admin' : role === 'Supervisor' ? 'Supervisor' : role === 'LeadCollector' ? 'Lead Collector' : role === 'LeadVerifier' ? 'Lead Verifier' : 'Lead Closer'}
+                                    </label>
+                                ))}
+                            </div>
                         </div>
                     </div>
                     <div className="grid grid-cols-2 gap-4">

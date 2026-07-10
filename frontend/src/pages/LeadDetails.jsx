@@ -314,9 +314,9 @@ const LeadDetails = () => {
                                 </div>
                                 <div className="flex items-center gap-3">
                                     <Mail size={18} className="text-slate-400" />
-                                    <div>
+                                    <div className="min-w-0">
                                         <p className="text-[10px] text-slate-400 uppercase font-black">Email</p>
-                                        <p>
+                                        <p className="break-all whitespace-normal text-sm">
                                             {lead.email ? (
                                                 <a href={`https://mail.google.com/mail/?view=cm&fs=1&to=${lead.email}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline hover:text-blue-800" title="Click to email on Gmail Web">
                                                     {lead.email}

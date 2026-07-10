@@ -12,7 +12,7 @@ const CommissionSchema = new mongoose.Schema({
   },
   dealType: {
     type: String,
-    enum: ['monthly_subscription', 'lifetime_deal', 'enterprise'],
+    enum: ['monthly_subscription', 'lifetime_deal', 'enterprise', 'one_time', 'weekly', 'monthly', 'annual'],
     required: true
   },
   dealAmount: { type: Number, required: true },
