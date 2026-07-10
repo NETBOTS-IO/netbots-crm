@@ -82,8 +82,24 @@ const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/netbots_crm';
 
 mongoose.connect(MONGO_URI)
-  .then(() => {
+  .then(async () => {
     console.log('Connected to MongoDB');
+    
+    // One-time migration: convert string designations to arrays for existing users
+    try {
+      const rawCollection = mongoose.connection.db.collection('users');
+      const usersWithStringDesignation = await rawCollection.find({ designation: { $type: 'string' } }).toArray();
+      for (const u of usersWithStringDesignation) {
+        const designationArray = u.designation ? [u.designation] : [];
+        await rawCollection.updateOne({ _id: u._id }, { $set: { designation: designationArray } });
+      }
+      if (usersWithStringDesignation.length > 0) {
+        console.log(`Migrated ${usersWithStringDesignation.length} users: designation string -> array`);
+      }
+    } catch (migrationErr) {
+      console.error('Designation migration error (non-fatal):', migrationErr.message);
+    }
+    
     initCronJobs();
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
   })

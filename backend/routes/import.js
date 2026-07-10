@@ -9,8 +9,12 @@ const { auth, requireRole } = require('../middleware/auth');
 const upload = multer({ dest: 'uploads/' });
 
 // POST /api/import/leads
-// Robust streaming CSV import
-router.post('/leads', auth, requireRole(['ceo', 'admin']), upload.single('file'), (req, res) => {
+// Robust streaming CSV import — Admin or users with can_add_leads permission
+router.post('/leads', auth, upload.single('file'), (req, res) => {
+  // Permission check: admin bypass or can_add_leads
+  if (req.user.role !== 'admin' && (!req.user.permissions || !req.user.permissions.can_add_leads)) {
+    return res.status(403).json({ success: false, error: 'Access denied: Cannot import leads.' });
+  }
   if (!req.file) {
     return res.status(400).json({ success: false, error: 'No file uploaded' });
   }

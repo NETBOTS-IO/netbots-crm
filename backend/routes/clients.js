@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const Client = require('../models/Client');
 const Commission = require('../models/Commission');
-const { auth, requireRole } = require('../middleware/auth');
+const { auth, requireRole, requirePermission } = require('../middleware/auth');
 
-// GET /api/clients - Admin/CEO only
-router.get('/', auth, requireRole(['ceo', 'admin']), async (req, res) => {
+// GET /api/clients - Admin or users with manage_clients permission
+router.get('/', auth, requirePermission('manage_clients'), async (req, res) => {
   try {
     const clients = await Client.find({})
       .populate('closedBy submittedBy caPartner engagedTeam.user')
@@ -16,8 +16,8 @@ router.get('/', auth, requireRole(['ceo', 'admin']), async (req, res) => {
   }
 });
 
-// GET /api/clients/:id - Admin/CEO only
-router.get('/:id', auth, requireRole(['ceo', 'admin']), async (req, res) => {
+// GET /api/clients/:id - Admin or users with manage_clients permission
+router.get('/:id', auth, requirePermission('manage_clients'), async (req, res) => {
   try {
     const client = await Client.findById(req.params.id)
       .populate('closedBy submittedBy caPartner engagedTeam.user');
@@ -28,8 +28,8 @@ router.get('/:id', auth, requireRole(['ceo', 'admin']), async (req, res) => {
   }
 });
 
-// POST /api/clients - Create manually (Admin/CEO only)
-router.post('/', auth, requireRole(['ceo', 'admin']), async (req, res) => {
+// POST /api/clients - Create manually (Admin or manage_clients)
+router.post('/', auth, requirePermission('manage_clients'), async (req, res) => {
   try {
     const client = new Client({
       ...req.body,
@@ -59,8 +59,8 @@ router.post('/', auth, requireRole(['ceo', 'admin']), async (req, res) => {
   }
 });
 
-// PUT /api/clients/:id - Update client (Admin/CEO only)
-router.put('/:id', auth, requireRole(['ceo', 'admin']), async (req, res) => {
+// PUT /api/clients/:id - Update client (Admin or manage_clients)
+router.put('/:id', auth, requirePermission('manage_clients'), async (req, res) => {
   try {
     const client = await Client.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!client) return res.status(404).json({ success: false, error: 'Client not found' });
@@ -90,7 +90,7 @@ router.put('/:id', auth, requireRole(['ceo', 'admin']), async (req, res) => {
   }
 });
 
-// DELETE /api/clients/:id - Delete client (Admin/CEO only)
+// DELETE /api/clients/:id - Delete client (Admin only - destructive operation)
 router.delete('/:id', auth, requireRole(['ceo', 'admin']), async (req, res) => {
   try {
     const client = await Client.findByIdAndDelete(req.params.id);

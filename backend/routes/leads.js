@@ -38,7 +38,8 @@ router.get('/', auth, async (req, res) => {
         convertedToClient: { $ne: true },
         clientId: { $exists: false }
     };
-    if (req.user.role === 'lead_gen') {
+    // Only restrict to own leads if user has NO can_view_leads permission AND is not admin/sales
+    if (req.user.role !== 'admin' && req.user.role !== 'sales' && (!req.user.permissions || !req.user.permissions.can_view_leads)) {
       baseQuery.submittedBy = req.user._id;
     }
 
@@ -250,11 +251,12 @@ router.get('/:id', auth, async (req, res) => {
     const lead = await Lead.findById(req.params.id).populate('submittedBy assignedCloser caPartner');
     if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
 
-    // Ownership check
-    if (req.user.role !== 'admin' && req.user.role !== 'sales') {
-        const isOwner = lead.submittedBy?._id.toString() === req.user._id.toString();
-        const isAssigned = lead.assignedCloser?._id.toString() === req.user._id.toString();
-        const isPartner = lead.caPartner?._id.toString() === req.user._id.toString();
+    // Ownership check — users with can_view_leads bypass ownership restriction
+    const hasViewPermission = req.user.role === 'admin' || req.user.role === 'sales' || (req.user.permissions && req.user.permissions.can_view_leads);
+    if (!hasViewPermission) {
+        const isOwner = lead.submittedBy?._id?.toString() === req.user._id.toString();
+        const isAssigned = lead.assignedCloser?._id?.toString() === req.user._id.toString();
+        const isPartner = lead.caPartner?._id?.toString() === req.user._id.toString();
         
         if (!isOwner && !isAssigned && !isPartner) {
             return res.status(403).json({ success: false, error: 'Access denied' });
@@ -350,7 +352,11 @@ router.put('/:id/stage', auth, async (req, res) => {
 });
 
 // POST /api/leads/:id/convert
-router.post('/:id/convert', auth, requireRole(['admin', 'sales']), async (req, res) => {
+// Allow admin, sales, or anyone with manage_clients permission
+router.post('/:id/convert', auth, async (req, res) => {
+    if (req.user.role !== 'admin' && req.user.role !== 'sales' && (!req.user.permissions || !req.user.permissions.manage_clients)) {
+        return res.status(403).json({ success: false, error: 'Access denied: Cannot convert leads.' });
+    }
     let { 
         planType, 
         dealType, 
