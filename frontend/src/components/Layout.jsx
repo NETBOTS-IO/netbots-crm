@@ -14,7 +14,8 @@ import {
     Wallet,
     FileText,
     BarChart3,
-    HelpCircle
+    HelpCircle,
+    Tag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -96,7 +97,9 @@ const Layout = () => {
         { to: '/payouts', icon: Wallet, label: 'Payouts', permission: 'manage_payouts' },
         { to: '/leaderboard', icon: Trophy, label: 'Leaderboard', permission: 'view_leaderboard' },
         { to: '/audit-logs', icon: FileText, label: 'Audit Logs', permission: 'manage_permissions' },
+        { to: '/packages', icon: Tag, label: 'Packages & Pricing', permission: 'view_dashboard' },
         { to: '/help', icon: HelpCircle, label: 'Help & Docs', permission: 'view_dashboard' },
+
     ];
 
     const filteredMenu = menuItems.filter(item => user?.role === 'admin' || user?.permissions?.[item.permission]);

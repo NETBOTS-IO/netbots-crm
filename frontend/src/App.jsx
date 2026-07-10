@@ -18,7 +18,9 @@ import PermissionsManagement from './pages/PermissionsManagement';
 import AuditLogs from './pages/AuditLogs';
 import Performance from './pages/Performance';
 import HelpPage from './pages/HelpPage';
+import PackagesPricing from './pages/PackagesPricing';
 import { Toaster } from "@/components/ui/toaster"
+
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -52,6 +54,7 @@ function App() {
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="import/leads" element={<ImportWizard />} />
             <Route path="audit-logs" element={<AuditLogs />} />
+            <Route path="packages" element={<PackagesPricing />} />
             <Route path="help" element={<HelpPage />} />
           </Route>
         </Routes>
