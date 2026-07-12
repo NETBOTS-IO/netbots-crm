@@ -58,7 +58,7 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
-app.use(express.static('../frontend'));
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
@@ -77,6 +77,11 @@ app.use('/api/time-tracking', require('./routes/timeTracking'));
 app.use('/api/audit-logs',    require('./routes/auditLogs'));
 app.use('/api/performance',   require('./routes/performance'));
 app.use('/api/agreement',     require('./routes/agreement'));
+
+// Catch-all route to serve compiled React app for frontend routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
+});
 
 const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/netbots_crm';
