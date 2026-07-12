@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
+import RoleGate from './components/RoleGate';
 import LoginPage from './pages/Login';
 import CEODashboard from './pages/CEODashboard';
 import SalesDashboard from './pages/SalesDashboard';
@@ -39,23 +40,120 @@ function App() {
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
-            <Route index element={<Dashboard />} />
-            <Route path="sales-dashboard" element={<SalesDashboard />} />
-            <Route path="leads" element={<LeadsPipeline />} />
-            <Route path="leads/new" element={<LeadForm />} />
-            <Route path="leads/details/:id" element={<LeadDetails />} />
-            <Route path="leads/edit/:id" element={<LeadForm />} />
-            <Route path="clients" element={<Clients />} />
-            <Route path="performance" element={<Performance />} />
-            <Route path="team" element={<TeamManagement />} />
-            <Route path="permissions" element={<PermissionsManagement />} />
-            <Route path="commissions" element={<CommissionsLedger />} />
-            <Route path="payouts" element={<Payouts />} />
-            <Route path="leaderboard" element={<Leaderboard />} />
-            <Route path="import/leads" element={<ImportWizard />} />
-            <Route path="audit-logs" element={<AuditLogs />} />
-            <Route path="packages" element={<PackagesPricing />} />
+
+            {/* Dashboard — requires view_dashboard */}
+            <Route index element={
+              <RoleGate permission="view_dashboard" action="View Dashboard">
+                <Dashboard />
+              </RoleGate>
+            } />
+
+            {/* Sales Dashboard — admin only */}
+            <Route path="sales-dashboard" element={
+              <RoleGate adminOnly action="View Sales Dashboard">
+                <SalesDashboard />
+              </RoleGate>
+            } />
+
+            {/* Leads Pipeline — requires can_view_leads */}
+            <Route path="leads" element={
+              <RoleGate permission="can_view_leads" action="View Leads Pipeline">
+                <LeadsPipeline />
+              </RoleGate>
+            } />
+
+            {/* Add Lead — requires can_add_leads */}
+            <Route path="leads/new" element={
+              <RoleGate permission="can_add_leads" action="Add New Lead">
+                <LeadForm />
+              </RoleGate>
+            } />
+
+            {/* Lead Details — requires can_view_leads */}
+            <Route path="leads/details/:id" element={
+              <RoleGate permission="can_view_leads" action="View Lead Details">
+                <LeadDetails />
+              </RoleGate>
+            } />
+
+            {/* Edit Lead — requires can_edit_leads (LeadForm itself also checks lock-claim bypass) */}
+            <Route path="leads/edit/:id" element={
+              <LeadForm />
+            } />
+
+            {/* Clients — requires manage_clients */}
+            <Route path="clients" element={
+              <RoleGate permission="manage_clients" action="Manage Clients">
+                <Clients />
+              </RoleGate>
+            } />
+
+            {/* Performance — requires view_dashboard */}
+            <Route path="performance" element={
+              <RoleGate permission="view_dashboard" action="View Performance Stats">
+                <Performance />
+              </RoleGate>
+            } />
+
+            {/* Team — requires manage_team */}
+            <Route path="team" element={
+              <RoleGate permission="manage_team" action="Manage Team">
+                <TeamManagement />
+              </RoleGate>
+            } />
+
+            {/* Permissions — requires manage_permissions */}
+            <Route path="permissions" element={
+              <RoleGate permission="manage_permissions" action="Manage Permissions">
+                <PermissionsManagement />
+              </RoleGate>
+            } />
+
+            {/* Commissions — requires view_commissions */}
+            <Route path="commissions" element={
+              <RoleGate permission="view_commissions" action="View Commissions">
+                <CommissionsLedger />
+              </RoleGate>
+            } />
+
+            {/* Payouts — requires manage_payouts */}
+            <Route path="payouts" element={
+              <RoleGate permission="manage_payouts" action="Manage Payouts">
+                <Payouts />
+              </RoleGate>
+            } />
+
+            {/* Leaderboard — requires view_leaderboard */}
+            <Route path="leaderboard" element={
+              <RoleGate permission="view_leaderboard" action="View Leaderboard">
+                <Leaderboard />
+              </RoleGate>
+            } />
+
+            {/* Import Leads — requires can_add_leads */}
+            <Route path="import/leads" element={
+              <RoleGate permission="can_add_leads" action="Import Leads">
+                <ImportWizard />
+              </RoleGate>
+            } />
+
+            {/* Audit Logs — admin only */}
+            <Route path="audit-logs" element={
+              <RoleGate adminOnly action="View Audit Logs">
+                <AuditLogs />
+              </RoleGate>
+            } />
+
+            {/* Packages & Pricing — admin only */}
+            <Route path="packages" element={
+              <RoleGate adminOnly action="Manage Packages & Pricing">
+                <PackagesPricing />
+              </RoleGate>
+            } />
+
+            {/* Help — open to all */}
             <Route path="help" element={<HelpPage />} />
+
           </Route>
         </Routes>
       </Router>

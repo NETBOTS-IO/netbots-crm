@@ -10,15 +10,17 @@ import {
     TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, FileDown } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileDown, UserRoundCog } from 'lucide-react';
 import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
 import { AddTeamMemberDialog } from '@/components/AddTeamMemberDialog';
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { exportTableToPDF } from '../utils/pdfExport';
 
 export default function TeamManagement() {
-    const { user } = useAuth();
+    const { user, impersonateUser, isImpersonating } = useAuth();
+    const { isAdmin } = usePermissions();
     const [members, setMembers] = useState([]);
     const [stats, setStats] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -26,13 +28,23 @@ export default function TeamManagement() {
     const [memberToEdit, setMemberToEdit] = useState(null);
     const { toast } = useToast();
 
+    const handleImpersonate = async (member) => {
+        if (!window.confirm(`Switch to ${member.name}'s account? You can exit anytime from the banner at the top.`)) return;
+        try {
+            await impersonateUser(member._id);
+        } catch (err) {
+            const msg = typeof err === 'string' ? err : (err.error || err.message || 'Failed to switch account');
+            toast({ variant: 'destructive', title: 'Switch Failed', description: msg });
+        }
+    };
+
     const handleExportPDF = () => {
-        const headers = ["Name", "Email", "Role", "Designation", "Joining Date"];
+        const headers = ["Name", "Email", "Role (Multiple)", "Title (Single)", "Joining Date"];
         const rows = members.map(m => [
             m.name || 'N/A',
             m.email || 'N/A',
+            Array.isArray(m.designation) ? m.designation.join(', ') : (m.designation || 'N/A'),
             m.role || 'N/A',
-            m.designation || 'N/A',
             m.joinedAt ? new Date(m.joinedAt).toLocaleDateString() : 'N/A'
         ]);
         exportTableToPDF("Team Members Registry Report", headers, rows, `Team_Members_${Date.now()}.pdf`);
@@ -94,14 +106,16 @@ export default function TeamManagement() {
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xl font-bold">Team Members</CardTitle>
                     <div className="flex gap-2">
-                        {user?.role === 'admin' && (
-                            <Button variant="outline" size="sm" className="gap-2 border-red-200 text-red-700 hover:bg-red-50" onClick={handleExportPDF}>
-                                <FileDown size={14} /> Export to PDF
-                            </Button>
-                        )}
+                    {isAdmin && (
+                        <Button variant="outline" size="sm" className="gap-2 border-red-200 text-red-700 hover:bg-red-50" onClick={handleExportPDF}>
+                            <FileDown size={14} /> Export to PDF
+                        </Button>
+                    )}
+                    {isAdmin && (
                         <Button size="sm" className="gap-2" onClick={() => { setMemberToEdit(null); setIsDialogOpen(true); }}>
                             <Plus size={14} /> Add Member
                         </Button>
+                    )}
                     </div>
                 </CardHeader>
                 <CardContent className="overflow-x-auto">
@@ -109,8 +123,8 @@ export default function TeamManagement() {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>Name</TableHead>
-                                <TableHead>Designation</TableHead>
                                 <TableHead>Role</TableHead>
+                                <TableHead>Title</TableHead>
                                 <TableHead>Rank</TableHead>
                                 <TableHead>Points</TableHead>
                                 <TableHead>Email</TableHead>
@@ -122,7 +136,7 @@ export default function TeamManagement() {
                                 <TableRow key={member._id}>
                                     <TableCell className="font-medium">{member.name}</TableCell>
                                     <TableCell className="text-sm font-semibold text-slate-500">
-                                        {member.designation || '-'}
+                                        {Array.isArray(member.designation) ? member.designation.join(', ') : (member.designation || '-')}
                                     </TableCell>
                                     <TableCell className="capitalize">{member.role?.replace('_', ' ')}</TableCell>
                                     <TableCell>
@@ -133,12 +147,28 @@ export default function TeamManagement() {
                                     <TableCell>{member.points || 0}</TableCell>
                                     <TableCell>{member.email}</TableCell>
                                     <TableCell className="text-right flex items-center justify-end gap-2">
-                                        <Button variant="outline" size="icon" title="Edit Member" onClick={() => handleEdit(member)}>
-                                            <Pencil size={14} />
-                                        </Button>
-                                        <Button variant="outline" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" title="Delete Member" onClick={() => handleDelete(member._id)}>
-                                            <Trash2 size={14} />
-                                        </Button>
+                                        {/* Switch Account — Admin only, not for other admins */}
+                                        {isAdmin && !isImpersonating && member.role !== 'admin' && (
+                                            <Button
+                                                variant="outline"
+                                                size="icon"
+                                                className="text-violet-600 hover:text-violet-700 hover:bg-violet-50 border-violet-200"
+                                                title={`Switch to ${member.name}'s account`}
+                                                onClick={() => handleImpersonate(member)}
+                                            >
+                                                <UserRoundCog size={14} />
+                                            </Button>
+                                        )}
+                                        {isAdmin && (
+                                            <Button variant="outline" size="icon" title="Edit Member" onClick={() => handleEdit(member)}>
+                                                <Pencil size={14} />
+                                            </Button>
+                                        )}
+                                        {isAdmin && (
+                                            <Button variant="outline" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" title="Delete Member" onClick={() => handleDelete(member._id)}>
+                                                <Trash2 size={14} />
+                                            </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}

@@ -10,13 +10,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Info } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
+import AccessDenied from '@/components/AccessDenied';
 
 const LeadForm = () => {
     const { id } = useParams();
     const { user: currentUser } = useAuth();
+    const { can, isAdmin, hasDesignation } = usePermissions();
     const navigate = useNavigate();
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
+    const [loadedLead, setLoadedLead] = useState(null); // stores the fetched lead for lock-claim check
+    const [accessChecked, setAccessChecked] = useState(!id); // for edit routes, wait until lead is loaded
     const [formData, setFormData] = useState({
         companyName: '',
         contactName: '',
@@ -92,14 +97,29 @@ const LeadForm = () => {
                             contactedBy: leadData.contactedBy || '',
                             contactMethod: leadData.contactMethod || ''
                         }));
+                        setLoadedLead(leadData);
                     }
                 } catch (err) {
                     toast({ variant: "destructive", title: "Error", description: "Failed to load lead" });
+                } finally {
+                    setAccessChecked(true);
                 }
             };
             fetchLead();
         }
     }, [id]);
+
+    // Determine if the current user can edit this lead:
+    // 1. Admin — always
+    // 2. User with can_edit_leads permission — always
+    // 3. User who holds the verifier or closer lock on this lead — allowed
+    const myId = currentUser?._id?.toString();
+    const holdsVerifierLock = loadedLead?.workingVerifier?._id?.toString() === myId;
+    const holdsCloserLock = loadedLead?.workingCloser?._id?.toString() === myId;
+    const canEditThis = isAdmin || can('can_edit_leads') || (id && (holdsVerifierLock || holdsCloserLock));
+
+    // For new leads, only need can_add_leads
+    const canCreateNew = isAdmin || can('can_add_leads');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -138,7 +158,8 @@ const LeadForm = () => {
                 navigate('/leads');
             }
         } catch (err) {
-            toast({ variant: "destructive", title: "Error", description: err.error || "Submission failed" });
+            const errorMsg = typeof err === 'string' ? err : (err.error || err.message || "Submission failed");
+            toast({ variant: "destructive", title: "Error", description: errorMsg });
         } finally {
             setLoading(false);
         }
@@ -147,6 +168,23 @@ const LeadForm = () => {
     const handleChange = (name, value) => {
         setFormData(prev => ({ ...prev, [name]: value }));
     };
+
+    // Show spinner while checking access (edit mode only)
+    if (id && !accessChecked) {
+        return (
+            <div className="min-h-[50vh] flex items-center justify-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+            </div>
+        );
+    }
+
+    // Show access denied if the user cannot edit OR create
+    if (id && !canEditThis) {
+        return <AccessDenied permission="can_edit_leads" action="Edit Lead" />;
+    }
+    if (!id && !canCreateNew) {
+        return <AccessDenied permission="can_add_leads" action="Add New Lead" />;
+    }
 
     return (
         <div className="max-w-2xl mx-auto">

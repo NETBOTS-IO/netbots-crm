@@ -6,7 +6,8 @@ const ActivitySchema = new mongoose.Schema({
     enum: ['lead_submitted', 'stage_changed', 'score_changed', 'demo_booked', 'demo_held',
            'message_sent', 'email_sent', 'call_made', 'client_converted', 'commission_earned',
            'payout_processed', 'rank_upgraded', 'note_added', 'churn_risk_flagged',
-           'retention_action', 'referral_sent', 'note', 'call', 'whatsapp', 'email', 'meeting', 'sms', 'social_media'],
+           'retention_action', 'referral_sent', 'note', 'call', 'whatsapp', 'email', 'meeting', 'sms', 'social_media',
+           'lead_locked_verifier', 'lead_unlocked_verifier', 'lead_locked_closer', 'lead_unlocked_closer'],
     required: true
   },
   leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },

@@ -85,5 +85,42 @@ router.put('/:id/permissions', auth, requireRole(['admin', 'ceo']), async (req, 
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
+// POST /api/team/:id/impersonate
+// Admin can generate a temporary JWT for any user to view the system as them.
+// The original admin token is saved by the frontend to allow switching back.
+router.post('/:id/impersonate', auth, requireRole(['admin']), async (req, res) => {
+  try {
+    const jwt = require('jsonwebtoken');
+    const targetUser = await User.findById(req.params.id).select('-password');
+    if (!targetUser) return res.status(404).json({ success: false, error: 'User not found' });
+
+    // Prevent impersonating another admin (safety measure)
+    if (targetUser.role === 'admin' && targetUser._id.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ success: false, error: 'Cannot impersonate another admin account.' });
+    }
+
+    // Generate a short-lived impersonation token (2 hours)
+    const token = jwt.sign(
+        { id: targetUser._id, role: targetUser.role, impersonatedBy: req.user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: '2h' }
+    );
+
+    res.json({
+        success: true,
+        data: {
+            token,
+            user: targetUser,
+            impersonatedBy: {
+                id: req.user._id,
+                name: req.user.name
+            }
+        }
+    });
+  } catch (err) {
+    console.error('Impersonate error:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
 
 module.exports = router;

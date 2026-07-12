@@ -15,7 +15,8 @@ import {
     FileText,
     BarChart3,
     HelpCircle,
-    Tag
+    Tag,
+    UserX2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -40,7 +41,7 @@ const SidebarLink = ({ to, icon: Icon, label, active, onClick }) => (
 );
 
 const Layout = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, isImpersonating, impersonatingAdminName, endImpersonation } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -164,6 +165,27 @@ const Layout = () => {
 
             {/* Main Content */}
             <main className="flex-1 flex flex-col min-w-0 md:pl-64">
+                {/* Impersonation Banner */}
+                {isImpersonating && (
+                    <div className="sticky top-0 z-50 flex items-center justify-between px-4 py-2 bg-amber-400 text-amber-900 shadow-md">
+                        <div className="flex items-center gap-2 text-sm font-semibold">
+                            <UserX2 size={16} className="animate-pulse" />
+                            <span>
+                                Admin Mode — Viewing as <strong>{user?.name}</strong>
+                                <span className="ml-2 font-normal opacity-75">(impersonated by {impersonatingAdminName})</span>
+                            </span>
+                        </div>
+                        <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-amber-700 text-amber-900 hover:bg-amber-500 font-bold text-xs gap-1.5"
+                            onClick={endImpersonation}
+                        >
+                            <LogOut size={14} />
+                            Exit Session
+                        </Button>
+                    </div>
+                )}
                 {/* Mobile Header */}
                 <header className="h-16 bg-white border-b flex items-center justify-between px-4 md:px-8">
                     <div className="flex items-center gap-4">

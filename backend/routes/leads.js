@@ -18,6 +18,35 @@ const maskLeadData = (lead) => {
     return masked;
 };
 
+// Helper to validate locks for editing leads
+const checkLeadLock = async (leadId, user) => {
+    if (user.role === 'admin') return { allowed: true };
+
+    const lead = await Lead.findById(leadId);
+    if (!lead) return { allowed: false, error: 'Lead not found', status: 404 };
+
+    const isVerifier = Array.isArray(user.designation) && user.designation.includes('LeadVerifier');
+    const isCloser = Array.isArray(user.designation) && user.designation.includes('LeadCloser');
+
+    if (isVerifier && lead.workingVerifier && lead.workingVerifier.toString() !== user._id.toString()) {
+        return { 
+            allowed: false, 
+            error: 'Action blocked: This lead is currently locked by another Lead Verifier.', 
+            status: 400 
+        };
+    }
+
+    if (isCloser && lead.workingCloser && lead.workingCloser.toString() !== user._id.toString()) {
+        return { 
+            allowed: false, 
+            error: 'Action blocked: This lead is currently locked by another Lead Closer.', 
+            status: 400 
+        };
+    }
+
+    return { allowed: true };
+};
+
 // GET /api/leads
 // get all leads with pagination, filtering, and stats
 router.get('/', auth, async (req, res) => {
@@ -31,7 +60,9 @@ router.get('/', auth, async (req, res) => {
         priority = 'all',
         stage = 'all',
         temp = 'all',
-        contact = 'all'
+        contact = 'all',
+        workingVerifier = 'all',
+        workingCloser = 'all'
     } = req.query;
 
     let baseQuery = { 
@@ -84,24 +115,72 @@ router.get('/', auth, async (req, res) => {
         ];
     }
 
-    // Calculate stats
-    const periodLeads = await Lead.find(statsQuery).select('lastContactedAt temperature stage followUpDate');
-    const totalLeadsCount = periodLeads.length;
-    let contactedCount = 0;
-    let commitmentsCount = 0;
-    let followUpCount = 0;
+    // High performance stats calculation using MongoDB Aggregation
+    const statsResult = await Lead.aggregate([
+      { $match: statsQuery },
+      {
+        $group: {
+          _id: null,
+          totalLeadsCount: { $sum: 1 },
+          contactedCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$lastContactedAt", null] },
+                    ...(periodRange ? [
+                      { $gte: ["$lastContactedAt", periodRange.$gte] },
+                      { $lte: ["$lastContactedAt", periodRange.$lte] }
+                    ] : [])
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          },
+          commitmentsCount: {
+            $sum: {
+              $cond: [
+                {
+                  $or: [
+                    { $eq: ["$temperature", "sql"] },
+                    { $eq: ["$stage", "close"] }
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          },
+          followUpCount: {
+            $sum: {
+              $cond: [
+                {
+                  $and: [
+                    { $ne: ["$followUpDate", null] },
+                    ...(periodRange ? [
+                      { $gte: ["$followUpDate", periodRange.$gte] },
+                      { $lte: ["$followUpDate", periodRange.$lte] }
+                    ] : [])
+                  ]
+                },
+                1,
+                0
+              ]
+            }
+          }
+        }
+      }
+    ]);
 
-    const isWithinPeriodBackend = (dateVal, pRange) => {
-        if (!dateVal) return false;
-        if (!pRange) return true; // 'all'
-        return dateVal >= pRange.$gte && dateVal <= (pRange.$lte || new Date());
+    const stats = statsResult[0] || {
+      totalLeadsCount: 0,
+      contactedCount: 0,
+      commitmentsCount: 0,
+      followUpCount: 0
     };
-
-    periodLeads.forEach(l => {
-        if (isWithinPeriodBackend(l.lastContactedAt, periodRange)) contactedCount++;
-        if (l.temperature === 'sql' || l.stage === 'close') commitmentsCount++;
-        if (l.followUpDate && isWithinPeriodBackend(l.followUpDate, periodRange)) followUpCount++;
-    });
+    const { totalLeadsCount, contactedCount, commitmentsCount, followUpCount } = stats;
 
     // Main Table Query
     let query = { ...statsQuery };
@@ -142,6 +221,21 @@ router.get('/', auth, async (req, res) => {
         query.$or = [...(query.$or || []), { temperature: 'sql' }, { stage: 'close' }];
     }
 
+    if (workingVerifier !== 'all') {
+        if (workingVerifier === 'unassigned') {
+            query.workingVerifier = null;
+        } else {
+            query.workingVerifier = workingVerifier;
+        }
+    }
+    if (workingCloser !== 'all') {
+        if (workingCloser === 'unassigned') {
+            query.workingCloser = null;
+        } else {
+            query.workingCloser = workingCloser;
+        }
+    }
+
     // Pagination
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
@@ -149,6 +243,8 @@ router.get('/', auth, async (req, res) => {
 
     let leads = await Lead.find(query)
         .populate('submittedBy', 'name email')
+        .populate('workingVerifier', 'name email')
+        .populate('workingCloser', 'name email')
         .sort('-createdAt')
         .skip(skip)
         .limit(limitNum);
@@ -184,6 +280,24 @@ router.post('/bulk-action', auth, async (req, res) => {
     }
 
     try {
+        // Concurrency lock validation for bulk operations
+        const isVerifier = Array.isArray(req.user.designation) && req.user.designation.includes('LeadVerifier');
+        const isCloser = Array.isArray(req.user.designation) && req.user.designation.includes('LeadCloser');
+        if (req.user.role !== 'admin' && (isVerifier || isCloser)) {
+            const lockedLeads = await Lead.find({
+                _id: { $in: leadIds },
+                $or: [
+                    ...(isVerifier ? [{ workingVerifier: { $exists: true, $ne: null, $ne: req.user._id } }] : []),
+                    ...(isCloser ? [{ workingCloser: { $exists: true, $ne: null, $ne: req.user._id } }] : [])
+                ]
+            });
+            if (lockedLeads.length > 0) {
+                return res.status(400).json({
+                    success: false,
+                    error: `Action blocked: ${lockedLeads.length} lead(s) are locked by other team members.`
+                });
+            }
+        }
         if (action === 'delete') {
             await Lead.deleteMany({ _id: { $in: leadIds } });
             await Activity.deleteMany({ leadId: { $in: leadIds } });
@@ -277,24 +391,40 @@ router.get('/:id', auth, async (req, res) => {
 
 // PUT /api/leads/:id
 router.put('/:id', auth, async (req, res) => {
-  if (req.user.role !== 'admin' && (!req.user.permissions || !req.user.permissions.can_edit_leads)) {
-      return res.status(403).json({ success: false, error: 'Access denied: Cannot edit leads.' });
-  }
   try {
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
+    const isAssignedVerifier = lead.workingVerifier && lead.workingVerifier.toString() === req.user._id.toString();
+    const isAssignedCloser = lead.workingCloser && lead.workingCloser.toString() === req.user._id.toString();
+
+    if (
+      req.user.role !== 'admin' && 
+      (!req.user.permissions || !req.user.permissions.can_edit_leads) && 
+      !isAssignedVerifier && 
+      !isAssignedCloser
+    ) {
+      return res.status(403).json({ success: false, error: 'Access denied: You do not have permission to edit this lead (claim the work lock first).' });
+    }
+
+    const lockCheck = await checkLeadLock(req.params.id, req.user);
+    if (!lockCheck.allowed) {
+      return res.status(lockCheck.status).json({ success: false, error: lockCheck.error });
+    }
+
     const updateData = { ...req.body };
     updateData.contactedBy = req.user.name || req.user.email;
     
     // Auto-verify if temperature becomes warm or sql
     if (['warm', 'sql'].includes(updateData.temperature)) {
-        const currentLead = await Lead.findById(req.params.id);
-        if (currentLead && !currentLead.leadVerifiedBy) {
+        if (!lead.leadVerifiedBy) {
             updateData.leadVerifiedBy = req.user.name || req.user.email;
             updateData.verifiedAt = Date.now();
         }
     }
 
-    const lead = await Lead.findByIdAndUpdate(req.params.id, updateData, { new: true });
-    res.json({ success: true, data: lead });
+    const updatedLead = await Lead.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    res.json({ success: true, data: updatedLead });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Server error' });
   }
@@ -302,13 +432,27 @@ router.put('/:id', auth, async (req, res) => {
 
 // PUT /api/leads/:id/stage
 router.put('/:id/stage', auth, async (req, res) => {
-  if (req.user.role !== 'admin' && (!req.user.permissions || !req.user.permissions.can_edit_leads)) {
-      return res.status(403).json({ success: false, error: 'Access denied: Cannot edit lead stages.' });
-  }
   const { stage } = req.body;
   try {
     const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
+    const isAssignedVerifier = lead.workingVerifier && lead.workingVerifier.toString() === req.user._id.toString();
+    const isAssignedCloser = lead.workingCloser && lead.workingCloser.toString() === req.user._id.toString();
+
+    if (
+      req.user.role !== 'admin' && 
+      (!req.user.permissions || !req.user.permissions.can_edit_leads) && 
+      !isAssignedVerifier && 
+      !isAssignedCloser
+    ) {
+      return res.status(403).json({ success: false, error: 'Access denied: You do not have permission to edit this lead stage.' });
+    }
+
+    const lockCheck = await checkLeadLock(req.params.id, req.user);
+    if (!lockCheck.allowed) {
+      return res.status(lockCheck.status).json({ success: false, error: lockCheck.error });
+    }
 
     const oldStage = lead.stage;
     lead.stage = stage;
@@ -354,9 +498,6 @@ router.put('/:id/stage', auth, async (req, res) => {
 // POST /api/leads/:id/convert
 // Allow admin, sales, or anyone with manage_clients permission
 router.post('/:id/convert', auth, async (req, res) => {
-    if (req.user.role !== 'admin' && req.user.role !== 'sales' && (!req.user.permissions || !req.user.permissions.manage_clients)) {
-        return res.status(403).json({ success: false, error: 'Access denied: Cannot convert leads.' });
-    }
     let { 
         planType, 
         dealType, 
@@ -384,6 +525,22 @@ router.post('/:id/convert', auth, async (req, res) => {
     try {
         const lead = await Lead.findById(req.params.id);
         if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
+        const isAssignedCloser = lead.workingCloser && lead.workingCloser.toString() === req.user._id.toString();
+
+        if (
+          req.user.role !== 'admin' && 
+          req.user.role !== 'sales' && 
+          (!req.user.permissions || !req.user.permissions.manage_clients) && 
+          !isAssignedCloser
+        ) {
+          return res.status(403).json({ success: false, error: 'Access denied: Cannot convert leads.' });
+        }
+
+        const lockCheck = await checkLeadLock(req.params.id, req.user);
+        if (!lockCheck.allowed) {
+            return res.status(lockCheck.status).json({ success: false, error: lockCheck.error });
+        }
         
         const closerUser = await User.findById(closedBy || req.user._id);
         const salesClosedByName = closerUser ? closerUser.name : (req.user.name || req.user.email);
@@ -533,6 +690,11 @@ router.post('/:id/activity', auth, async (req, res) => {
         const lead = await Lead.findById(req.params.id);
         if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
 
+        const lockCheck = await checkLeadLock(req.params.id, req.user);
+        if (!lockCheck.allowed) {
+            return res.status(lockCheck.status || 400).json({ success: false, error: lockCheck.error });
+        }
+
         const activity = new Activity({
             type: type || 'note',
             leadId: lead._id,
@@ -569,6 +731,142 @@ router.delete('/:id', auth, async (req, res) => {
     } catch (err) {
         res.status(500).json({ success: false, error: 'Server error' });
     }
+});
+
+// PUT /api/leads/:id/lock-verifier
+router.put('/:id/lock-verifier', auth, async (req, res) => {
+  try {
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
+    if (lead.workingVerifier && lead.workingVerifier.toString() !== req.user._id.toString()) {
+      return res.status(400).json({ success: false, error: 'Lead is already locked by another verifier' });
+    }
+
+    lead.workingVerifier = req.user._id;
+    await lead.save();
+
+    // Log activity
+    const activity = new Activity({
+      type: 'lead_locked_verifier',
+      leadId: lead._id,
+      performedBy: req.user._id,
+      description: `Verifier lock claimed by ${req.user.name}`
+    });
+    await activity.save();
+
+    const populatedLead = await Lead.findById(lead._id)
+      .populate('submittedBy', 'name email')
+      .populate('workingVerifier', 'name email')
+      .populate('workingCloser', 'name email');
+
+    res.json({ success: true, data: populatedLead });
+  } catch (err) {
+    console.error("Lock verifier error:", err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// PUT /api/leads/:id/unlock-verifier
+router.put('/:id/unlock-verifier', auth, async (req, res) => {
+  try {
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
+    if (lead.workingVerifier && lead.workingVerifier.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'You cannot unlock a lead locked by another verifier' });
+    }
+
+    lead.workingVerifier = null;
+    await lead.save();
+
+    // Log activity
+    const activity = new Activity({
+      type: 'lead_unlocked_verifier',
+      leadId: lead._id,
+      performedBy: req.user._id,
+      description: `Verifier lock released by ${req.user.name}`
+    });
+    await activity.save();
+
+    const populatedLead = await Lead.findById(lead._id)
+      .populate('submittedBy', 'name email')
+      .populate('workingVerifier', 'name email')
+      .populate('workingCloser', 'name email');
+
+    res.json({ success: true, data: populatedLead });
+  } catch (err) {
+    console.error("Unlock verifier error:", err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// PUT /api/leads/:id/lock-closer
+router.put('/:id/lock-closer', auth, async (req, res) => {
+  try {
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
+    if (lead.workingCloser && lead.workingCloser.toString() !== req.user._id.toString()) {
+      return res.status(400).json({ success: false, error: 'Lead is already locked by another closer' });
+    }
+
+    lead.workingCloser = req.user._id;
+    await lead.save();
+
+    // Log activity
+    const activity = new Activity({
+      type: 'lead_locked_closer',
+      leadId: lead._id,
+      performedBy: req.user._id,
+      description: `Closer lock claimed by ${req.user.name}`
+    });
+    await activity.save();
+
+    const populatedLead = await Lead.findById(lead._id)
+      .populate('submittedBy', 'name email')
+      .populate('workingVerifier', 'name email')
+      .populate('workingCloser', 'name email');
+
+    res.json({ success: true, data: populatedLead });
+  } catch (err) {
+    console.error("Lock closer error:", err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// PUT /api/leads/:id/unlock-closer
+router.put('/:id/unlock-closer', auth, async (req, res) => {
+  try {
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
+    if (lead.workingCloser && lead.workingCloser.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+      return res.status(403).json({ success: false, error: 'You cannot unlock a lead locked by another closer' });
+    }
+
+    lead.workingCloser = null;
+    await lead.save();
+
+    // Log activity
+    const activity = new Activity({
+      type: 'lead_unlocked_closer',
+      leadId: lead._id,
+      performedBy: req.user._id,
+      description: `Closer lock released by ${req.user.name}`
+    });
+    await activity.save();
+
+    const populatedLead = await Lead.findById(lead._id)
+      .populate('submittedBy', 'name email')
+      .populate('workingVerifier', 'name email')
+      .populate('workingCloser', 'name email');
+
+    res.json({ success: true, data: populatedLead });
+  } catch (err) {
+    console.error("Unlock closer error:", err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
 });
 
 module.exports = router;

@@ -99,8 +99,21 @@ const LeadSchema = new mongoose.Schema({
   contactedBy: { type: String },
   contactMethod: { type: String },
   contactedAt: { type: Date },
-  salesClosedBy: { type: String }
+  salesClosedBy: { type: String },
+  workingVerifier: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  workingCloser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
 }, { timestamps: true });
+
+LeadSchema.index({ convertedToClient: 1, clientId: 1 });
+LeadSchema.index({ submittedBy: 1 });
+LeadSchema.index({ createdAt: -1 });
+LeadSchema.index({ lastContactedAt: -1 });
+LeadSchema.index({ followUpDate: 1 });
+LeadSchema.index({ workingVerifier: 1 });
+LeadSchema.index({ workingCloser: 1 });
+LeadSchema.index({ priority: 1 });
+LeadSchema.index({ stage: 1 });
+LeadSchema.index({ temperature: 1 });
 
 LeadSchema.pre('save', function(next) {
   const scoreMap = { cold: 1, warm: 3, sql: 7, closed: 20, retained: 30 };

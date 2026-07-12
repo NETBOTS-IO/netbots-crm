@@ -118,13 +118,13 @@ export function AddTeamMemberDialog({ open, setOpen, onSuccess, memberToEdit = n
                     </div>
                     <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label htmlFor="role">Role</Label>
+                            <Label htmlFor="role">Title</Label>
                             <Select
                                 value={formData.role}
                                 onValueChange={(val) => setFormData({ ...formData, role: val })}
                             >
                                 <SelectTrigger>
-                                    <SelectValue placeholder="Select role" />
+                                    <SelectValue placeholder="Select title" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="lead_gen">Lead Gen</SelectItem>
@@ -135,7 +135,7 @@ export function AddTeamMemberDialog({ open, setOpen, onSuccess, memberToEdit = n
                             </Select>
                         </div>
                         <div className="space-y-3">
-                            <Label>Designation (Roles)</Label>
+                            <Label>Role (Multiple Select)</Label>
                             <div className="grid grid-cols-2 gap-2 mt-2 bg-slate-50 p-3 rounded-md border border-slate-100">
                                 {['admin', 'Supervisor', 'LeadCollector', 'LeadVerifier', 'LeadCloser'].map(role => (
                                     <label key={role} className="flex items-center gap-2 text-xs font-medium cursor-pointer text-slate-700">

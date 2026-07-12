@@ -30,6 +30,7 @@ import {
 import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -70,10 +71,44 @@ const LeadDetails = () => {
     }, [currentUser]);
 
     const stages = ['identify', 'qualify', 'nurture', 'close', 'onboard', 'retain', 'refer'];
-    const isPrivileged = currentUser?.role === 'admin';
-    const canConvert = currentUser?.role === 'admin' || currentUser?.role === 'sales';
-    const canEdit = currentUser?.role === 'admin' || currentUser?.permissions?.can_edit_leads;
-    const canView = currentUser?.role === 'admin' || currentUser?.permissions?.can_view_leads;
+    const { isAdmin, can } = usePermissions();
+    const myId = currentUser?._id?.toString();
+    const holdsVerifierLock = lead?.workingVerifier?._id?.toString() === myId;
+    const holdsCloserLock = lead?.workingCloser?._id?.toString() === myId;
+
+    const isPrivileged = isAdmin;
+    const canConvert = isAdmin || currentUser?.role === 'sales';
+    const canEdit = isAdmin || can('can_edit_leads') || holdsVerifierLock || holdsCloserLock;
+    const canView = isAdmin || can('can_view_leads');
+
+    const isVerifierUser = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier');
+    const isCloserUser = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser');
+
+    // Helper to get lock warning message for active verifier/closer
+    const getLockStatusMessage = () => {
+        if (isPrivileged) return null; // Admin bypasses everything
+        
+        // Locked by another Verifier
+        if (isVerifierUser && lead?.workingVerifier && lead.workingVerifier._id?.toString() !== myId) {
+            return `Lead Verifier "${lead.workingVerifier.name}" is working on this lead. You cannot perform this action.`;
+        }
+        // Locked by another Closer
+        if (isCloserUser && lead?.workingCloser && lead.workingCloser._id?.toString() !== myId) {
+            return `Lead Closer "${lead.workingCloser.name}" is working on this lead. You cannot perform this action.`;
+        }
+
+        // Unclaimed by current user (must claim first)
+        if (isVerifierUser && !lead?.workingVerifier) {
+            return "Access denied: You must claim this lead first (Work Claim) before you can modify its stage or add notes.";
+        }
+        if (isCloserUser && !lead?.workingCloser) {
+            return "Access denied: You must claim this lead first (Work Claim) before you can modify its stage or add notes.";
+        }
+
+        return null;
+    };
+
+    const lockWarning = getLockStatusMessage();
 
     const getDealValueUSD = () => {
         if (['monthly_subscription', 'weekly', 'monthly'].includes(conversionData.dealType)) return parseFloat(conversionData.monthlyAmount || 0);
@@ -160,6 +195,10 @@ const LeadDetails = () => {
     };
 
     const handleUpdateStage = async (newStage) => {
+        if (lockWarning) {
+            toast({ variant: "destructive", title: "Action Blocked", description: lockWarning });
+            return;
+        }
         try {
             const res = await api.put(`/leads/${id}/stage`, { stage: newStage });
             if (res.success) {
@@ -173,6 +212,10 @@ const LeadDetails = () => {
 
     const handleAddNote = async (e) => {
         e.preventDefault();
+        if (lockWarning) {
+            toast({ variant: "destructive", title: "Action Blocked", description: lockWarning });
+            return;
+        }
         if (!note.trim()) return;
         setSubmittingNote(true);
         try {
@@ -542,11 +585,16 @@ const LeadDetails = () => {
                             <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Log Activity / Add Note</CardTitle>
                         </CardHeader>
                         <CardContent>
+                            {lockWarning && (
+                                <div className="mb-4 p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-lg text-xs font-semibold leading-relaxed">
+                                    ⚠️ {lockWarning}
+                                </div>
+                            )}
                             <form onSubmit={handleAddNote} className="space-y-3">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase">Activity Type</label>
-                                    <Select value={activityType} onValueChange={setActivityType}>
-                                        <SelectTrigger className="w-full bg-white"><SelectValue /></SelectTrigger>
+                                    <Select value={activityType} onValueChange={setActivityType} disabled={!!lockWarning}>
+                                        <SelectTrigger className="w-full bg-white" disabled={!!lockWarning}><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="note">Note / Remark</SelectItem>
                                             <SelectItem value="call">Phone Call</SelectItem>
@@ -561,13 +609,14 @@ const LeadDetails = () => {
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-bold text-slate-400 uppercase">Notes / Details</label>
                                     <textarea
-                                        className="w-full min-h-[80px] p-3 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                                        className="w-full min-h-[80px] p-3 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none disabled:bg-slate-50 disabled:text-slate-400"
                                         placeholder={activityType === 'note' ? "Type important details here..." : `Details about the ${activityType} contact...`}
                                         value={note}
                                         onChange={(e) => setNote(e.target.value)}
+                                        disabled={!!lockWarning}
                                     />
                                 </div>
-                                <Button className="w-full text-xs font-bold uppercase bg-blue-600 hover:bg-blue-700 text-white" disabled={submittingNote}>
+                                <Button className="w-full text-xs font-bold uppercase bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-50" disabled={submittingNote || !!lockWarning}>
                                     {submittingNote ? 'Saving...' : (activityType === 'note' ? 'Add Note' : 'Log Activity')}
                                 </Button>
                             </form>

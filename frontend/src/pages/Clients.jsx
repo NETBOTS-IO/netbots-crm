@@ -35,11 +35,14 @@ import {
 import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { exportTableToPDF } from '../utils/pdfExport';
 import { FileDown } from 'lucide-react';
 
 const Clients = () => {
     const { user } = useAuth();
+    const { isAdmin, can } = usePermissions();
+    const canManage = isAdmin || can('manage_clients');
     const { toast } = useToast();
     const [clients, setClients] = useState([]);
     const [team, setTeam] = useState([]);
@@ -286,14 +289,16 @@ const Clients = () => {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
-                    {user?.role === 'admin' && (
+                    {canManage && (
                         <Button variant="outline" onClick={handleExportPDF} className="gap-1.5 h-10 border-red-200 text-red-700 hover:bg-red-50">
                             <FileDown size={16} /> Export to PDF
                         </Button>
                     )}
-                    <Button onClick={handleOpenAdd} className="gap-1.5 h-10">
-                        <Plus size={16} /> Add Client
-                    </Button>
+                    {canManage && (
+                        <Button onClick={handleOpenAdd} className="gap-1.5 h-10">
+                            <Plus size={16} /> Add Client
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -360,12 +365,16 @@ const Clients = () => {
                                                 <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:bg-blue-50" onClick={() => handleViewCompleteDetail(client)} title="View Complete Detail">
                                                     <Eye size={16} />
                                                 </Button>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-amber-600 hover:bg-amber-50" onClick={() => handleOpenEdit(client)}>
-                                                    <Pencil size={16} />
-                                                </Button>
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => handleDeleteClient(client._id)}>
-                                                    <Trash2 size={16} />
-                                                </Button>
+                                                {canManage && (
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-amber-600 hover:bg-amber-50" onClick={() => handleOpenEdit(client)}>
+                                                        <Pencil size={16} />
+                                                    </Button>
+                                                )}
+                                                {isAdmin && (
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => handleDeleteClient(client._id)}>
+                                                        <Trash2 size={16} />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>

@@ -179,7 +179,7 @@ export default function PermissionsManagement() {
                         <table className="w-full text-sm text-left">
                             <thead className="bg-slate-50 text-slate-500 border-b">
                                 <tr>
-                                    <th className="px-6 py-4 font-bold text-slate-700">User / Designation</th>
+                                    <th className="px-6 py-4 font-bold text-slate-700">User / Role</th>
                                     <th className="px-6 py-4 font-bold text-slate-700 text-center">Presets / Templates</th>
                                     {AVAILABLE_PERMISSIONS.map(p => (
                                         <th key={p.key} className="px-6 py-4 font-medium text-center text-xs tracking-tight uppercase whitespace-nowrap">
