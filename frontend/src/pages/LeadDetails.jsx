@@ -25,7 +25,8 @@ import {
     Youtube,
     Star,
     Link,
-    Info
+    Info,
+    HelpCircle
 } from 'lucide-react';
 import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
@@ -54,11 +55,6 @@ const LeadDetails = () => {
 
     // Tour state
     const [runTour, setRunTour] = useState(false);
-    useEffect(() => {
-        if (!localStorage.getItem('hasRunLeadDetailsTour')) {
-            setRunTour(true);
-        }
-    }, []);
     
     // Conversion & Team states
     const [team, setTeam] = useState([]);
@@ -323,8 +319,8 @@ const LeadDetails = () => {
         },
         {
             target: '#tour-lead-info',
-            title: 'Lead Information',
-            content: 'Yahan lead ki key details milengi, jaise: Contact Person name, Phone number, targeted services (multiple select ho sakti hain), kisne submit ki, kisne verify ki, coordinates aur working hours.',
+            title: 'Lead Information & Services Option',
+            content: 'Yahan lead ki key details milengi, jaise: Contact Person name, Phone number, coordinates aur working hours.\n\n💼 **Target Services (Kab kya pitch karein):**\n- *Google Business SEO*: Agar business Google Maps par rankings behtar karna chahta hai.\n- *Website SEO*: Google Search organic rankings grow karne ke liye.\n- *Social Media Management*: Facebook aur Instagram handles manage karne ke liye.\n- *Designing*: Graphic design aur UI/UX projects ke liye.\n- *Software Development / Website Development*: Custom software tools aur full websites development ke liye.\n- *SaaS Product*: Ready-made subscription-based software packages pitch karne ke liye.',
         },
         {
             target: '#tour-notes-section',
@@ -361,12 +357,12 @@ const LeadDetails = () => {
                 </Button>
                 <div className="flex gap-2">
                     <Button 
-                        size="xs" 
+                        size="sm" 
                         variant="outline" 
-                        className="h-7 text-[10px] uppercase font-bold border-blue-200 text-blue-600 hover:bg-blue-50 mt-1"
+                        className="h-8 text-[11px] font-bold border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all flex items-center gap-1.5 shadow-sm rounded-lg shrink-0 mt-1"
                         onClick={() => setRunTour(true)}
                     >
-                        💡 Tour Guide
+                        <HelpCircle size={14} className="text-blue-500" /> Start Page Tour
                     </Button>
                     {holdsVerifierLock && !lead?.isVerifiedByVerifier && (
                         <Button 

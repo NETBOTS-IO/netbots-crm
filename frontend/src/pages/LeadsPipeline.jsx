@@ -25,7 +25,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { exportTableToPDF } from '../utils/pdfExport';
-import { FileDown } from 'lucide-react';
+import { FileDown, HelpCircle } from 'lucide-react';
 import LeadsTour from '@/components/leads/LeadsTour';
 
 const LeadsPipeline = () => {
@@ -36,11 +36,6 @@ const LeadsPipeline = () => {
     
     // Tour state
     const [runTour, setRunTour] = useState(false);
-    useEffect(() => {
-        if (!localStorage.getItem('hasRunLeadsPipelineTour')) {
-            setRunTour(true);
-        }
-    }, []);
     
     // Helper to get session storage filter or fallback
     const getSessionFilter = (key, defaultValue) => {
@@ -415,33 +410,33 @@ const LeadsPipeline = () => {
         },
         {
             target: '#tour-stats',
-            title: 'Leads Stats',
-            content: 'Yahan aapko leads ke metrics dikhenge: Total Leads, Contacted, Commitments (SQLs) aur Scheduled Follow-ups. Kisi bhi card par click kar ke aap un leads ko niche list me filter kar sakte hain.',
+            title: 'Leads Stats Dashboard',
+            content: 'Yahan aapko overall leads ke quantitative statistics milenge:\n- **Total Leads**: Database me majood saari leads.\n- **Contacted**: Jin leads ke sath aj contact kiya gaya.\n- **Commitments (SQLs)**: Aisi leads jo close hone ke qareeb hain.\n- **Scheduled Follow-ups**: Woh leads jinki follow-up date set hai.\nKisi bhi card par click karke aap un leads ko filter kar sakte hain.',
         },
         {
             target: '#tour-search',
-            title: 'Leads Search',
-            content: 'Agar aapko koi specific lead dhoondni hai, toh aap Company Name, Contact Name, Email, ya Phone number yahan likh kar search kar sakte hain.',
+            title: 'Leads Search Bar',
+            content: 'Agar aapko koi specific lead jaldi dhoondni hai, toh Company Name, Contact Name, Email, ya Phone number yahan likhein.',
         },
         {
             target: '#tour-filters-btn',
-            title: 'Filters & Sorting',
-            content: 'Is button par click kar ke aap Stage, Priority, Temperature aur Assignees ke mutabiq leads ko deep-filter aur sort kar sakte hain.',
+            title: 'Filters & Persistence (Zaroori Maloomat)',
+            content: 'Is button par click kar ke aap leads ko Stage, Priority, Temperature aur Assignees ke mutabiq filter kar sakte hain.\n\n⚠️ **ZAROORI BAAT:** Agar aap yahan koi filter set karte hain, toh page refresh karne ke baad bhi wahi filter laga rahega (persistent view). Agar aap chahte hain ke tamam leads wapas show hon, toh filters panel khol kar **Reset** button par click karna zaroori hai.',
         },
         {
             target: '#tour-actions',
-            title: 'Quick Actions',
-            content: 'Yahan se aap New Lead create kar sakte hain, Google Maps se leads dhoond sakte hain, CSV file bulk me import kar sakte hain, ya PDF export kar sakte hain (agar admin hain).',
+            title: 'Quick Page Actions',
+            content: 'Yahan se aap:\n- **New Lead**: Nayi lead manual add kar sakte hain.\n- **Import CSV**: Excel/CSV file upload kar ke bulk leads import kar sakte hain.\n- **Find New Lead**: Google Maps khol kar naye leads search kar sakte hain.\n- **Export to PDF**: Admin users poori report download kar sakte hain.',
         },
         {
             target: '#tour-table',
-            title: 'Leads Table',
-            content: 'Yeh aapki saari leads ki list hai. Isme aap priority tags (Low, Medium, High, Urgent), temperature labels (Cold, Warm, SQL) aur current stage dekh sakte hain.',
+            title: 'Leads Table & Fields Info',
+            content: 'Leads list ke main columns aur options ye hain:\n\n1. **Priority (Kab kya use karein):**\n- *Low*: Aisi leads jin par baad me aaram se kaam kiya ja sake.\n- *Medium*: Default standard leads.\n- *High*: In leads par focus jald se jald hona chahiye.\n- *Urgent*: Fauran contact aur action ke liye.\n\n2. **Temperature (Client Interest):**\n- *Cold*: Client interested nahi hai ya response low hai.\n- *Warm*: Client ne positive signal diya hai.\n- *SQL (Sales Qualified Lead)*: Client deal close karne ke liye ready ho raha hai.\n- *Closed*: Deal successfully final ho chuki hai.\n\n3. **Stage (Pipeline Journey Phase):**\n- *Identify*: Abhi lead database me enter hui hai.\n- *Qualify*: Basic criteria check kiya ja raha hai.\n- *Nurture*: Client ke sath ongoing discussion aur pitch chal rahi hai.\n- *Close*: Deal commitment phase.\n- *Onboard*: Client ko onboard/training dena.\n- *Retain / Refer*: Retention aur client referrals.\n- *Rejected*: Woh leads jo verify nahi ho skin ya fake thin.',
         },
         {
             target: '#tour-legend',
             title: 'Claims Legend',
-            content: 'Leads Pipeline ke colors aapko batate hain ke lead kis status me hai (e.g. My Active Claim, Locked by Verifier/Closer, etc.).',
+            content: 'Yahan se aap samajh sakte hain ke lead kis user ke paas locked hai (e.g. My Active Claim, Claimed by Verifier, Closer, etc.). Locked leads ko koi doosra user edit nahi kar sakta jab tak unlock na kiya jaye.',
         },
         ...(isAdmin || isVerifier ? [
             {
@@ -468,12 +463,12 @@ const LeadsPipeline = () => {
                     <div className="flex items-center gap-2">
                         <h2 className="text-xl font-bold text-slate-800">Leads Pipeline Overview</h2>
                         <Button 
-                            size="xs" 
+                            size="sm" 
                             variant="outline" 
-                            className="h-7 text-[10px] uppercase font-bold border-blue-200 text-blue-600 hover:bg-blue-50"
+                            className="h-8 text-[11px] font-bold border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all flex items-center gap-1.5 shadow-sm rounded-lg shrink-0"
                             onClick={() => setRunTour(true)}
                         >
-                            💡 Tour Guide
+                            <HelpCircle size={14} className="text-blue-500" /> Start Page Tour
                         </Button>
                     </div>
                     <p className="text-xs text-slate-500 font-bold uppercase">Analyze and action your prospects</p>

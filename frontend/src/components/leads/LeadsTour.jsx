@@ -25,44 +25,52 @@ const LeadsTour = ({ run, setRun, steps, tourKey }) => {
         options: {
           arrowColor: '#ffffff',
           backgroundColor: '#ffffff',
-          overlayColor: 'rgba(15, 23, 42, 0.65)',
-          primaryColor: '#2563eb',
+          overlayColor: 'rgba(15, 23, 42, 0.6)',
+          primaryColor: '#3b82f6',
           textColor: '#1e293b',
-          zIndex: 1000,
+          zIndex: 10000,
         },
-        tooltipContainer: {
+        tooltip: {
+          borderRadius: '12px',
+          padding: '24px',
+          boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+          maxWidth: '450px',
+        },
+        tooltipTitle: {
+          fontSize: '16px',
+          fontWeight: '800',
+          color: '#0f172a',
+          marginBottom: '10px',
           textAlign: 'left',
-          fontFamily: 'inherit',
+        },
+        tooltipContent: {
+          fontSize: '13px',
+          lineHeight: '1.6',
+          color: '#475569',
+          textAlign: 'left',
         },
         buttonBack: {
-          marginRight: 10,
+          marginRight: 12,
           color: '#64748b',
-          fontWeight: 600,
-          fontSize: '13px',
+          fontWeight: 700,
+          fontSize: '12px',
         },
         buttonNext: {
           backgroundColor: '#2563eb',
           color: '#ffffff',
-          fontWeight: 600,
-          borderRadius: '6px',
-          fontSize: '13px',
+          fontWeight: 700,
+          borderRadius: '8px',
+          fontSize: '12px',
           padding: '8px 16px',
           border: 'none',
-          cursor: 'pointer'
+          boxShadow: '0 4px 6px -1px rgb(37 99 235 / 0.2)',
+          cursor: 'pointer',
         },
         buttonSkip: {
-          color: '#64748b',
-          fontWeight: 600,
-          fontSize: '13px',
+          color: '#ef4444',
+          fontWeight: 700,
+          fontSize: '12px',
         }
-      }}
-      locale={{
-        back: 'Peeche',
-        close: 'Band Karein',
-        last: 'Khatam',
-        next: 'Agla',
-        open: 'Kholein',
-        skip: 'Chorein',
       }}
     />
   );
