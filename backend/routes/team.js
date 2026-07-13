@@ -4,6 +4,7 @@ const User = require('../models/User');
 const Lead = require('../models/Lead');
 const Commission = require('../models/Commission');
 const { auth, requireRole } = require('../middleware/auth');
+const bcrypt = require('bcryptjs');
 
 // GET /api/team
 router.get('/', auth, async (req, res) => {
@@ -52,6 +53,27 @@ router.put('/:id', auth, requireRole(['admin']), async (req, res) => {
     );
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     res.json({ success: true, data: user });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// PUT /api/team/:id/reset-password
+// Reset a team member's password - Admin only
+router.put('/:id/reset-password', auth, requireRole(['admin']), async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password || password.trim().length < 6) {
+      return res.status(400).json({ success: false, error: 'Password must be at least 6 characters long.' });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: { password: hashedPassword } },
+      { new: true }
+    );
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+    res.json({ success: true, message: 'Password reset successful.' });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Server error' });
   }

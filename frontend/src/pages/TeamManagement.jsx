@@ -10,7 +10,7 @@ import {
     TableRow
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, FileDown, UserRoundCog } from 'lucide-react';
+import { Plus, Pencil, Trash2, FileDown, UserRoundCog, KeyRound } from 'lucide-react';
 import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
 import { AddTeamMemberDialog } from '@/components/AddTeamMemberDialog';
@@ -97,6 +97,24 @@ export default function TeamManagement() {
             toast({ variant: "destructive", title: "Error", description: "Failed to delete user." });
         }
     };
+    const handleResetPasswordPrompt = async (member) => {
+        const newPassword = window.prompt(`Enter new password for ${member.name}:`);
+        if (newPassword === null) return;
+        if (newPassword.trim().length < 6) {
+            toast({ variant: "destructive", title: "Validation Error", description: "Password must be at least 6 characters long." });
+            return;
+        }
+        try {
+            const res = await api.put(`/team/${member._id}/reset-password`, { password: newPassword });
+            if (res.success) {
+                toast({ title: "Success", description: `Password reset successfully for ${member.name}` });
+            } else {
+                toast({ variant: "destructive", title: "Error", description: res.error || "Failed to reset password." });
+            }
+        } catch (err) {
+            toast({ variant: "destructive", title: "Error", description: err.response?.data?.error || "Failed to reset password." });
+        }
+    };
 
     if (loading) return <div>Loading team...</div>;
 
@@ -157,6 +175,11 @@ export default function TeamManagement() {
                                                 onClick={() => handleImpersonate(member)}
                                             >
                                                 <UserRoundCog size={14} />
+                                            </Button>
+                                        )}
+                                        {isAdmin && (
+                                            <Button variant="outline" size="icon" className="text-amber-600 hover:text-amber-700 hover:bg-amber-50 border-amber-200" title="Reset Password" onClick={() => handleResetPasswordPrompt(member)}>
+                                                <KeyRound size={14} />
                                             </Button>
                                         )}
                                         {isAdmin && (

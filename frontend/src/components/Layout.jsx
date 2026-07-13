@@ -16,8 +16,12 @@ import {
     BarChart3,
     HelpCircle,
     Tag,
-    UserX2
+    UserX2,
+    KeyRound
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -44,7 +48,40 @@ const Layout = () => {
     const { user, logout, isImpersonating, impersonatingAdminName, endImpersonation } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+    const { toast } = useToast();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    
+    // Change password state
+    const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [submittingPassword, setSubmittingPassword] = useState(false);
+
+    const handleChangePasswordSubmit = async (e) => {
+        e.preventDefault();
+        if (newPassword.length < 6) {
+            toast({ variant: "destructive", title: "Error", description: "Password must be at least 6 characters." });
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            toast({ variant: "destructive", title: "Error", description: "Passwords do not match." });
+            return;
+        }
+        setSubmittingPassword(true);
+        try {
+            const res = await api.put('/auth/me', { password: newPassword });
+            if (res.success) {
+                toast({ title: "Success", description: "Password updated successfully." });
+                setIsChangePasswordOpen(false);
+                setNewPassword('');
+                setConfirmPassword('');
+            }
+        } catch (err) {
+            toast({ variant: "destructive", title: "Error", description: err.response?.data?.error || "Failed to update password." });
+        } finally {
+            setSubmittingPassword(false);
+        }
+    };
 
     // Track global clicks
     useEffect(() => {
@@ -154,7 +191,15 @@ const Layout = () => {
                     </div>
                     <Button
                         variant="ghost"
-                        className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800 gap-3 mt-2"
+                        className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800 gap-3 mt-1"
+                        onClick={() => setIsChangePasswordOpen(true)}
+                    >
+                        <KeyRound size={20} />
+                        <span>Change Password</span>
+                    </Button>
+                    <Button
+                        variant="ghost"
+                        className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800 gap-3 mt-1"
                         onClick={logout}
                     >
                         <LogOut size={20} />
@@ -213,6 +258,45 @@ const Layout = () => {
                     Intellectual property of Net Bots  (SMC-PRIVATE) LIMITED
                 </footer>
             </main>
+
+            <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
+                <DialogContent className="sm:max-w-[400px] bg-white p-6 rounded-lg shadow-xl">
+                    <DialogHeader>
+                        <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                            <KeyRound className="text-blue-500" size={20} />
+                            Change Password
+                        </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleChangePasswordSubmit} className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase">New Password</label>
+                            <Input
+                                type="password"
+                                required
+                                placeholder="Enter at least 6 characters"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase">Confirm Password</label>
+                            <Input
+                                type="password"
+                                required
+                                placeholder="Re-enter new password"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                            />
+                        </div>
+                        <DialogFooter className="pt-2">
+                            <Button type="button" variant="outline" onClick={() => setIsChangePasswordOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={submittingPassword} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                                {submittingPassword ? 'Saving...' : 'Update Password'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
