@@ -7,7 +7,7 @@ const ActivitySchema = new mongoose.Schema({
            'message_sent', 'email_sent', 'call_made', 'client_converted', 'commission_earned',
            'payout_processed', 'rank_upgraded', 'note_added', 'churn_risk_flagged',
            'retention_action', 'referral_sent', 'note', 'call', 'whatsapp', 'email', 'meeting', 'sms', 'social_media',
-           'lead_locked_verifier', 'lead_unlocked_verifier', 'lead_locked_closer', 'lead_unlocked_closer'],
+           'lead_locked_verifier', 'lead_unlocked_verifier', 'lead_locked_closer', 'lead_unlocked_closer', 'lead_verified'],
     required: true
   },
   leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead' },

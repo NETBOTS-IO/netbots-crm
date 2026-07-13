@@ -662,65 +662,80 @@ const LeadsPipeline = () => {
                                 <TableCell>
                                     <div className="flex flex-col gap-1">
                                         {/* Verifier Lock Button */}
-                                        {lead.workingVerifier ? (
-                                            lead.workingVerifier._id === currentUser?._id ? (
-                                                <Button 
-                                                    size="xs" 
-                                                    className="h-6 text-[9px] px-2 font-bold uppercase tracking-tight bg-emerald-600 hover:bg-emerald-700 text-white" 
-                                                    onClick={() => handleUnlockVerifier(lead._id)}
-                                                >
-                                                    Verifier: Mine (Unlock)
-                                                </Button>
+                                        {(currentUser?.role === 'admin' || (Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier'))) && (
+                                            lead.workingVerifier ? (
+                                                lead.workingVerifier._id === currentUser?._id ? (
+                                                    <Button 
+                                                        size="xs" 
+                                                        className="h-6 text-[9px] px-2 font-bold uppercase tracking-tight bg-emerald-600 hover:bg-emerald-700 text-white" 
+                                                        onClick={() => handleUnlockVerifier(lead._id)}
+                                                    >
+                                                        Verifier: Mine (Unlock)
+                                                    </Button>
+                                                ) : (
+                                                    <Button 
+                                                        size="xs" 
+                                                        disabled 
+                                                        className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
+                                                        title={`Locked by ${lead.workingVerifier.name}`}
+                                                    >
+                                                        Verifier: {lead.workingVerifier.name}
+                                                    </Button>
+                                                )
                                             ) : (
                                                 <Button 
                                                     size="xs" 
-                                                    disabled 
-                                                    className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
-                                                    title={`Locked by ${lead.workingVerifier.name}`}
+                                                    variant="outline" 
+                                                    className="h-6 text-[9px] px-2 font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                    onClick={() => handleLockVerifier(lead._id)}
                                                 >
-                                                    Verifier: {lead.workingVerifier.name}
+                                                    Claim Verifier
                                                 </Button>
                                             )
-                                        ) : (
-                                            <Button 
-                                                size="xs" 
-                                                variant="outline" 
-                                                className="h-6 text-[9px] px-2 font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
-                                                onClick={() => handleLockVerifier(lead._id)}
-                                            >
-                                                Claim Verifier
-                                            </Button>
                                         )}
 
                                         {/* Closer Lock Button */}
-                                        {lead.workingCloser ? (
-                                            lead.workingCloser._id === currentUser?._id ? (
-                                                <Button 
-                                                    size="xs" 
-                                                    className="h-6 text-[9px] px-2 font-bold uppercase tracking-tight bg-blue-600 hover:bg-blue-700 text-white" 
-                                                    onClick={() => handleUnlockCloser(lead._id)}
-                                                >
-                                                    Closer: Mine (Unlock)
-                                                </Button>
+                                        {(currentUser?.role === 'admin' || (Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser'))) && (
+                                            lead.workingCloser ? (
+                                                lead.workingCloser._id === currentUser?._id ? (
+                                                    <Button 
+                                                        size="xs" 
+                                                        className="h-6 text-[9px] px-2 font-bold uppercase tracking-tight bg-blue-600 hover:bg-blue-700 text-white" 
+                                                        onClick={() => handleUnlockCloser(lead._id)}
+                                                    >
+                                                        Closer: Mine (Unlock)
+                                                    </Button>
+                                                ) : (
+                                                    <Button 
+                                                        size="xs" 
+                                                        disabled 
+                                                        className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
+                                                        title={`Locked by ${lead.workingCloser.name}`}
+                                                    >
+                                                        Closer: {lead.workingCloser.name}
+                                                    </Button>
+                                                )
                                             ) : (
-                                                <Button 
-                                                    size="xs" 
-                                                    disabled 
-                                                    className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
-                                                    title={`Locked by ${lead.workingCloser.name}`}
-                                                >
-                                                    Closer: {lead.workingCloser.name}
-                                                </Button>
+                                                !lead.isVerifiedByVerifier ? (
+                                                    <Button 
+                                                        size="xs" 
+                                                        disabled
+                                                        className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
+                                                        title="Please wait for a Verifier to mark this lead as verified first."
+                                                    >
+                                                        Claim Closer
+                                                    </Button>
+                                                ) : (
+                                                    <Button 
+                                                        size="xs" 
+                                                        variant="outline" 
+                                                        className="h-6 text-[9px] px-2 font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                        onClick={() => handleLockCloser(lead._id)}
+                                                    >
+                                                        Claim Closer
+                                                    </Button>
+                                                )
                                             )
-                                        ) : (
-                                            <Button 
-                                                size="xs" 
-                                                variant="outline" 
-                                                className="h-6 text-[9px] px-2 font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
-                                                onClick={() => handleLockCloser(lead._id)}
-                                            >
-                                                Claim Closer
-                                            </Button>
                                         )}
                                     </div>
                                 </TableCell>
@@ -812,6 +827,7 @@ const LeadsPipeline = () => {
                                     <SelectItem value="onboard">Onboard</SelectItem>
                                     <SelectItem value="retain">Retain</SelectItem>
                                     <SelectItem value="refer">Refer</SelectItem>
+                                    <SelectItem value="rejected">Rejected</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>

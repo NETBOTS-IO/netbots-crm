@@ -28,20 +28,28 @@ const checkLeadLock = async (leadId, user) => {
     const isVerifier = Array.isArray(user.designation) && user.designation.includes('LeadVerifier');
     const isCloser = Array.isArray(user.designation) && user.designation.includes('LeadCloser');
 
-    if (isVerifier && lead.workingVerifier && lead.workingVerifier.toString() !== user._id.toString()) {
-        return { 
-            allowed: false, 
-            error: 'Action blocked: This lead is currently locked by another Lead Verifier.', 
-            status: 400 
-        };
+    const isAssignedVerifier = lead.workingVerifier && lead.workingVerifier.toString() === user._id.toString();
+    const isAssignedCloser = lead.workingCloser && lead.workingCloser.toString() === user._id.toString();
+
+    // If the user has locked it, they can edit.
+    if (isAssignedVerifier || isAssignedCloser) return { allowed: true };
+
+    // If it's locked by SOMEONE ELSE, block it immediately.
+    const lockedByOtherVerifier = lead.workingVerifier && lead.workingVerifier.toString() !== user._id.toString();
+    const lockedByOtherCloser = lead.workingCloser && lead.workingCloser.toString() !== user._id.toString();
+    
+    if (lockedByOtherVerifier || lockedByOtherCloser) {
+        return { allowed: false, error: 'Action blocked: This lead is locked by another team member.', status: 403 };
     }
 
-    if (isCloser && lead.workingCloser && lead.workingCloser.toString() !== user._id.toString()) {
-        return { 
-            allowed: false, 
-            error: 'Action blocked: This lead is currently locked by another Lead Closer.', 
-            status: 400 
-        };
+    // If it's NOT locked, but the user is a Verifier or Closer, they MUST claim it first.
+    if (isVerifier || isCloser) {
+        return { allowed: false, error: 'Access denied: You must claim this lead first before making edits.', status: 403 };
+    }
+
+    // Otherwise (e.g. Collector), fallback to their global edit permission
+    if (!user.permissions || !user.permissions.can_edit_leads) {
+        return { allowed: false, error: 'Access denied: You do not have permission to edit leads.', status: 403 };
     }
 
     return { allowed: true };
@@ -209,7 +217,12 @@ router.get('/', auth, async (req, res) => {
 
     // 3. Dropdown filters
     if (priority !== 'all') query.priority = priority;
-    if (stage !== 'all') query.stage = stage;
+    if (stage !== 'all') {
+        query.stage = stage;
+    } else {
+        // By default, do not show rejected leads unless explicitly filtered
+        query.stage = { $ne: 'rejected' };
+    }
     if (temp !== 'all') query.temperature = temp;
     
     if (contact === 'contacted_today') {
@@ -362,7 +375,7 @@ router.post('/', auth, async (req, res) => {
 // get single lead + full activity timeline
 router.get('/:id', auth, async (req, res) => {
   try {
-    const lead = await Lead.findById(req.params.id).populate('submittedBy assignedCloser caPartner');
+    const lead = await Lead.findById(req.params.id).populate('submittedBy assignedCloser caPartner workingVerifier workingCloser');
     if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
 
     // Ownership check — users with can_view_leads bypass ownership restriction
@@ -392,25 +405,13 @@ router.get('/:id', auth, async (req, res) => {
 // PUT /api/leads/:id
 router.put('/:id', auth, async (req, res) => {
   try {
-    const lead = await Lead.findById(req.params.id);
-    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
-
-    const isAssignedVerifier = lead.workingVerifier && lead.workingVerifier.toString() === req.user._id.toString();
-    const isAssignedCloser = lead.workingCloser && lead.workingCloser.toString() === req.user._id.toString();
-
-    if (
-      req.user.role !== 'admin' && 
-      (!req.user.permissions || !req.user.permissions.can_edit_leads) && 
-      !isAssignedVerifier && 
-      !isAssignedCloser
-    ) {
-      return res.status(403).json({ success: false, error: 'Access denied: You do not have permission to edit this lead (claim the work lock first).' });
-    }
-
     const lockCheck = await checkLeadLock(req.params.id, req.user);
     if (!lockCheck.allowed) {
       return res.status(lockCheck.status).json({ success: false, error: lockCheck.error });
     }
+
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
 
     const updateData = { ...req.body };
     updateData.contactedBy = req.user.name || req.user.email;
@@ -432,31 +433,23 @@ router.put('/:id', auth, async (req, res) => {
 
 // PUT /api/leads/:id/stage
 router.put('/:id/stage', auth, async (req, res) => {
-  const { stage } = req.body;
+  const { stage, rejectedReason } = req.body;
   try {
-    const lead = await Lead.findById(req.params.id);
-    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
-
-    const isAssignedVerifier = lead.workingVerifier && lead.workingVerifier.toString() === req.user._id.toString();
-    const isAssignedCloser = lead.workingCloser && lead.workingCloser.toString() === req.user._id.toString();
-
-    if (
-      req.user.role !== 'admin' && 
-      (!req.user.permissions || !req.user.permissions.can_edit_leads) && 
-      !isAssignedVerifier && 
-      !isAssignedCloser
-    ) {
-      return res.status(403).json({ success: false, error: 'Access denied: You do not have permission to edit this lead stage.' });
-    }
-
     const lockCheck = await checkLeadLock(req.params.id, req.user);
     if (!lockCheck.allowed) {
       return res.status(lockCheck.status).json({ success: false, error: lockCheck.error });
     }
 
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
     const oldStage = lead.stage;
     lead.stage = stage;
     lead.stageEnteredAt = Date.now();
+    
+    if (stage === 'rejected' && rejectedReason) {
+        lead.rejectedReason = rejectedReason;
+    }
     
     // Auto temp update if stage is close or beyond
     if (stage === 'close') lead.temperature = 'sql';
@@ -492,6 +485,38 @@ router.put('/:id/stage', auth, async (req, res) => {
     res.json({ success: true, data: lead });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// PUT /api/leads/:id/verify
+// Mark lead as verified by the verifier
+router.put('/:id/verify', auth, async (req, res) => {
+  try {
+    const lockCheck = await checkLeadLock(req.params.id, req.user);
+    if (!lockCheck.allowed) {
+      return res.status(lockCheck.status).json({ success: false, error: lockCheck.error });
+    }
+
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
+    lead.isVerifiedByVerifier = true;
+    lead.leadVerifiedBy = req.user.name || req.user.email;
+    lead.verifiedAt = Date.now();
+    await lead.save();
+
+    const activity = new Activity({
+      type: 'lead_verified',
+      leadId: lead._id,
+      performedBy: req.user._id,
+      description: `Lead verified by ${req.user.name}`
+    });
+    await activity.save();
+
+    res.json({ success: true, data: lead });
+  } catch (err) {
+    console.error("Error in /verify:", err);
+    res.status(500).json({ success: false, error: 'Server error: ' + err.message });
   }
 });
 
@@ -736,6 +761,13 @@ router.delete('/:id', auth, async (req, res) => {
 // PUT /api/leads/:id/lock-verifier
 router.put('/:id/lock-verifier', auth, async (req, res) => {
   try {
+    if (req.user.role !== 'admin') {
+      const isVerifier = Array.isArray(req.user.designation) && req.user.designation.includes('LeadVerifier');
+      if (!isVerifier) {
+        return res.status(403).json({ success: false, error: 'You do not have the LeadVerifier designation to claim this lead.' });
+      }
+    }
+
     const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
 
@@ -804,6 +836,13 @@ router.put('/:id/unlock-verifier', auth, async (req, res) => {
 // PUT /api/leads/:id/lock-closer
 router.put('/:id/lock-closer', auth, async (req, res) => {
   try {
+    if (req.user.role !== 'admin') {
+      const isCloser = Array.isArray(req.user.designation) && req.user.designation.includes('LeadCloser');
+      if (!isCloser) {
+        return res.status(403).json({ success: false, error: 'You do not have the LeadCloser designation to claim this lead.' });
+      }
+    }
+
     const lead = await Lead.findById(req.params.id);
     if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
 

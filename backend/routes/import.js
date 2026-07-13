@@ -40,7 +40,7 @@ router.post('/leads', auth, upload.single('file'), (req, res) => {
             return undefined;
           };
 
-          const leadData = {
+            const leadData = {
             companyName: getValue(['Name', 'name', 'companyName', 'Company', 'company_name']),
             contactName: getValue(['contactName', 'Contact', 'contact_name']),
             phone: getValue(['Phone', 'phone']),
@@ -71,6 +71,7 @@ router.post('/leads', auth, upload.single('file'), (req, res) => {
             leadCollectedBy: req.user.name || req.user.email,
             targetService: getValue(['TargetService', 'targetService', 'target_service', 'service']),
             source: 'bulk_import',
+            priority: req.body.priority || 'medium',
             notes: getValue(['Notes', 'notes']) || '',
           };
 

@@ -5,10 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, FileType, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import api from '@/lib/api';
 
 const ImportWizard = () => {
     const [file, setFile] = useState(null);
+    const [priority, setPriority] = useState('medium');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
     const { toast } = useToast();
@@ -23,6 +26,7 @@ const ImportWizard = () => {
         setLoading(true);
 
         const formData = new FormData();
+        formData.append('priority', priority);
         formData.append('file', file);
 
         try {
@@ -66,11 +70,28 @@ const ImportWizard = () => {
                             onChange={handleFileChange}
                             className="max-w-xs mb-4"
                         />
-                        <p className="text-sm text-slate-500 max-w-lg text-center">
+                        <p className="text-sm text-slate-500 max-w-lg text-center mt-4">
                             Supported columns: Name, Phone, Email, Website, Address, Instagram, Facebook, Twitter, Linkedin, Yelp, Youtube, PlaceID, CID, Category, ReviewCount, AverageRating, Latitude, Longitude, and Working Hours (1_Monday to 7_Sunday).
                         </p>
                     </CardContent>
-                    <CardFooter className="flex justify-end gap-3">
+                    <CardContent className="border-t px-6 py-4 bg-slate-50">
+                        <div className="flex flex-col gap-2 max-w-xs mx-auto">
+                            <Label className="text-xs font-bold text-slate-500 uppercase">Default Lead Priority</Label>
+                            <Select value={priority} onValueChange={setPriority}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select priority" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="low">Low Priority</SelectItem>
+                                    <SelectItem value="medium">Medium Priority</SelectItem>
+                                    <SelectItem value="high">High Priority</SelectItem>
+                                    <SelectItem value="urgent">Urgent</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <p className="text-[10px] text-slate-400 mt-1">This priority will be applied to all leads in the CSV.</p>
+                        </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-end gap-3 border-t pt-4">
                         <Button variant="outline" onClick={() => navigate('/leads')}>Cancel</Button>
                         <Button onClick={handleUpload} disabled={!file || loading}>
                             {loading ? 'Processing...' : 'Start Import'}

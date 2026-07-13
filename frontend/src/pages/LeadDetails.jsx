@@ -46,6 +46,11 @@ const LeadDetails = () => {
     const [activityType, setActivityType] = useState('note');
     const [submittingNote, setSubmittingNote] = useState(false);
     
+    // Rejected state
+    const [isRejectOpen, setIsRejectOpen] = useState(false);
+    const [rejectedReason, setRejectedReason] = useState('');
+    const [rejecting, setRejecting] = useState(false);
+    
     // Conversion & Team states
     const [team, setTeam] = useState([]);
     const [isConvertOpen, setIsConvertOpen] = useState(false);
@@ -70,7 +75,7 @@ const LeadDetails = () => {
         }
     }, [currentUser]);
 
-    const stages = ['identify', 'qualify', 'nurture', 'close', 'onboard', 'retain', 'refer'];
+    const stages = ['identify', 'qualify', 'nurture', 'close', 'onboard', 'retain', 'refer', 'rejected'];
     const { isAdmin, can } = usePermissions();
     const myId = currentUser?._id?.toString();
     const holdsVerifierLock = lead?.workingVerifier?._id?.toString() === myId;
@@ -88,6 +93,8 @@ const LeadDetails = () => {
     const getLockStatusMessage = () => {
         if (isPrivileged) return null; // Admin bypasses everything
         
+        if (holdsVerifierLock || holdsCloserLock) return null; // If they hold any lock, they are fully allowed
+        
         // Locked by another Verifier
         if (isVerifierUser && lead?.workingVerifier && lead.workingVerifier._id?.toString() !== myId) {
             return `Lead Verifier "${lead.workingVerifier.name}" is working on this lead. You cannot perform this action.`;
@@ -98,11 +105,12 @@ const LeadDetails = () => {
         }
 
         // Unclaimed by current user (must claim first)
-        if (isVerifierUser && !lead?.workingVerifier) {
+        if (isVerifierUser || isCloserUser) {
             return "Access denied: You must claim this lead first (Work Claim) before you can modify its stage or add notes.";
         }
-        if (isCloserUser && !lead?.workingCloser) {
-            return "Access denied: You must claim this lead first (Work Claim) before you can modify its stage or add notes.";
+
+        if (!can('can_edit_leads')) {
+            return "Access denied: You do not have permission to edit leads.";
         }
 
         return null;
@@ -199,15 +207,56 @@ const LeadDetails = () => {
             toast({ variant: "destructive", title: "Action Blocked", description: lockWarning });
             return;
         }
+        if (newStage === 'rejected') {
+            setIsRejectOpen(true);
+            return;
+        }
+        submitStageUpdate(newStage);
+    };
+
+    const submitStageUpdate = async (newStage, reason = null) => {
         try {
-            const res = await api.put(`/leads/${id}/stage`, { stage: newStage });
+            const payload = { stage: newStage };
+            if (reason) payload.rejectedReason = reason;
+
+            const res = await api.put(`/leads/${id}/stage`, payload);
             if (res.success) {
                 toast({ title: "Success", description: `Stage updated to ${newStage}` });
                 fetchLeadData();
+                if (newStage === 'rejected') {
+                    setIsRejectOpen(false);
+                    setRejectedReason('');
+                }
+            } else {
+                toast({ variant: "destructive", title: "Error", description: res.error || "Failed to update stage" });
             }
         } catch (err) {
             toast({ variant: "destructive", title: "Error", description: "Failed to update stage" });
+        } finally {
+            setRejecting(false);
         }
+    };
+
+    const handleMarkVerified = async () => {
+        try {
+            const res = await api.put(`/leads/${id}/verify`);
+            if (res.success) {
+                toast({ title: "Success", description: "Lead has been marked as verified." });
+                fetchLeadData();
+            } else {
+                toast({ variant: "destructive", title: "Error", description: res.error || "Failed to verify lead" });
+            }
+        } catch (err) {
+            const errorMsg = typeof err === 'object' && err.error ? err.error : (err.message || "Connection failed");
+            toast({ variant: "destructive", title: "Error", description: errorMsg });
+        }
+    };
+
+    const handleRejectSubmit = (e) => {
+        e.preventDefault();
+        if (!rejectedReason.trim()) return;
+        setRejecting(true);
+        submitStageUpdate('rejected', rejectedReason);
     };
 
     const handleAddNote = async (e) => {
@@ -258,11 +307,16 @@ const LeadDetails = () => {
                     <ArrowLeft size={16} /> Back to Pipeline
                 </Button>
                 <div className="flex gap-2">
+                    {holdsVerifierLock && !lead?.isVerifiedByVerifier && (
+                        <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2 font-semibold" onClick={handleMarkVerified}>
+                            <CheckCircle2 size={14} /> Mark as Verified
+                        </Button>
+                    )}
                     <Button 
                         variant="outline" 
                         size="sm" 
-                        className="gap-2" 
-                        onClick={() => navigate(`/leads/edit/${lead._id}`)}
+                        className="flex items-center gap-2 font-semibold" 
+                        onClick={() => navigate(`/leads/edit/${id}`)}
                         disabled={!canEdit}
                         title={!canEdit ? "You do not have permission to edit leads." : ""}
                     >
@@ -406,9 +460,13 @@ const LeadDetails = () => {
                             <div className="grid grid-cols-2 md:grid-cols-5 gap-6 text-sm text-slate-700 font-medium">
                                 <div>
                                     <p className="text-[10px] text-slate-400 uppercase font-black">Target Service</p>
-                                    <Badge variant="outline" className="mt-1 bg-blue-50 text-blue-700 border-blue-200 capitalize font-bold">
-                                        {lead.targetService ? lead.targetService.replace(/_/g, ' ') : 'Not Specified'}
-                                    </Badge>
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {lead.targetService && lead.targetService.length > 0 ? lead.targetService.map(service => (
+                                            <Badge key={service} variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 capitalize font-bold">
+                                                {service.replace(/_/g, ' ')}
+                                            </Badge>
+                                        )) : <span className="text-slate-400 text-xs font-bold mt-1">Not Specified</span>}
+                                    </div>
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-slate-400 uppercase font-black">Lead Collected By</p>
@@ -844,6 +902,35 @@ const LeadDetails = () => {
                             <Button type="button" variant="outline" onClick={() => setIsConvertOpen(false)}>Cancel</Button>
                             <Button type="submit" disabled={converting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                                 {converting ? 'Converting...' : 'Confirm Conversion'}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={isRejectOpen} onOpenChange={setIsRejectOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-rose-600 flex items-center gap-2">
+                            Reject Lead
+                        </DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={handleRejectSubmit} className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="rejectedReason" className="text-xs font-bold text-slate-500 uppercase">Reason for Rejection</Label>
+                            <textarea
+                                id="rejectedReason"
+                                required
+                                className="w-full min-h-[100px] p-3 text-sm border rounded-lg focus:ring-2 focus:ring-rose-500 outline-none"
+                                placeholder="Please explain why this lead is being rejected..."
+                                value={rejectedReason}
+                                onChange={(e) => setRejectedReason(e.target.value)}
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="outline" onClick={() => setIsRejectOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={rejecting} className="bg-rose-600 hover:bg-rose-700 text-white">
+                                {rejecting ? 'Rejecting...' : 'Confirm Rejection'}
                             </Button>
                         </DialogFooter>
                     </form>

@@ -79,7 +79,7 @@ app.use('/api/performance',   require('./routes/performance'));
 app.use('/api/agreement',     require('./routes/agreement'));
 
 // Catch-all route to serve compiled React app for frontend routes
-app.get('*', (req, res) => {
+app.use((req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
 
@@ -94,12 +94,16 @@ mongoose.connect(MONGO_URI)
     try {
       const rawCollection = mongoose.connection.db.collection('users');
       const usersWithStringDesignation = await rawCollection.find({ designation: { $type: 'string' } }).toArray();
+      let migratedCount = 0;
       for (const u of usersWithStringDesignation) {
-        const designationArray = u.designation ? [u.designation] : [];
-        await rawCollection.updateOne({ _id: u._id }, { $set: { designation: designationArray } });
+        if (typeof u.designation === 'string') {
+          const designationArray = [u.designation];
+          await rawCollection.updateOne({ _id: u._id }, { $set: { designation: designationArray } });
+          migratedCount++;
+        }
       }
-      if (usersWithStringDesignation.length > 0) {
-        console.log(`Migrated ${usersWithStringDesignation.length} users: designation string -> array`);
+      if (migratedCount > 0) {
+        console.log(`Migrated ${migratedCount} users: designation string -> array`);
       }
     } catch (migrationErr) {
       console.error('Designation migration error (non-fatal):', migrationErr.message);

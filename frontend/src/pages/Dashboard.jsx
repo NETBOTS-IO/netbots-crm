@@ -1,6 +1,7 @@
 import { useAuth } from '@/context/AuthContext';
 import CEODashboard from './CEODashboard';
 import SalesDashboard from './SalesDashboard';
+import StaffDashboard from './StaffDashboard';
 import { Navigate } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -16,9 +17,8 @@ const Dashboard = () => {
         return <SalesDashboard />;
     }
 
-    // Default for researchers/partners could be a simple summary or personal stats
-    // For now, let's show SalesDashboard or a simplified version
-    return <SalesDashboard />;
+    // lead_gen, technical_staff, etc. get the personalized StaffDashboard
+    return <StaffDashboard />;
 };
 
 export default Dashboard;

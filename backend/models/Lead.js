@@ -24,7 +24,7 @@ const LeadSchema = new mongoose.Schema({
   score: { type: Number, default: 1 },
   stage: {
     type: String,
-    enum: ['identify', 'qualify', 'nurture', 'close', 'onboard', 'retain', 'refer'],
+    enum: ['identify', 'qualify', 'nurture', 'close', 'onboard', 'retain', 'refer', 'rejected'],
     default: 'identify'
   },
   currentSoftware: {
@@ -61,6 +61,7 @@ const LeadSchema = new mongoose.Schema({
     enum: ['price', 'features', 'competitor', 'no_response', 'timing', 'other', null],
     default: null
   },
+  rejectedReason: { type: String },
   notes: { type: String },
   internalNotes: { type: String },
   stageEnteredAt: { type: Date, default: Date.now },
@@ -89,12 +90,13 @@ const LeadSchema = new mongoose.Schema({
   sundayHours: { type: String },
   
   // Robust Tracking Fields
-  targetService: {
+  targetService: [{
     type: String,
     enum: ['google_business_seo', 'website_seo', 'social_media_management_marketing', 'designing', 'software_development', 'website_development', 'saas_product']
-  },
+  }],
   leadCollectedBy: { type: String },
   leadVerifiedBy: { type: String },
+  isVerifiedByVerifier: { type: Boolean, default: false },
   verifiedAt: { type: Date },
   contactedBy: { type: String },
   contactMethod: { type: String },

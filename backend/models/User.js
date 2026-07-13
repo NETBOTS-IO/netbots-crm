@@ -32,8 +32,8 @@ const UserSchema = new mongoose.Schema({
   },
   rank: {
     type: String,
-    enum: [' ', 'hunter', 'closer', 'elite_closer', 'gold_closer', 'champion'],
-    default: ' '
+    enum: ['rookie', 'hunter', 'closer', 'elite_closer', 'gold_closer', 'champion'],
+    default: 'rookie'
   },
   points: { type: Number, default: 0 },
   totalLeadsSubmitted: { type: Number, default: 0 },
