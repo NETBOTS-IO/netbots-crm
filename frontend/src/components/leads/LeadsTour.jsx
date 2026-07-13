@@ -1,5 +1,5 @@
 import React from 'react';
-import Joyride, { STATUS } from 'react-joyride';
+import { Joyride, STATUS } from 'react-joyride';
 
 const LeadsTour = ({ run, setRun, steps, tourKey }) => {
   const handleJoyrideCallback = (data) => {
