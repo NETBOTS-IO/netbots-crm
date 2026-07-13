@@ -26,12 +26,21 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { exportTableToPDF } from '../utils/pdfExport';
 import { FileDown } from 'lucide-react';
+import LeadsTour from '@/components/leads/LeadsTour';
 
 const LeadsPipeline = () => {
     const [leads, setLeads] = useState([]);
     const [stats, setStats] = useState({ totalLeadsCount: 0, contactedCount: 0, commitmentsCount: 0, followUpCount: 0 });
     const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
     const [limit] = useState(50);
+    
+    // Tour state
+    const [runTour, setRunTour] = useState(false);
+    useEffect(() => {
+        if (!localStorage.getItem('hasRunLeadsPipelineTour')) {
+            setRunTour(true);
+        }
+    }, []);
     
     // Helper to get session storage filter or fallback
     const getSessionFilter = (key, defaultValue) => {
@@ -393,12 +402,80 @@ const LeadsPipeline = () => {
         }
     };
 
+    const isVerifier = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier');
+    const isCloser = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser');
+    const isAdmin = currentUser?.role === 'admin';
+
+    const tourSteps = [
+        {
+            target: 'body',
+            placement: 'center',
+            title: 'Leads Pipeline Overview Tour',
+            content: 'Assalam-o-Alaikum! Is interactive tour me hum Netbots CRM Leads Pipeline ke important features aur buttons ko Roman Urdu me samjhein ge.',
+        },
+        {
+            target: '#tour-stats',
+            title: 'Leads Stats',
+            content: 'Yahan aapko leads ke metrics dikhenge: Total Leads, Contacted, Commitments (SQLs) aur Scheduled Follow-ups. Kisi bhi card par click kar ke aap un leads ko niche list me filter kar sakte hain.',
+        },
+        {
+            target: '#tour-search',
+            title: 'Leads Search',
+            content: 'Agar aapko koi specific lead dhoondni hai, toh aap Company Name, Contact Name, Email, ya Phone number yahan likh kar search kar sakte hain.',
+        },
+        {
+            target: '#tour-filters-btn',
+            title: 'Filters & Sorting',
+            content: 'Is button par click kar ke aap Stage, Priority, Temperature aur Assignees ke mutabiq leads ko deep-filter aur sort kar sakte hain.',
+        },
+        {
+            target: '#tour-actions',
+            title: 'Quick Actions',
+            content: 'Yahan se aap New Lead create kar sakte hain, Google Maps se leads dhoond sakte hain, CSV file bulk me import kar sakte hain, ya PDF export kar sakte hain (agar admin hain).',
+        },
+        {
+            target: '#tour-table',
+            title: 'Leads Table',
+            content: 'Yeh aapki saari leads ki list hai. Isme aap priority tags (Low, Medium, High, Urgent), temperature labels (Cold, Warm, SQL) aur current stage dekh sakte hain.',
+        },
+        {
+            target: '#tour-legend',
+            title: 'Claims Legend',
+            content: 'Leads Pipeline ke colors aapko batate hain ke lead kis status me hai (e.g. My Active Claim, Locked by Verifier/Closer, etc.).',
+        },
+        ...(isAdmin || isVerifier ? [
+            {
+                target: '#tour-claim-section',
+                title: 'Verifier Claims',
+                content: 'Verifier user yahan se lead claim karta hai. Jab tak verifier lead claim nahi karega aur lead ko verify kar ke "Mark as Verified" nahi karega, closer isey claim nahi kar payega.',
+            }
+        ] : []),
+        ...(isAdmin || isCloser ? [
+            {
+                target: '#tour-claim-section',
+                title: 'Closer Claims',
+                content: 'Closer user yahan se lead claim karta hai takay sale close ki ja sakay. Yaad rahe Closer tabhi claim kar payega jab lead verifier ki taraf se verify ho chuki ho.',
+            }
+        ] : [])
+    ];
+
     return (
         <div className="space-y-6">
+            <LeadsTour run={runTour} setRun={setRunTour} steps={tourSteps} tourKey="hasRunLeadsPipelineTour" />
             {/* Header & Period Filter */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-lg border shadow-sm">
                 <div>
-                    <h2 className="text-xl font-bold text-slate-800">Leads Pipeline Overview</h2>
+                    <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-slate-800">Leads Pipeline Overview</h2>
+                        <Button 
+                            size="xs" 
+                            variant="outline" 
+                            className="h-7 text-[10px] uppercase font-bold border-blue-200 text-blue-600 hover:bg-blue-50"
+                            onClick={() => setRunTour(true)}
+                        >
+                            💡 Tour Guide
+                        </Button>
+                    </div>
                     <p className="text-xs text-slate-500 font-bold uppercase">Analyze and action your prospects</p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -419,7 +496,7 @@ const LeadsPipeline = () => {
             </div>
 
             {/* Stats Dashboard Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div id="tour-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <Card 
                     onClick={() => setCardFilter('all')} 
                     className={`cursor-pointer bg-gradient-to-br from-blue-50 to-white border-blue-100 shadow-sm hover:shadow transition-all ${cardFilter === 'all' ? 'ring-2 ring-blue-500 border-transparent shadow' : ''}`}
@@ -496,7 +573,7 @@ const LeadsPipeline = () => {
             <div className="p-4 bg-white rounded-lg border shadow-sm space-y-4">
                 <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
                     <div className="flex flex-col sm:flex-row gap-2 w-full md:w-[480px]">
-                        <div className="relative flex-1">
+                        <div id="tour-search" className="relative flex-1">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                             <Input
                                 className="pl-10 h-10 w-full"
@@ -506,6 +583,7 @@ const LeadsPipeline = () => {
                             />
                         </div>
                         <Button 
+                            id="tour-filters-btn"
                             variant="outline" 
                             className="h-10 gap-2 border-slate-200 text-slate-700 hover:bg-slate-50 relative font-semibold shrink-0"
                             onClick={() => setIsFiltersOpen(true)}
@@ -519,7 +597,7 @@ const LeadsPipeline = () => {
                             )}
                         </Button>
                     </div>
-                    <div className="flex gap-2 w-full md:w-auto items-center justify-end">
+                    <div id="tour-actions" className="flex gap-2 w-full md:w-auto items-center justify-end">
                         {currentUser?.role === 'admin' && (
                             <Button variant="outline" size="sm" className="gap-2 border-red-200 text-red-700 hover:bg-red-50" onClick={handleExportPDF}>
                                 <FileDown size={14} /> Export to PDF
@@ -571,7 +649,7 @@ const LeadsPipeline = () => {
             )}
 
             {/* Color Legend / Indicators */}
-            <div className="flex flex-wrap items-center gap-4 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 shadow-sm">
+            <div id="tour-legend" className="flex flex-wrap items-center gap-4 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 shadow-sm">
                 <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Claims Legend:</span>
                 <div className="flex items-center gap-1.5">
                     <span className="w-3.5 h-3.5 rounded bg-emerald-200 border border-emerald-400 block shrink-0" />
@@ -595,7 +673,7 @@ const LeadsPipeline = () => {
                 </div>
             </div>
 
-            <div className="rounded-md border bg-white overflow-x-auto">
+            <div id="tour-table" className="rounded-md border bg-white overflow-x-auto">
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -613,7 +691,7 @@ const LeadsPipeline = () => {
                             <TableHead>Priority</TableHead>
                             <TableHead>Temp</TableHead>
                             <TableHead>Stage</TableHead>
-                            <TableHead>Work Claim</TableHead>
+                            <TableHead id="tour-claim-section">Work Claim</TableHead>
                             {isPrivileged && <TableHead>Researcher</TableHead>}
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>

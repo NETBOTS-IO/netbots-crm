@@ -33,6 +33,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import LeadsTour from '@/components/leads/LeadsTour';
 
 const LeadDetails = () => {
     const { id } = useParams();
@@ -50,6 +51,14 @@ const LeadDetails = () => {
     const [isRejectOpen, setIsRejectOpen] = useState(false);
     const [rejectedReason, setRejectedReason] = useState('');
     const [rejecting, setRejecting] = useState(false);
+
+    // Tour state
+    const [runTour, setRunTour] = useState(false);
+    useEffect(() => {
+        if (!localStorage.getItem('hasRunLeadDetailsTour')) {
+            setRunTour(true);
+        }
+    }, []);
     
     // Conversion & Team states
     const [team, setTeam] = useState([]);
@@ -295,6 +304,49 @@ const LeadDetails = () => {
         }
     };
 
+    const tourSteps = [
+        {
+            target: 'body',
+            placement: 'center',
+            title: 'Lead Details Tour',
+            content: 'Is page par hum lead ki mukammal details aur actions ko samjhein ge.',
+        },
+        {
+            target: '#tour-lead-details',
+            title: 'Lead Overview',
+            content: 'Yahan lead ka Company Name, Website aur uske is waqt ka interest temperature (Cold, Warm, SQL) aur business category nazar aati hai.',
+        },
+        {
+            target: '#tour-pipeline-journey',
+            title: 'Pipeline Journey',
+            content: 'Yeh progress bar dikhata hai ke lead abhi kis stage par hai. Identify se le kar convert hone tak (ya phir agar reject hui ho toh Rejected stage par) yahan se stage change ki ja sakti hai.',
+        },
+        {
+            target: '#tour-lead-info',
+            title: 'Lead Information',
+            content: 'Yahan lead ki key details milengi, jaise: Contact Person name, Phone number, targeted services (multiple select ho sakti hain), kisne submit ki, kisne verify ki, coordinates aur working hours.',
+        },
+        {
+            target: '#tour-notes-section',
+            title: 'Notes & Activity Logs',
+            content: 'Is section me aap lead ke bare me comments aur call remarks add kar sakte hain, aur pichli activities ki history dekh sakte hain. Lekin dhyan rahe, edits aur notes/activities likhne ke liye pehle lead ka "Work Claim" (lock) hona zaroori hai!',
+        },
+        ...(holdsVerifierLock && !lead?.isVerifiedByVerifier ? [
+            {
+                target: '#tour-verify-btn',
+                title: 'Mark as Verified',
+                content: 'Verifier user saari cheezein verify karne ke baad is "Mark as Verified" button par click karta hai. Is ke bina Closer is lead ko claim nahi kar payega.',
+            }
+        ] : []),
+        ...(canEdit ? [
+            {
+                target: '#tour-edit-btn',
+                title: 'Edit Lead Details',
+                content: 'Is button par click kar ke aap lead ki email, phone, location aur target services ko edit kar sakte hain.',
+            }
+        ] : [])
+    ];
+
     if (loading) return <div className="p-8 text-center">Loading lead details...</div>;
     if (!lead) return <div className="p-8 text-center">Lead not found</div>;
 
@@ -302,17 +354,32 @@ const LeadDetails = () => {
 
     return (
         <div className="space-y-6 max-w-6xl mx-auto">
+            <LeadsTour run={runTour} setRun={setRunTour} steps={tourSteps} tourKey="hasRunLeadDetailsTour" />
             <div className="flex items-center justify-between">
                 <Button variant="ghost" className="gap-2" onClick={() => navigate('/leads')}>
                     <ArrowLeft size={16} /> Back to Pipeline
                 </Button>
                 <div className="flex gap-2">
+                    <Button 
+                        size="xs" 
+                        variant="outline" 
+                        className="h-7 text-[10px] uppercase font-bold border-blue-200 text-blue-600 hover:bg-blue-50 mt-1"
+                        onClick={() => setRunTour(true)}
+                    >
+                        💡 Tour Guide
+                    </Button>
                     {holdsVerifierLock && !lead?.isVerifiedByVerifier && (
-                        <Button size="sm" className="bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2 font-semibold" onClick={handleMarkVerified}>
+                        <Button 
+                            id="tour-verify-btn"
+                            size="sm" 
+                            className="bg-amber-500 hover:bg-amber-600 text-white flex items-center gap-2 font-semibold" 
+                            onClick={handleMarkVerified}
+                        >
                             <CheckCircle2 size={14} /> Mark as Verified
                         </Button>
                     )}
                     <Button 
+                        id="tour-edit-btn"
                         variant="outline" 
                         size="sm" 
                         className="flex items-center gap-2 font-semibold" 
@@ -332,7 +399,7 @@ const LeadDetails = () => {
 
             <div className={`grid gap-6 md:grid-cols-3 ${!canView ? 'blur-sm select-none' : ''}`}>
                 {/* Main Info Card */}
-                <Card className="md:col-span-2">
+                <Card id="tour-lead-details" className="md:col-span-2">
                     <CardHeader className="border-b bg-slate-50/50">
                         <div className="flex justify-between items-start">
                             <div>
@@ -359,9 +426,9 @@ const LeadDetails = () => {
                             </div>
                         </div>
                     </CardHeader>
-                    <CardContent className="pt-6">
+                    <CardContent id="tour-lead-info" className="pt-6">
                         {/* Stage Progress Bar */}
-                        <div className="mb-8">
+                        <div id="tour-pipeline-journey" className="mb-8">
                             <h3 className="text-xs font-bold uppercase text-slate-400 mb-4 tracking-widest">Pipeline Journey</h3>
                             <div className="relative flex justify-between items-center px-2">
                                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-slate-100 -z-10" />
@@ -637,7 +704,7 @@ const LeadDetails = () => {
                 </Card>
 
                 {/* Sidebar: Activity & Notes */}
-                <div className="space-y-6">
+                <div id="tour-notes-section" className="space-y-6">
                     <Card>
                         <CardHeader className="pb-3">
                             <CardTitle className="text-sm font-bold uppercase tracking-wider text-slate-500">Log Activity / Add Note</CardTitle>
