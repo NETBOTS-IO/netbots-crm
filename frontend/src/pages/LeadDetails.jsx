@@ -320,7 +320,22 @@ const LeadDetails = () => {
         {
             target: '#tour-lead-info',
             title: 'Lead Information & Services Option',
-            content: 'Yahan lead ki key details milengi, jaise: Contact Person name, Phone number, coordinates aur working hours.\n\n💼 **Target Services (Kab kya pitch karein):**\n- *Google Business SEO*: Agar business Google Maps par rankings behtar karna chahta hai.\n- *Website SEO*: Google Search organic rankings grow karne ke liye.\n- *Social Media Management*: Facebook aur Instagram handles manage karne ke liye.\n- *Designing*: Graphic design aur UI/UX projects ke liye.\n- *Software Development / Website Development*: Custom software tools aur full websites development ke liye.\n- *SaaS Product*: Ready-made subscription-based software packages pitch karne ke liye.',
+            content: (
+                <div className="space-y-2">
+                    <p>Yahan lead ki key details milengi, jaise: Contact Person name, Phone number, coordinates aur working hours.</p>
+                    <div className="space-y-1 mt-2">
+                        <span className="text-xs font-bold text-slate-800 uppercase block">💼 Target Services (Kab kya pitch karein):</span>
+                        <ul className="list-disc pl-4 space-y-1 text-slate-600 text-xs leading-normal">
+                            <li><strong>Google Business SEO:</strong> Agar business Google Maps par rankings behtar karna chahta hai.</li>
+                            <li><strong>Website SEO:</strong> Google Search organic rankings grow karne ke liye.</li>
+                            <li><strong>Social Media Management:</strong> Facebook aur Instagram handles manage karne ke liye.</li>
+                            <li><strong>Designing:</strong> Graphic design aur UI/UX projects ke liye.</li>
+                            <li><strong>Software Dev / Website Dev:</strong> Custom software aur full websites development ke liye.</li>
+                            <li><strong>SaaS Product:</strong> Ready-made subscription-based software packages pitch karne ke liye.</li>
+                        </ul>
+                    </div>
+                </div>
+            ),
         },
         {
             target: '#tour-notes-section',

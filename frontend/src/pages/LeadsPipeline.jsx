@@ -411,7 +411,18 @@ const LeadsPipeline = () => {
         {
             target: '#tour-stats',
             title: 'Leads Stats Dashboard',
-            content: 'Yahan aapko overall leads ke quantitative statistics milenge:\n- **Total Leads**: Database me majood saari leads.\n- **Contacted**: Jin leads ke sath aj contact kiya gaya.\n- **Commitments (SQLs)**: Aisi leads jo close hone ke qareeb hain.\n- **Scheduled Follow-ups**: Woh leads jinki follow-up date set hai.\nKisi bhi card par click karke aap un leads ko filter kar sakte hain.',
+            content: (
+                <div className="space-y-2">
+                    <p>Yahan aapko overall leads ke quantitative statistics milenge:</p>
+                    <ul className="list-disc pl-4 space-y-1 mt-1 text-slate-600 text-xs">
+                        <li><strong>Total Leads:</strong> Database me majood saari leads.</li>
+                        <li><strong>Contacted:</strong> Jin leads ke sath aj contact kiya gaya.</li>
+                        <li><strong>Commitments (SQLs):</strong> Aisi leads jo close hone ke qareeb hain.</li>
+                        <li><strong>Scheduled Follow-ups:</strong> Woh leads jinki follow-up date set hai.</li>
+                    </ul>
+                    <p className="mt-2 text-[11px] text-slate-400">Kisi bhi card par click karke aap niche leads ko filter kar sakte hain.</p>
+                </div>
+            )
         },
         {
             target: '#tour-search',
@@ -421,17 +432,68 @@ const LeadsPipeline = () => {
         {
             target: '#tour-filters-btn',
             title: 'Filters & Persistence (Zaroori Maloomat)',
-            content: 'Is button par click kar ke aap leads ko Stage, Priority, Temperature aur Assignees ke mutabiq filter kar sakte hain.\n\n⚠️ **ZAROORI BAAT:** Agar aap yahan koi filter set karte hain, toh page refresh karne ke baad bhi wahi filter laga rahega (persistent view). Agar aap chahte hain ke tamam leads wapas show hon, toh filters panel khol kar **Reset** button par click karna zaroori hai.',
+            content: (
+                <div className="space-y-2">
+                    <p>Is button par click kar ke aap leads ko Stage, Priority, Temperature aur Assignees ke mutabiq filter kar sakte hain.</p>
+                    <div className="bg-amber-50 p-2.5 rounded-lg border border-amber-200 text-[11px] text-amber-800 font-medium mt-2 leading-relaxed">
+                        ⚠️ <strong>ZAROORI BAAT:</strong> Agar aap yahan koi filter set karte hain, toh page refresh karne ke baad bhi wahi filter laga rahega (persistent view). Agar aap chahte hain ke tamam leads wapas show hon, toh filters panel khol kar <strong>Reset</strong> button par click karna zaroori hai.
+                    </div>
+                </div>
+            )
         },
         {
             target: '#tour-actions',
             title: 'Quick Page Actions',
-            content: 'Yahan se aap:\n- **New Lead**: Nayi lead manual add kar sakte hain.\n- **Import CSV**: Excel/CSV file upload kar ke bulk leads import kar sakte hain.\n- **Find New Lead**: Google Maps khol kar naye leads search kar sakte hain.\n- **Export to PDF**: Admin users poori report download kar sakte hain.',
+            content: (
+                <div className="space-y-2">
+                    <p>Yahan se aap ye actions perform kar sakte hain:</p>
+                    <ul className="list-disc pl-4 space-y-1 text-slate-600 text-xs">
+                        <li><strong>New Lead:</strong> Nayi lead manually add karne ke liye.</li>
+                        <li><strong>Import CSV:</strong> Excel/CSV file se bulk data upload karne ke liye.</li>
+                        <li><strong>Find New Lead:</strong> Google Maps se search karne ke liye.</li>
+                        <li><strong>Export to PDF:</strong> Admin ke liye report download karne ke liye.</li>
+                    </ul>
+                </div>
+            )
         },
         {
             target: '#tour-table',
             title: 'Leads Table & Fields Info',
-            content: 'Leads list ke main columns aur options ye hain:\n\n1. **Priority (Kab kya use karein):**\n- *Low*: Aisi leads jin par baad me aaram se kaam kiya ja sake.\n- *Medium*: Default standard leads.\n- *High*: In leads par focus jald se jald hona chahiye.\n- *Urgent*: Fauran contact aur action ke liye.\n\n2. **Temperature (Client Interest):**\n- *Cold*: Client interested nahi hai ya response low hai.\n- *Warm*: Client ne positive signal diya hai.\n- *SQL (Sales Qualified Lead)*: Client deal close karne ke liye ready ho raha hai.\n- *Closed*: Deal successfully final ho chuki hai.\n\n3. **Stage (Pipeline Journey Phase):**\n- *Identify*: Abhi lead database me enter hui hai.\n- *Qualify*: Basic criteria check kiya ja raha hai.\n- *Nurture*: Client ke sath ongoing discussion aur pitch chal rahi hai.\n- *Close*: Deal commitment phase.\n- *Onboard*: Client ko onboard/training dena.\n- *Retain / Refer*: Retention aur client referrals.\n- *Rejected*: Woh leads jo verify nahi ho skin ya fake thin.',
+            content: (
+                <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
+                    <p>Leads list ke main columns aur unki options ye hain:</p>
+                    
+                    <div className="space-y-1">
+                        <span className="text-xs font-bold text-slate-800 uppercase block">1. Priority (Kab kya use karein):</span>
+                        <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-slate-600">
+                            <li><strong>Low:</strong> Aisi leads jin par baad me aaram se kaam kiya ja sake.</li>
+                            <li><strong>Medium:</strong> Default standard leads.</li>
+                            <li><strong>High:</strong> In leads par focus jald se jald hona chahiye.</li>
+                            <li><strong>Urgent:</strong> Fauran contact aur action ke liye.</li>
+                        </ul>
+                    </div>
+
+                    <div className="space-y-1">
+                        <span className="text-xs font-bold text-slate-800 uppercase block">2. Temperature (Client Interest):</span>
+                        <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-slate-600">
+                            <li><strong>Cold:</strong> Client interested nahi hai ya response low hai.</li>
+                            <li><strong>Warm:</strong> Client ne positive signal diya hai.</li>
+                            <li><strong>SQL:</strong> Client deal close karne ke liye ready ho raha hai.</li>
+                            <li><strong>Closed:</strong> Deal successfully close ho chuki hai.</li>
+                        </ul>
+                    </div>
+
+                    <div className="space-y-1">
+                        <span className="text-xs font-bold text-slate-800 uppercase block">3. Stage (Pipeline Journey Phase):</span>
+                        <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-slate-600">
+                            <li><strong>Identify / Qualify:</strong> Basic details find aur qualify karne ka phase.</li>
+                            <li><strong>Nurture / Close:</strong> Client pitching aur commitment process.</li>
+                            <li><strong>Onboard / Retain / Refer:</strong> Client onboarding aur support.</li>
+                            <li><strong>Rejected:</strong> Woh leads jo fake hain ya verify nahi ho skin.</li>
+                        </ul>
+                    </div>
+                </div>
+            )
         },
         {
             target: '#tour-legend',
