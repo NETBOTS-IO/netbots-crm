@@ -2,7 +2,7 @@ const cron = require('node-cron');
 const Lead = require('../models/Lead');
 const Activity = require('../models/Activity');
 const User = require('../models/User');
-const { sendDailySummary, sendMonthlyProgressEmail } = require('../utils/mailer');
+const { sendDailySummary, sendMonthlyProgressEmail, sendFollowUpReminderEmail } = require('../utils/mailer');
 
 const initCronJobs = () => {
     // 1. Daily Summary at 6:00 AM
@@ -57,6 +57,36 @@ const initCronJobs = () => {
             console.log('Monthly Performance Summaries completed.');
         } catch (error) {
             console.error('Failed to run Monthly Summaries Cron:', error);
+        }
+    });
+
+    // 3. Hourly Lead Follow-Up Reminders
+    cron.schedule('0 * * * *', async () => {
+        console.log('Running Hourly Lead Follow-Up Reminders Cron Job...');
+        try {
+            const now = new Date();
+            const tomorrow = new Date();
+            tomorrow.setHours(tomorrow.getHours() + 24);
+
+            // Fetch leads that have followUpDate in the next 24 hours, aren't converted, and reminder hasn't been sent
+            const leadsToRemind = await Lead.find({
+                followUpDate: { $gte: now, $lte: tomorrow },
+                convertedToClient: { $ne: true },
+                followUpReminderSent: { $ne: true }
+            }).populate('workingCloser assignedCloser');
+
+            for (const lead of leadsToRemind) {
+                // Find closer user to remind: workingCloser first, then assignedCloser
+                const closer = lead.workingCloser || lead.assignedCloser;
+                if (closer && closer.email) {
+                    await sendFollowUpReminderEmail(closer.email, closer.name, lead);
+                    lead.followUpReminderSent = true;
+                    await lead.save();
+                    console.log(`Follow-up reminder sent to ${closer.name} for lead ${lead.companyName}`);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to run Hourly Follow-up Reminder Cron:', error);
         }
     });
 };

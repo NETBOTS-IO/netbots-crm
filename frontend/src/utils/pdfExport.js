@@ -57,12 +57,44 @@ export const exportTableToPDF = (title, headers, rows, filename) => {
         const finalHeaders = ["S.No", ...headers];
         const finalRows = rows.map((row, idx) => [String(idx + 1), ...row]);
 
-        // Calculate dynamic column widths
+        // Smart semantic weights for columns to allocate optimal space and prevent overlapping
+        const getHeaderWeight = (headerName) => {
+            const name = String(headerName).toLowerCase().trim();
+            if (name === 's.no') return 3;
+            if (name.includes('company') || name.includes('client') || name.includes('name')) return 11;
+            if (name.includes('contact person') || name.includes('contact')) return 9;
+            if (name.includes('phone') || name.includes('email') || name.includes('details')) return 13;
+            if (name.includes('remaining') || name.includes('due') || name.includes('time')) return 7;
+            if (name.includes('date') || name.includes('schedule')) return 9;
+            if (name.includes('priority')) return 6;
+            if (name.includes('temp') || name.includes('temperature')) return 5;
+            if (name.includes('closer') || name.includes('assigned')) return 9;
+            if (name.includes('action') || name.includes('details')) return 8;
+            if (name.includes('amount') || name.includes('value') || name.includes('commission') || name.includes('payout')) return 8;
+            if (name.includes('lead')) return 11;
+            return 8; // default weight
+        };
+
+        const totalWeight = finalHeaders.reduce((sum, h) => sum + getHeaderWeight(h), 0);
         const pageWidth = 268; // 282 - 14
-        const colWidth = pageWidth / finalHeaders.length;
+
+        // Precalculate X coordinates and widths for each column
+        let currentX = 14;
+        const colLayout = finalHeaders.map((header) => {
+            const width = (getHeaderWeight(header) / totalWeight) * pageWidth;
+            const x = currentX;
+            currentX += width;
+            return { x, width };
+        });
+
+        // 3. Draw Table Headers
+        y = 43;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(15, 23, 42);
 
         finalHeaders.forEach((header, index) => {
-            doc.text(header, 14 + (index * colWidth), y);
+            doc.text(header, colLayout[index].x, y);
         });
 
         doc.setDrawColor(148, 163, 184); // slate-400
@@ -83,7 +115,7 @@ export const exportTableToPDF = (title, headers, rows, filename) => {
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(9);
                 finalHeaders.forEach((header, index) => {
-                    doc.text(header, 14 + (index * colWidth), y);
+                    doc.text(header, colLayout[index].x, y);
                 });
                 doc.line(14, y + 2, 282, y + 2);
                 y += 8;
@@ -93,8 +125,11 @@ export const exportTableToPDF = (title, headers, rows, filename) => {
 
             row.forEach((cell, cellIndex) => {
                 const cellText = String(cell || '');
-                const truncatedText = cellText.length > 32 ? cellText.substring(0, 30) + '...' : cellText;
-                doc.text(truncatedText, 14 + (cellIndex * colWidth), y);
+                const layout = colLayout[cellIndex];
+                // Safe char limit calculation based on column width
+                const maxChars = Math.floor(layout.width * 0.72);
+                const truncatedText = cellText.length > maxChars ? cellText.substring(0, maxChars - 3) + '...' : cellText;
+                doc.text(truncatedText, layout.x, y);
             });
 
             y += 6;

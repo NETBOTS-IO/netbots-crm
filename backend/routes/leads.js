@@ -371,6 +371,49 @@ router.post('/', auth, async (req, res) => {
   }
 });
 
+// GET /api/leads/followups
+// get all leads that have a follow-up date and time set
+router.get('/followups', auth, async (req, res) => {
+  try {
+    const isCloser = Array.isArray(req.user.designation) && req.user.designation.includes('LeadCloser');
+    const hasAccess = req.user.role === 'admin' || req.user.role === 'sales' || isCloser;
+
+    if (!hasAccess) {
+      return res.status(403).json({ success: false, error: 'Access denied: Requires Closer or Admin permissions.' });
+    }
+
+    const { priority = 'all', temp = 'all', search = '' } = req.query;
+
+    let query = {
+      followUpDate: { $exists: true, $ne: null },
+      convertedToClient: { $ne: true }
+    };
+
+    if (priority !== 'all') query.priority = priority;
+    if (temp !== 'all') query.temperature = temp;
+    if (search) {
+      query.$or = [
+        { companyName: { $regex: search, $options: 'i' } },
+        { contactName: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+        { phone: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const leads = await Lead.find(query)
+      .populate('submittedBy', 'name email')
+      .populate('workingVerifier', 'name email')
+      .populate('workingCloser', 'name email')
+      .populate('assignedCloser', 'name email')
+      .sort({ followUpDate: 1 });
+
+    res.json({ success: true, data: leads });
+  } catch (err) {
+    console.error("GET /api/leads/followups error:", err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 // GET /api/leads/:id
 // get single lead + full activity timeline
 router.get('/:id', auth, async (req, res) => {

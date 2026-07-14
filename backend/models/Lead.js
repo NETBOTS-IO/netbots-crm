@@ -103,7 +103,8 @@ const LeadSchema = new mongoose.Schema({
   contactedAt: { type: Date },
   salesClosedBy: { type: String },
   workingVerifier: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
-  workingCloser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }
+  workingCloser: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  followUpReminderSent: { type: Boolean, default: false }
 }, { timestamps: true });
 
 LeadSchema.index({ convertedToClient: 1, clientId: 1 });
@@ -120,6 +121,10 @@ LeadSchema.index({ temperature: 1 });
 LeadSchema.pre('save', function(next) {
   const scoreMap = { cold: 1, warm: 3, sql: 7, closed: 20, retained: 30 };
   this.score = scoreMap[this.temperature] || 1;
+
+  if (this.isModified('followUpDate')) {
+    this.followUpReminderSent = false;
+  }
   next();
 });
 

@@ -17,7 +17,8 @@ import {
     HelpCircle,
     Tag,
     UserX2,
-    KeyRound
+    KeyRound,
+    Clock
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -127,6 +128,7 @@ const Layout = () => {
     const menuItems = [
         { to: '/', icon: LayoutDashboard, label: 'Dashboard', permission: 'view_dashboard' },
         { to: '/leads', icon: ClipboardList, label: 'Leads Pipeline', permission: 'can_view_leads' },
+        { to: '/followups', icon: Clock, label: 'Follow-ups', permission: 'can_view_leads' },
         { to: '/clients', icon: UserSquare2, label: 'Clients', permission: 'manage_clients' },
         { to: '/performance', icon: BarChart3, label: 'Performance Stats', permission: 'view_dashboard' },
         { to: '/team', icon: Users, label: 'Team', permission: 'manage_team' },

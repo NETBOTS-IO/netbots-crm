@@ -17,6 +17,7 @@ const PAGE_PERMISSION_MAP = {
     '/': 'view_dashboard',
     '/leads': 'can_view_leads',
     '/leads/new': 'can_add_leads',
+    '/followups': 'can_view_leads',
     '/clients': 'manage_clients',
     '/performance': 'view_dashboard',
     '/team': 'manage_team',

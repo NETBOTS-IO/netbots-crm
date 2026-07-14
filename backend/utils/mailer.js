@@ -147,10 +147,65 @@ const sendMailWithAttachment = async (to, subject, html, attachments = []) => {
     }
 };
 
+/**
+ * Sends a Follow-Up Reminder Email to a closer
+ */
+const sendFollowUpReminderEmail = async (email, memberName, lead) => {
+    const followUpDateStr = lead.followUpDate ? new Date(lead.followUpDate).toLocaleString() : 'N/A';
+    const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #dc2626; border-bottom: 2px solid #ef4444; padding-bottom: 10px;">⏰ Follow-Up Reminder</h2>
+        <p style="font-size: 14px; color: #4b5563;">Hi <strong>${memberName}</strong>,</p>
+        <p style="font-size: 14px; color: #4b5563;">This is a reminder that you have an upcoming follow-up scheduled for the following lead:</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+            <tr style="background-color: #f8fafc;">
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold; color: #374151;">Company Name</td>
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-size: 14px; color: #1e3a8a; text-align: right; font-weight: bold;">${lead.companyName}</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold; color: #374151;">Contact Person</td>
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-size: 14px; color: #374151; text-align: right;">${lead.contactName || 'N/A'}</td>
+            </tr>
+            <tr style="background-color: #f8fafc;">
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold; color: #374151;">Phone</td>
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-size: 14px; color: #374151; text-align: right;">${lead.phone || 'N/A'}</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold; color: #374151;">Email</td>
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-size: 14px; color: #374151; text-align: right;">${lead.email || 'N/A'}</td>
+            </tr>
+            <tr style="background-color: #f8fafc;">
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold; color: #374151;">Follow-Up Date & Time</td>
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-size: 14px; font-weight: bold; color: #b91c1c; text-align: right;">${followUpDateStr}</td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-weight: bold; color: #374151;">Priority</td>
+                <td style="padding: 10px; border: 1px solid #e2e8f0; font-size: 14px; font-weight: bold; text-transform: uppercase; color: #374151; text-align: right;">${lead.priority || 'medium'}</td>
+            </tr>
+        </table>
+        
+        <p style="font-size: 14px; color: #4b5563; margin-top: 20px;">Please click the link below to view details and update the lead status:</p>
+        <div style="text-align: center; margin-top: 15px;">
+            <a href="${process.env.FRONTEND_URL || 'http://localhost:5173'}/leads/details/${lead._id}" 
+               style="background-color: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+               View Lead Details
+            </a>
+        </div>
+        
+        <div style="margin-top: 25px; font-size: 12px; color: #9ca3af; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+            <p>Property of NetBots (SMC-Private) Limited</p>
+        </div>
+    </div>
+    `;
+    return sendMail(email, `⏰ Follow-Up Reminder: ${lead.companyName}`, html);
+};
+
 module.exports = {
     sendMail,
     sendMailWithAttachment,
     sendDailySummary,
     sendLeadConversionEmail,
-    sendMonthlyProgressEmail
+    sendMonthlyProgressEmail,
+    sendFollowUpReminderEmail
 };

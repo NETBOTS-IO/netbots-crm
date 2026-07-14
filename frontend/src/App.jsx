@@ -20,6 +20,7 @@ import AuditLogs from './pages/AuditLogs';
 import Performance from './pages/Performance';
 import HelpPage from './pages/HelpPage';
 import PackagesPricing from './pages/PackagesPricing';
+import Followups from './pages/Followups';
 import { Toaster } from "@/components/ui/toaster"
 
 
@@ -59,6 +60,13 @@ function App() {
             <Route path="leads" element={
               <RoleGate permission="can_view_leads" action="View Leads Pipeline">
                 <LeadsPipeline />
+              </RoleGate>
+            } />
+
+            {/* Follow-ups — requires can_view_leads */}
+            <Route path="followups" element={
+              <RoleGate permission="can_view_leads" action="View Follow-ups Dashboard">
+                <Followups />
               </RoleGate>
             } />
 
