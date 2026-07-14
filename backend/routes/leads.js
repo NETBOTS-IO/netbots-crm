@@ -360,14 +360,29 @@ router.post('/', auth, async (req, res) => {
     await activity.save();
 
     // Update intern stats/points
-    req.user.totalLeadsSubmitted += 1;
-    req.user.points += getPointsForEvent('lead_submitted');
-    req.user.rank = calculateRank(req.user);
-    await req.user.save();
+    const pointsToAdd = getPointsForEvent('lead_submitted');
+    const newPoints = (req.user.points || 0) + pointsToAdd;
+    const newRank = calculateRank({
+      points: newPoints,
+      totalSQLs: req.user.totalSQLs || 0,
+      totalCloses: req.user.totalCloses || 0
+    });
+
+    await User.updateOne(
+      { _id: req.user._id },
+      { 
+        $inc: { totalLeadsSubmitted: 1, points: pointsToAdd },
+        $set: { rank: newRank }
+      }
+    );
 
     res.json({ success: true, data: lead });
   } catch (err) {
-    res.status(500).json({ success: false, error: 'Server error' });
+    console.error("POST /api/leads error:", err);
+    res.status(err.name === 'ValidationError' ? 400 : 500).json({ 
+      success: false, 
+      error: err.name === 'ValidationError' ? err.message : 'Server error' 
+    });
   }
 });
 

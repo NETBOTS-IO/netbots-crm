@@ -42,7 +42,11 @@ const ImportWizard = () => {
 
             if (data.success) {
                 setResult(data);
-                toast({ title: "Import Complete", description: `Successfully imported ${data.summary.success} leads.` });
+                let message = `Successfully imported ${data.summary.success} leads.`;
+                if (data.summary.duplicates > 0) {
+                    message += ` (${data.summary.duplicates} duplicates skipped)`;
+                }
+                toast({ title: "Import Complete", description: message });
             } else {
                 toast({ variant: "destructive", title: "Error", description: data.error || "Import failed" });
             }
@@ -65,7 +69,7 @@ const ImportWizard = () => {
                     <CardContent className="flex flex-col items-center py-10">
                         <Upload size={48} className="text-slate-400 mb-4" />
                         <Input
-                            type="file"
+                             type="file"
                             accept=".csv"
                             onChange={handleFileChange}
                             className="max-w-xs mb-4"
@@ -108,7 +112,10 @@ const ImportWizard = () => {
                                 <p className="text-emerald-700">
                                     Processed {result.summary.total} rows:
                                     <span className="font-bold"> {result.summary.success} success</span>,
-                                    <span className="font-bold"> {result.summary.failed} failed</span>.
+                                    <span className="font-bold"> {result.summary.failed} failed</span>
+                                    {result.summary.duplicates > 0 && (
+                                        <span> (including <span className="font-bold">{result.summary.duplicates} duplicates</span>)</span>
+                                    )}.
                                 </p>
                             </div>
                         </CardContent>

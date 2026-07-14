@@ -62,7 +62,7 @@ const LeadForm = () => {
         sundayHours: '',
         lastContactedAt: '',
         followUpDate: '',
-        targetService: '',
+        targetService: [],
         contactedBy: '',
         contactMethod: ''
     });
@@ -94,6 +94,7 @@ const LeadForm = () => {
                             ...leadData,
                             lastContactedAt: formatDate(leadData.lastContactedAt),
                             followUpDate: formatDate(leadData.followUpDate),
+                            targetService: Array.isArray(leadData.targetService) ? leadData.targetService : (leadData.targetService ? [leadData.targetService] : []),
                             contactedBy: leadData.contactedBy || '',
                             contactMethod: leadData.contactMethod || ''
                         }));
@@ -142,12 +143,16 @@ const LeadForm = () => {
             });
 
             // Clean empty strings for enums to prevent validation errors
-            const enumFields = ['targetService', 'contactMethod', 'businessType'];
+            const enumFields = ['contactMethod', 'businessType'];
             enumFields.forEach(field => {
                 if (payload[field] === '') {
                     delete payload[field];
                 }
             });
+
+            if (Array.isArray(payload.targetService) && payload.targetService.length === 0) {
+                delete payload.targetService;
+            }
 
             const res = id
                 ? await api.put(`/leads/${id}`, payload)
@@ -564,22 +569,48 @@ const LeadForm = () => {
                             <TabsContent value="action" className="space-y-4 pt-2">
                                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-2">Lead Action & Status Controls</h3>
                                 <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2 col-span-2 bg-blue-50/50 p-3 rounded-lg border border-blue-100">
-                                        <Label className="font-bold text-blue-900">Target Service / Product Offered</Label>
-                                        <Select value={formData.targetService || ''} onValueChange={(v) => handleChange('targetService', v)}>
-                                            <SelectTrigger className="bg-white"><SelectValue placeholder="Select target service..." /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="google_business_seo">Google Business SEO</SelectItem>
-                                                <SelectItem value="website_seo">Website SEO</SelectItem>
-                                                <SelectItem value="social_media_management_marketing">Social Media Management & Marketing</SelectItem>
-                                                <SelectItem value="designing">Designing</SelectItem>
-                                                <SelectItem value="software_development">Software Development</SelectItem>
-                                                <SelectItem value="website_development">Website Development</SelectItem>
-                                                <SelectItem value="saas_product">SaaS Product</SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        <p className="text-[10px] text-blue-700/80 mt-1">Specify which service or product this prospect is targeted for.</p>
-                                    </div>
+                                     <div className="space-y-2 col-span-2 bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                                         <Label className="font-bold text-blue-900 block mb-2">Target Services / Products Offered (Select multiple)</Label>
+                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
+                                             {[
+                                                 { id: 'google_business_seo', label: 'Google Business SEO' },
+                                                 { id: 'website_seo', label: 'Website SEO' },
+                                                 { id: 'social_media_management_marketing', label: 'Social Media Management & Marketing' },
+                                                 { id: 'designing', label: 'Designing' },
+                                                 { id: 'software_development', label: 'Software Development' },
+                                                 { id: 'website_development', label: 'Website Development' },
+                                                 { id: 'saas_product', label: 'SaaS Product' }
+                                             ].map((svc) => {
+                                                 const isChecked = Array.isArray(formData.targetService)
+                                                     ? formData.targetService.includes(svc.id)
+                                                     : formData.targetService === svc.id;
+                                                 return (
+                                                     <label key={svc.id} className="flex items-center gap-2 text-sm text-slate-700 bg-white p-2 rounded border border-slate-100 hover:bg-slate-50 cursor-pointer">
+                                                         <input
+                                                             type="checkbox"
+                                                             checked={isChecked}
+                                                             onChange={(e) => {
+                                                                 let currentServices = Array.isArray(formData.targetService)
+                                                                     ? [...formData.targetService]
+                                                                     : (formData.targetService ? [formData.targetService] : []);
+                                                                 if (e.target.checked) {
+                                                                     if (!currentServices.includes(svc.id)) {
+                                                                         currentServices.push(svc.id);
+                                                                     }
+                                                                 } else {
+                                                                     currentServices = currentServices.filter(id => id !== svc.id);
+                                                                 }
+                                                                 handleChange('targetService', currentServices);
+                                                             }}
+                                                             className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500"
+                                                         />
+                                                         <span>{svc.label}</span>
+                                                     </label>
+                                                 );
+                                             })}
+                                         </div>
+                                         <p className="text-[10px] text-blue-700/80 mt-2">Specify one or more services/products this prospect is targeted for.</p>
+                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="lastContactedAt">Last Contacted Date & Time</Label>
                                         <Input

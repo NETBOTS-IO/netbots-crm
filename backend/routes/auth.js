@@ -102,12 +102,15 @@ router.get('/me', auth, (req, res) => {
 router.put('/me', auth, async (req, res) => {
   const { name, phone, password } = req.body;
   try {
-    if (name) req.user.name = name;
-    if (phone) req.user.phone = phone;
-    if (password) req.user.password = await bcrypt.hash(password, 10);
-    await req.user.save();
+    const updates = {};
+    if (name) updates.name = name;
+    if (phone) updates.phone = phone;
+    if (password) updates.password = await bcrypt.hash(password, 10);
+
+    await User.findByIdAndUpdate(req.user._id, { $set: updates });
     res.json({ success: true, message: 'Profile updated' });
   } catch (err) {
+    console.error('Profile update error:', err);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });

@@ -7,7 +7,7 @@ const LeadSchema = new mongoose.Schema({
   email: { type: String },
   businessType: {
     type: String,
-    enum: ['pharmacy', 'hotel', 'restaurant', 'retail_shop', 'trader', 'ngo', 'ca_firm',
+    enum: ['pharmacy', 'hotel', 'restaurant', 'retail_shop', 'retail', 'distribution', 'trader', 'ngo', 'ca_firm',
            'freelancer', 'ecommerce', 'manufacturing', 'services', 'other']
   },
   channel: { type: String },

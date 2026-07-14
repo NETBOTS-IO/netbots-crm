@@ -80,6 +80,20 @@ router.post('/leads', auth, upload.single('file'), (req, res) => {
             continue;
           }
 
+          // Duplicate check: same company name and either same phone or same email
+          const dupeQuery = { companyName: leadData.companyName };
+          if (leadData.phone) {
+            dupeQuery.phone = leadData.phone;
+          } else if (leadData.email) {
+            dupeQuery.email = leadData.email;
+          }
+
+          const existing = await Lead.findOne(dupeQuery);
+          if (existing) {
+            errors.push({ row, error: 'Duplicate lead' });
+            continue;
+          }
+
           const lead = new Lead(leadData);
           await lead.save();
           successCount++;
@@ -91,12 +105,15 @@ router.post('/leads', auth, upload.single('file'), (req, res) => {
       // Cleanup
       fs.unlinkSync(req.file.path);
 
+      const duplicateCount = errors.filter(e => e.error === 'Duplicate lead').length;
+
       res.json({
         success: true,
         summary: {
           total: results.length,
           success: successCount,
-          failed: errors.length
+          failed: errors.length,
+          duplicates: duplicateCount
         },
         errors: errors.slice(0, 10) // Return first 10 errors for debugging
       });

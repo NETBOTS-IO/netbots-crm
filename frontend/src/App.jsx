@@ -152,9 +152,9 @@ function App() {
               </RoleGate>
             } />
 
-            {/* Packages & Pricing — admin only */}
+            {/* Packages & Pricing — open to all staff with view_dashboard */}
             <Route path="packages" element={
-              <RoleGate adminOnly action="Manage Packages & Pricing">
+              <RoleGate permission="view_dashboard" action="View Packages & Pricing">
                 <PackagesPricing />
               </RoleGate>
             } />
