@@ -28,6 +28,20 @@ import { exportTableToPDF } from '../utils/pdfExport';
 import { FileDown, HelpCircle } from 'lucide-react';
 import LeadsTour from '@/components/leads/LeadsTour';
 
+const getChannelBadge = (channel) => {
+    const chan = (channel || 'Manual').toLowerCase();
+    if (chan === 'website') {
+        return <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-semibold text-[10px] tracking-wide uppercase px-2 py-0.5">Website</Badge>;
+    }
+    if (chan.includes('scraped') || chan.includes('maps')) {
+        return <Badge variant="outline" className="border-sky-200 bg-sky-50 text-sky-700 font-semibold text-[10px] tracking-wide uppercase px-2 py-0.5">Scraped</Badge>;
+    }
+    if (chan === 'reference' || chan === 'referral') {
+        return <Badge variant="outline" className="border-purple-200 bg-purple-50 text-purple-700 font-semibold text-[10px] tracking-wide uppercase px-2 py-0.5">Reference</Badge>;
+    }
+    return <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700 font-semibold text-[10px] tracking-wide uppercase px-2 py-0.5">{channel || 'Manual'}</Badge>;
+};
+
 const LeadsPipeline = () => {
     const [leads, setLeads] = useState([]);
     const [stats, setStats] = useState({ totalLeadsCount: 0, contactedCount: 0, commitmentsCount: 0, followUpCount: 0 });
@@ -755,6 +769,7 @@ const LeadsPipeline = () => {
                             <TableHead>Priority</TableHead>
                             <TableHead>Temp</TableHead>
                             <TableHead>Stage</TableHead>
+                            <TableHead>Source</TableHead>
                             <TableHead id="tour-claim-section">Work Claim</TableHead>
                             {isPrivileged && <TableHead>Researcher</TableHead>}
                             <TableHead className="text-right">Actions</TableHead>
@@ -800,6 +815,9 @@ const LeadsPipeline = () => {
                                 </TableCell>
                                 <TableCell>
                                     <Badge variant="outline" className="capitalize text-xs">{lead.stage}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                    {getChannelBadge(lead.channel)}
                                 </TableCell>
                                 <TableCell>
                                     <div className="flex flex-col gap-1">
