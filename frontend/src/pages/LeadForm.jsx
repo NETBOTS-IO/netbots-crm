@@ -114,9 +114,9 @@ const LeadForm = () => {
     // 1. Admin — always
     // 2. User with can_edit_leads permission — always
     // 3. User who holds the verifier or closer lock on this lead — allowed
-    const myId = currentUser?._id?.toString();
-    const holdsVerifierLock = loadedLead?.workingVerifier?._id?.toString() === myId;
-    const holdsCloserLock = loadedLead?.workingCloser?._id?.toString() === myId;
+    const myId = currentUser?._id?.toString() || currentUser?.id?.toString();
+    const holdsVerifierLock = loadedLead?.workingVerifier?._id?.toString() === myId || loadedLead?.workingVerifier === myId;
+    const holdsCloserLock = loadedLead?.workingCloser?._id?.toString() === myId || loadedLead?.workingCloser === myId;
     const canEditThis = isAdmin || can('can_edit_leads') || (id && (holdsVerifierLock || holdsCloserLock));
 
     // For new leads, only need can_add_leads

@@ -29,6 +29,7 @@ dist-ssr
 
 # Project-specific
 mongodb_data/
+netbots/
 backend/uploads/
 .agents/
 .gemini/

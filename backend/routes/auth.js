@@ -17,7 +17,7 @@ router.post('/login', async (req, res) => {
     if (!isMatch) return res.status(400).json({ success: false, error: 'Invalid credentials' });
 
     const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1d' });
-    res.json({ success: true, data: { token, user: { id: user._id, name: user.name, role: user.role, designation: user.designation, permissions: user.permissions, agreementSigned: user.agreementSigned, agreementPdfPath: user.agreementPdfPath } } });
+    res.json({ success: true, data: { token, user: { id: user._id, _id: user._id, name: user.name, role: user.role, designation: user.designation, permissions: user.permissions, agreementSigned: user.agreementSigned, agreementPdfPath: user.agreementPdfPath } } });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Server error' });
   }

@@ -82,9 +82,9 @@ const LeadDetails = () => {
 
     const stages = ['identify', 'qualify', 'nurture', 'close', 'onboard', 'retain', 'refer', 'rejected'];
     const { isAdmin, can } = usePermissions();
-    const myId = currentUser?._id?.toString();
-    const holdsVerifierLock = lead?.workingVerifier?._id?.toString() === myId;
-    const holdsCloserLock = lead?.workingCloser?._id?.toString() === myId;
+    const myId = currentUser?._id?.toString() || currentUser?.id?.toString();
+    const holdsVerifierLock = lead?.workingVerifier?._id?.toString() === myId || lead?.workingVerifier === myId;
+    const holdsCloserLock = lead?.workingCloser?._id?.toString() === myId || lead?.workingCloser === myId;
 
     const isPrivileged = isAdmin;
     const canConvert = isAdmin || currentUser?.role === 'sales';

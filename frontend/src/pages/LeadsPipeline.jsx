@@ -196,7 +196,7 @@ const LeadsPipeline = () => {
         
         const isVerifier = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier');
         const isCloser = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser');
-        const myId = currentUser?._id?.toString();
+        const myId = currentUser?._id?.toString() || currentUser?.id?.toString();
 
         if (isVerifier && lead.workingVerifier && lead.workingVerifier._id?.toString() !== myId) {
             return true;
@@ -212,7 +212,7 @@ const LeadsPipeline = () => {
         
         const isVerifier = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier');
         const isCloser = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser');
-        const myId = currentUser?._id?.toString();
+        const myId = currentUser?._id?.toString() || currentUser?.id?.toString();
         
         const isVerifierMine = lead.workingVerifier?._id?.toString() === myId;
         const isCloserMine = lead.workingCloser?._id?.toString() === myId;
@@ -253,7 +253,7 @@ const LeadsPipeline = () => {
         
         const isVerifier = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier');
         const isCloser = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser');
-        const myId = currentUser?._id?.toString();
+        const myId = currentUser?._id?.toString() || currentUser?.id?.toString();
         
         if (currentUser?.role !== 'admin') {
             if (isVerifier && lead.workingVerifier && lead.workingVerifier._id?.toString() !== myId) {
@@ -799,7 +799,7 @@ const LeadsPipeline = () => {
                                         {/* Verifier Lock Button */}
                                         {(currentUser?.role === 'admin' || (Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier'))) && (
                                             lead.workingVerifier ? (
-                                                lead.workingVerifier._id === currentUser?._id ? (
+                                                (lead.workingVerifier._id === currentUser?._id || lead.workingVerifier._id === currentUser?.id) ? (
                                                     <Button 
                                                         size="xs" 
                                                         className="h-6 text-[9px] px-2 font-bold uppercase tracking-tight bg-emerald-600 hover:bg-emerald-700 text-white" 
@@ -832,7 +832,7 @@ const LeadsPipeline = () => {
                                         {/* Closer Lock Button */}
                                         {(currentUser?.role === 'admin' || (Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser'))) && (
                                             lead.workingCloser ? (
-                                                lead.workingCloser._id === currentUser?._id ? (
+                                                (lead.workingCloser._id === currentUser?._id || lead.workingCloser._id === currentUser?.id) ? (
                                                     <Button 
                                                         size="xs" 
                                                         className="h-6 text-[9px] px-2 font-bold uppercase tracking-tight bg-blue-600 hover:bg-blue-700 text-white" 
