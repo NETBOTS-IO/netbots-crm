@@ -70,7 +70,8 @@ router.get('/', auth, async (req, res) => {
         temp = 'all',
         contact = 'all',
         workingVerifier = 'all',
-        workingCloser = 'all'
+        workingCloser = 'all',
+        channel = 'all'
     } = req.query;
 
     let baseQuery = { 
@@ -224,6 +225,7 @@ router.get('/', auth, async (req, res) => {
         query.stage = { $ne: 'rejected' };
     }
     if (temp !== 'all') query.temperature = temp;
+    if (channel !== 'all') query.channel = channel;
     
     if (contact === 'contacted_today') {
         query.lastContactedAt = getPeriodRange('today');
@@ -332,6 +334,53 @@ router.post('/bulk-action', auth, async (req, res) => {
         console.error("Bulk action error:", err);
         res.status(500).json({ success: false, error: 'Server error' });
     }
+});
+
+// POST /api/leads/public-webhook
+// Secure webhook to submit website leads directly into CRM
+router.post('/public-webhook', async (req, res) => {
+  const apiKey = req.headers['x-api-key'];
+  if (apiKey !== 'netbots_website_webhook_secret_key_2026') {
+    return res.status(401).json({ success: false, error: 'Unauthorized: Invalid API Key' });
+  }
+
+  try {
+    const { companyName, contactName, email, phone, notes, priority, channel, website, targetService } = req.body;
+    
+    // Find the default submitter user (CEO Netbots)
+    const ceoUser = await User.findOne({ email: 'ceo@netbots.io' });
+    const submittedById = ceoUser ? ceoUser._id : '6a4f2775bb63089ec230a354';
+
+    const lead = new Lead({
+      companyName: companyName || contactName || 'Website Lead',
+      contactName,
+      email,
+      phone,
+      notes,
+      priority: priority || 'high',
+      channel: channel || 'Website',
+      website,
+      targetService,
+      submittedBy: submittedById,
+      leadCollectedBy: 'Website Form'
+    });
+
+    await lead.save();
+
+    // Create an activity for the new website lead
+    const activity = new Activity({
+      leadId: lead._id,
+      userId: submittedById,
+      action: 'Lead Created',
+      details: `Website lead auto-created from website form submission.`
+    });
+    await activity.save();
+
+    res.json({ success: true, leadId: lead._id });
+  } catch (err) {
+    console.error("Public webhook lead creation error:", err);
+    res.status(500).json({ success: false, error: err.message || 'Server error' });
+  }
 });
 
 // POST /api/leads

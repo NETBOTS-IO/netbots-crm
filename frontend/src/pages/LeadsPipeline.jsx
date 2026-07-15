@@ -53,6 +53,7 @@ const LeadsPipeline = () => {
     const [cardFilter, setCardFilter] = useState(() => getSessionFilter('lead_filter_card', 'all'));
     const [filterVerifier, setFilterVerifier] = useState(() => getSessionFilter('lead_filter_verifier', 'all'));
     const [filterCloser, setFilterCloser] = useState(() => getSessionFilter('lead_filter_closer', 'all'));
+    const [filterChannel, setFilterChannel] = useState(() => getSessionFilter('lead_filter_channel', 'all'));
     const [isFiltersOpen, setIsFiltersOpen] = useState(false);
 
     const [verifiersList, setVerifiersList] = useState([]);
@@ -99,6 +100,9 @@ const LeadsPipeline = () => {
     useEffect(() => {
         sessionStorage.setItem('lead_filter_closer', filterCloser);
     }, [filterCloser]);
+    useEffect(() => {
+        sessionStorage.setItem('lead_filter_channel', filterChannel);
+    }, [filterChannel]);
 
     // Fetch team members list for verifiers & closers dropdowns
     useEffect(() => {
@@ -179,6 +183,7 @@ const LeadsPipeline = () => {
         setCardFilter('all');
         setFilterVerifier('all');
         setFilterCloser('all');
+        setFilterChannel('all');
         sessionStorage.removeItem('lead_filter_search');
         sessionStorage.removeItem('lead_filter_priority');
         sessionStorage.removeItem('lead_filter_stage');
@@ -188,6 +193,7 @@ const LeadsPipeline = () => {
         sessionStorage.removeItem('lead_filter_card');
         sessionStorage.removeItem('lead_filter_verifier');
         sessionStorage.removeItem('lead_filter_closer');
+        sessionStorage.removeItem('lead_filter_channel');
         setPagination(p => ({ ...p, page: 1 }));
     };
 
@@ -305,7 +311,8 @@ const LeadsPipeline = () => {
                 temp: filterTemp,
                 contact: filterContact,
                 workingVerifier: filterVerifier,
-                workingCloser: filterCloser
+                workingCloser: filterCloser,
+                channel: filterChannel
             });
             const res = await api.get(`/leads?${params.toString()}`);
             if (res.success) {
@@ -320,7 +327,7 @@ const LeadsPipeline = () => {
         } finally {
             setLoading(false);
         }
-    }, [pagination.page, limit, searchTerm, period, cardFilter, filterPriority, filterStage, filterTemp, filterContact, filterVerifier, filterCloser]);
+    }, [pagination.page, limit, searchTerm, period, cardFilter, filterPriority, filterStage, filterTemp, filterContact, filterVerifier, filterCloser, filterChannel]);
 
     useEffect(() => {
         fetchLeads();
@@ -329,7 +336,7 @@ const LeadsPipeline = () => {
     // Handle filter change (reset to page 1)
     useEffect(() => {
         setPagination(p => ({ ...p, page: 1 }));
-    }, [searchTerm, period, cardFilter, filterPriority, filterStage, filterTemp, filterContact, filterVerifier, filterCloser]);
+    }, [searchTerm, period, cardFilter, filterPriority, filterStage, filterTemp, filterContact, filterVerifier, filterCloser, filterChannel]);
 
     const getTempColor = (temp) => {
         const colors = {
@@ -647,7 +654,7 @@ const LeadsPipeline = () => {
                         >
                             <SlidersHorizontal size={15} />
                             Filter & Sort
-                            {(filterPriority !== 'all' || filterStage !== 'all' || filterTemp !== 'all' || filterContact !== 'all' || filterVerifier !== 'all' || filterCloser !== 'all') && (
+                            {(filterPriority !== 'all' || filterStage !== 'all' || filterTemp !== 'all' || filterContact !== 'all' || filterVerifier !== 'all' || filterCloser !== 'all' || filterChannel !== 'all') && (
                                 <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow-sm animate-pulse">
                                     !
                                 </span>
@@ -1026,6 +1033,20 @@ const LeadsPipeline = () => {
                                     {closersList.map(c => (
                                         <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
                                     ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Channel</label>
+                            <Select value={filterChannel} onValueChange={setFilterChannel}>
+                                <SelectTrigger className="h-10">
+                                    <SelectValue placeholder="Channel" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">All Channels</SelectItem>
+                                    <SelectItem value="Website">Website</SelectItem>
+                                    <SelectItem value="Manual">Manual</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
