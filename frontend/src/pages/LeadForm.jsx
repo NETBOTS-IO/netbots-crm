@@ -193,9 +193,9 @@ const LeadForm = () => {
 
     return (
         <div className="max-w-2xl mx-auto">
-            <Card>
+            <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
-                    <CardTitle>{id ? 'Edit Lead' : 'Submit New Lead'}</CardTitle>
+                    <CardTitle className="text-xl font-semibold text-slate-900">{id ? 'Edit Lead' : 'Submit New Lead'}</CardTitle>
                 </CardHeader>
                 <form onSubmit={handleSubmit}>
                     <CardContent className="space-y-4">
@@ -687,9 +687,9 @@ const LeadForm = () => {
                             </TabsContent>
                         </Tabs>
                     </CardContent>
-                    <CardFooter className="flex justify-between">
-                        <Button type="button" variant="outline" onClick={() => navigate('/leads')}>Cancel</Button>
-                        <Button type="submit" disabled={loading}>{loading ? 'Saving...' : 'Save Lead'}</Button>
+                    <CardFooter className="flex justify-between border-t border-slate-100 pt-4">
+                        <Button type="button" variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50" onClick={() => navigate('/leads')}>Cancel</Button>
+                        <Button type="submit" disabled={loading} className="bg-slate-950 hover:bg-slate-900 text-white">{loading ? 'Saving...' : 'Save Lead'}</Button>
                     </CardFooter>
                 </form>
             </Card>

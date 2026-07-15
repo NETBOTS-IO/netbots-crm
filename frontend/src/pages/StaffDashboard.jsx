@@ -16,16 +16,14 @@ import api from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
-const StatCard = ({ title, value, icon: Icon, description, colorClass = "text-slate-600", bgClass = "bg-slate-100", children }) => (
-    <Card className="hover:shadow-md transition-shadow duration-300 border-slate-100">
+const StatCard = ({ title, value, icon: Icon, description, children }) => (
+    <Card className="border border-slate-200 bg-white hover:border-slate-300 transition-all duration-200">
         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-xs font-black text-slate-400 uppercase tracking-widest">{title}</CardTitle>
-            <div className={`p-2 ${bgClass} rounded-xl ${colorClass} transition-transform duration-300 hover:scale-110`}>
-                <Icon size={18} />
-            </div>
+            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{title}</CardTitle>
+            <Icon size={16} className="text-slate-400" />
         </CardHeader>
         <CardContent>
-            <div className="text-3xl font-black text-slate-800 tracking-tight">{value}</div>
+            <div className="text-2xl font-semibold text-slate-900 tracking-tight">{value}</div>
             {description && <p className="text-xs text-slate-500 mt-1 font-medium">{description}</p>}
             {children}
         </CardContent>
@@ -96,36 +94,35 @@ const StaffDashboard = () => {
     return (
         <div className="space-y-6 max-w-7xl mx-auto">
             {/* Header / Welcome Banner */}
-            <div className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 md:p-8 shadow-xl border border-slate-800">
-                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+            <div className="bg-white text-slate-900 rounded-lg p-6 border border-slate-200 shadow-sm">
                 <div className="relative flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <span className="bg-blue-50/10 text-blue-300 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-blue-500/30">
+                            <span className="bg-slate-100 text-slate-800 text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded border border-slate-200">
                                 {user?.role?.replace('_', ' ')}
                             </span>
                             {stats.partnerTier && (
-                                <span className="bg-amber-500/20 text-amber-300 text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-amber-500/30">
+                                <span className="bg-slate-900 text-white text-[10px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded">
                                     {stats.partnerTier} Tier
                                 </span>
                             )}
                         </div>
-                        <h1 className="text-3xl font-black tracking-tight md:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-indigo-200">
+                        <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
                             Welcome back, {user?.name}!
                         </h1>
-                        <p className="text-slate-400 text-sm mt-1 max-w-lg font-medium">
+                        <p className="text-slate-500 text-sm mt-1 max-w-lg font-medium">
                             Check out your personalized performance stats, commission reports, and team progress.
                         </p>
                     </div>
 
                     {stats.referralCode && (
-                        <div className="bg-white/5 backdrop-blur-md rounded-2xl p-4 border border-white/10 shrink-0">
-                            <div className="flex items-center gap-2 text-indigo-300 text-xs font-bold uppercase tracking-wider mb-1">
+                        <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 shrink-0">
+                            <div className="flex items-center gap-2 text-slate-600 text-xs font-semibold uppercase tracking-wider mb-1">
                                 <Share2 size={14} />
                                 Referral Program
                             </div>
-                            <div className="text-lg font-black tracking-widest text-slate-100">{stats.referralCode}</div>
-                            <div className="text-[10px] text-slate-400 mt-1 font-bold">
+                            <div className="text-lg font-semibold tracking-widest text-slate-900">{stats.referralCode}</div>
+                            <div className="text-[10px] text-slate-500 mt-1 font-medium">
                                 {stats.totalClientsReferred} Clients referred successfully
                             </div>
                         </div>
@@ -139,14 +136,12 @@ const StaffDashboard = () => {
                     title="Leads Submitted"
                     value={stats.totalLeads}
                     icon={Target}
-                    bgClass="bg-blue-50/80"
-                    colorClass="text-blue-600"
                 >
                     <div className="flex gap-2 mt-2">
-                        <span className="text-[10px] font-black uppercase bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200/50">
+                        <span className="text-[10px] font-semibold uppercase bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">
                             {stats.warmLeads} Warm
                         </span>
-                        <span className="text-[10px] font-black uppercase bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200/50">
+                        <span className="text-[10px] font-semibold uppercase bg-slate-900 text-white px-2 py-0.5 rounded">
                             {stats.sqlLeads} SQL
                         </span>
                     </div>
@@ -157,8 +152,6 @@ const StaffDashboard = () => {
                     value={stats.closedDeals}
                     icon={CheckCircle2}
                     description="Successfully onboarded clients"
-                    bgClass="bg-emerald-50/80"
-                    colorClass="text-emerald-600"
                 />
 
                 <StatCard
@@ -166,24 +159,20 @@ const StaffDashboard = () => {
                     value={`PKR ${stats.totalCommissionEarned.toLocaleString()}`}
                     icon={IndianRupee}
                     description="Total commission approved"
-                    bgClass="bg-indigo-50/80"
-                    colorClass="text-indigo-600"
                 />
 
                 <StatCard
                     title="Current Rank"
                     value={stats.rank.replace('_', ' ').toUpperCase()}
                     icon={Award}
-                    bgClass="bg-amber-50/80"
-                    colorClass="text-amber-600"
                 >
                     <div className="mt-2 space-y-1">
-                        <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                        <div className="flex justify-between text-[10px] font-medium text-slate-500">
                             <span>{stats.points} pts</span>
                             <span>Next: {rankInfo.nextRank} ({rankInfo.nextPoints} pts)</span>
                         </div>
                         <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-                            <div className="bg-amber-500 h-1.5 rounded-full transition-all duration-500" style={{ width: `${rankInfo.progress}%` }}></div>
+                            <div className="bg-slate-900 h-1.5 rounded-full transition-all duration-500" style={{ width: `${rankInfo.progress}%` }}></div>
                         </div>
                     </div>
                 </StatCard>
@@ -192,27 +181,27 @@ const StaffDashboard = () => {
             {/* Main Sections: Activities, Earnings, and Team */}
             <div className="grid gap-6 lg:grid-cols-3">
                 {/* Activity Log */}
-                <Card className="lg:col-span-1 border-slate-100">
-                    <CardHeader className="border-b border-slate-50">
-                        <CardTitle className="flex items-center gap-2 text-md font-black text-slate-700 tracking-tight uppercase text-xs">
-                            <Clock size={16} className="text-amber-500" />
+                <Card className="lg:col-span-1 border border-slate-200">
+                    <CardHeader className="border-b border-slate-100">
+                        <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                            <Clock size={16} className="text-slate-400" />
                             My Recent Activities
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-4">
                         <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1">
                             {activities.map((act) => (
-                                <div key={act._id} className="flex items-start gap-3 border-l-2 border-slate-100 pl-3 pb-3 last:pb-0">
+                                <div key={act._id} className="flex items-start gap-3 border-l border-slate-200 pl-3 pb-3 last:pb-0">
                                     <div className="flex flex-col">
-                                        <p className="text-xs font-semibold text-slate-800">{act.description}</p>
-                                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                                        <p className="text-xs font-medium text-slate-800">{act.description}</p>
+                                        <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-0.5">
                                             {new Date(act.createdAt).toLocaleString(undefined, { dateStyle: 'short', timeStyle: 'short' })}
                                         </span>
                                     </div>
                                 </div>
                             ))}
                             {activities.length === 0 && (
-                                <div className="text-center py-12 text-slate-400 font-bold text-xs uppercase tracking-wider">
+                                <div className="text-center py-12 text-slate-400 font-semibold text-xs uppercase tracking-wider">
                                     No recorded activities
                                 </div>
                             )}
@@ -221,44 +210,44 @@ const StaffDashboard = () => {
                 </Card>
 
                 {/* Earnings & Commission */}
-                <Card className="lg:col-span-2 border-slate-100">
-                    <CardHeader className="border-b border-slate-50">
-                        <CardTitle className="flex items-center gap-2 text-md font-black text-slate-700 tracking-tight uppercase text-xs">
-                            <IndianRupee size={16} className="text-emerald-500" />
+                <Card className="lg:col-span-2 border border-slate-200">
+                    <CardHeader className="border-b border-slate-100">
+                        <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                            <IndianRupee size={16} className="text-slate-400" />
                             Personal Commission Ledger
                         </CardTitle>
                     </CardHeader>
                     <CardContent className="pt-4">
-                        <div className="rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+                        <div className="rounded-lg border border-slate-200 overflow-hidden shadow-sm bg-white">
                             <table className="w-full text-xs">
-                                <thead className="bg-slate-50/80 border-b border-slate-100">
+                                <thead className="bg-slate-50 border-b border-slate-200">
                                     <tr>
-                                        <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-widest text-[9px]">Client</th>
-                                        <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-widest text-[9px]">Date Approved</th>
-                                        <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-widest text-[9px]">Status</th>
-                                        <th className="px-4 py-3 text-right font-black text-slate-400 uppercase tracking-widest text-[9px]">Amount</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-slate-500 uppercase tracking-wider text-[9px]">Client</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-slate-500 uppercase tracking-wider text-[9px]">Date Approved</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-slate-500 uppercase tracking-wider text-[9px]">Status</th>
+                                        <th className="px-4 py-2.5 text-right font-medium text-slate-500 uppercase tracking-wider text-[9px]">Amount</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="divide-y divide-slate-100">
                                     {commissions.map((comm) => (
-                                        <tr key={comm._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                        <tr key={comm._id} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-4 py-3 font-semibold text-slate-700">{comm.clientId?.companyName || 'N/A'}</td>
                                             <td className="px-4 py-3 font-medium text-slate-500">
                                                 {new Date(comm.createdAt).toLocaleDateString()}
                                             </td>
                                             <td className="px-4 py-3">
-                                                <span className={`inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded-full ${comm.status === 'paid' ? 'bg-emerald-50 text-emerald-600 border border-emerald-200/50' : 'bg-amber-50 text-amber-600 border border-amber-200/50'}`}>
+                                                <span className={`inline-block text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full ${comm.status === 'paid' ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-800 border border-slate-200'}`}>
                                                     {comm.status}
                                                 </span>
                                             </td>
-                                            <td className="px-4 py-3 text-right text-blue-600 font-black">
+                                            <td className="px-4 py-3 text-right text-slate-900 font-semibold">
                                                 PKR {comm.commissionAmount.toLocaleString()}
                                             </td>
                                         </tr>
                                     ))}
                                     {commissions.length === 0 && (
                                         <tr>
-                                            <td colSpan="4" className="px-4 py-16 text-center text-slate-400 font-black uppercase text-[10px] tracking-widest bg-slate-50/20">
+                                            <td colSpan="4" className="px-4 py-16 text-center text-slate-400 font-semibold uppercase text-[10px] tracking-widest bg-slate-50/20">
                                                 No Earnings Recorded Yet
                                             </td>
                                         </tr>
@@ -271,42 +260,42 @@ const StaffDashboard = () => {
             </div>
 
             {/* My Active Claimed Leads */}
-            <Card className="border-slate-100">
-                <CardHeader className="border-b border-slate-50">
-                    <CardTitle className="flex items-center gap-2 text-md font-black text-slate-700 tracking-tight uppercase text-xs">
-                        <Target size={16} className="text-blue-500" />
+            <Card className="border border-slate-200">
+                <CardHeader className="border-b border-slate-100">
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                        <Target size={16} className="text-slate-400" />
                         My Active Claimed Leads
                     </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-4">
-                    <div className="rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+                    <div className="rounded-lg border border-slate-200 overflow-hidden shadow-sm bg-white">
                         <table className="w-full text-xs">
-                            <thead className="bg-slate-50/80 border-b border-slate-100">
+                            <thead className="bg-slate-50 border-b border-slate-200">
                                 <tr>
-                                    <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-widest text-[9px]">Company Name</th>
-                                    <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-widest text-[9px]">Stage</th>
-                                    <th className="px-4 py-3 text-left font-black text-slate-400 uppercase tracking-widest text-[9px]">Temperature</th>
-                                    <th className="px-4 py-3 text-right font-black text-slate-400 uppercase tracking-widest text-[9px]">Action</th>
+                                    <th className="px-4 py-2.5 text-left font-medium text-slate-500 uppercase tracking-wider text-[9px]">Company Name</th>
+                                    <th className="px-4 py-2.5 text-left font-medium text-slate-500 uppercase tracking-wider text-[9px]">Stage</th>
+                                    <th className="px-4 py-2.5 text-left font-medium text-slate-500 uppercase tracking-wider text-[9px]">Temperature</th>
+                                    <th className="px-4 py-2.5 text-right font-medium text-slate-500 uppercase tracking-wider text-[9px]">Action</th>
                                 </tr>
                             </thead>
-                            <tbody>
+                            <tbody className="divide-y divide-slate-100">
                                 {claimedLeads.map((lead) => (
-                                    <tr key={lead._id} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
+                                    <tr key={lead._id} className="hover:bg-slate-50/50 transition-colors">
                                         <td className="px-4 py-3 font-semibold text-slate-700">{lead.companyName}</td>
                                         <td className="px-4 py-3">
-                                            <span className="inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200/50">
+                                            <span className="inline-block text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-800 border border-slate-200">
                                                 {lead.stage}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="inline-block text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-amber-50 text-amber-600 border border-amber-200/50">
+                                            <span className="inline-block text-[9px] font-semibold uppercase px-2 py-0.5 rounded-full bg-slate-950 text-white">
                                                 {lead.temperature}
                                             </span>
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <button 
                                                 onClick={() => navigate(`/leads/${lead._id}`)}
-                                                className="text-[10px] font-bold uppercase text-indigo-600 hover:text-indigo-800"
+                                                className="text-[10px] font-semibold uppercase text-slate-900 hover:underline"
                                             >
                                                 View / Edit
                                             </button>
@@ -315,7 +304,7 @@ const StaffDashboard = () => {
                                 ))}
                                 {claimedLeads.length === 0 && (
                                     <tr>
-                                        <td colSpan="4" className="px-4 py-16 text-center text-slate-400 font-black uppercase text-[10px] tracking-widest bg-slate-50/20">
+                                        <td colSpan="4" className="px-4 py-16 text-center text-slate-400 font-semibold uppercase text-[10px] tracking-widest bg-slate-50/20">
                                             You haven't claimed any leads yet
                                         </td>
                                     </tr>
@@ -327,10 +316,10 @@ const StaffDashboard = () => {
             </Card>
 
             {/* Team Leaderboard / Coworkers */}
-            <Card className="border-slate-100">
-                <CardHeader className="border-b border-slate-50">
-                    <CardTitle className="flex items-center gap-2 text-md font-black text-slate-700 tracking-tight uppercase text-xs">
-                        <Flame size={16} className="text-orange-500 animate-bounce" />
+            <Card className="border border-slate-200">
+                <CardHeader className="border-b border-slate-100">
+                    <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                        <Flame size={16} className="text-slate-400" />
                         Team Leaderboard & Activity Standings
                     </CardTitle>
                 </CardHeader>
@@ -341,28 +330,28 @@ const StaffDashboard = () => {
                             return (
                                 <div
                                     key={member._id}
-                                    className={`relative p-4 rounded-2xl border transition-all duration-300 ${isSelf ? 'bg-indigo-50/40 border-indigo-200/80 shadow-md ring-1 ring-indigo-500/10' : 'bg-slate-50/50 border-slate-100 hover:border-slate-300/80 hover:bg-slate-50/80'}`}
+                                    className={`relative p-4 rounded-lg border transition-all duration-200 ${isSelf ? 'bg-slate-100 border-slate-300 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}
                                 >
-                                    <div className="absolute top-2 right-2 text-xs font-black text-slate-300">
+                                    <div className="absolute top-2 right-2 text-xs font-semibold text-slate-300">
                                         #{index + 1}
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-black uppercase tracking-wider text-slate-600 border shrink-0">
+                                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center font-semibold uppercase tracking-wider text-slate-600 border border-slate-200 shrink-0">
                                             {member.name.substring(0, 2)}
                                         </div>
                                         <div className="min-w-0">
-                                            <h4 className="text-xs font-black text-slate-800 truncate flex items-center gap-1.5">
+                                            <h4 className="text-xs font-semibold text-slate-800 truncate flex items-center gap-1.5">
                                                 {member.name}
-                                                {isSelf && <span className="bg-indigo-600 text-white text-[8px] font-black uppercase px-1 rounded-sm">You</span>}
+                                                {isSelf && <span className="bg-slate-950 text-white text-[8px] font-semibold uppercase px-1 rounded-sm">You</span>}
                                             </h4>
-                                            <p className="text-[10px] text-slate-400 uppercase font-black truncate tracking-wider">
+                                            <p className="text-[10px] text-slate-400 uppercase font-semibold truncate tracking-wider">
                                                 {member.designation && member.designation.length > 0 ? member.designation[0] : member.role}
                                             </p>
                                         </div>
                                     </div>
                                     <div className="mt-3 flex justify-between items-center text-[10px]">
-                                        <span className="font-bold text-slate-500 uppercase tracking-widest text-[9px]">{member.rank.replace('_', ' ')}</span>
-                                        <span className="font-black text-indigo-600">{member.points} Points</span>
+                                        <span className="font-semibold text-slate-500 uppercase tracking-widest text-[9px]">{member.rank.replace('_', ' ')}</span>
+                                        <span className="font-semibold text-slate-900">{member.points} Points</span>
                                     </div>
                                 </div>
                             );

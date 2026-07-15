@@ -34,37 +34,36 @@ const Leaderboard = () => {
     if (loading) return <div>Loading leaderboard...</div>;
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
-            <div className="text-center space-y-2">
-                <h2 className="text-3xl font-bold flex items-center justify-center gap-3">
-                    <Star className="text-blue-500 fill-blue-500" />
+        <div className="max-w-2xl mx-auto space-y-6">
+            <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm text-center space-y-1">
+                <h2 className="text-xl font-semibold text-slate-900 flex items-center justify-center gap-2">
+                    <Trophy className="text-slate-400" size={20} />
                     Top Performers Leaderboard
-                    <Star className="text-blue-500 fill-blue-500" />
                 </h2>
-                <p className="text-slate-500">Recognition for our hardest working interns and closers</p>
+                <p className="text-xs text-slate-500 font-medium">Recognition for our hardest working interns and closers</p>
             </div>
 
-            <div className="grid gap-4">
+            <div className="grid gap-3">
                 {ranking.map((user, index) => (
-                    <Card key={user._id} className={index < 3 ? "border-blue-200 bg-blue-50/50 shadow-sm" : ""}>
-                        <CardContent className="flex items-center gap-6 py-4">
+                    <Card key={user._id} className={index < 3 ? "border-slate-350 bg-slate-50/30" : "border-slate-200"}>
+                        <CardContent className="flex items-center gap-4 py-3 px-4">
                             <div className="w-8 flex justify-center">{getRankIcon(index)}</div>
 
-                            <div className="w-12 h-12 rounded-full bg-slate-200 flex items-center justify-center text-lg font-bold text-slate-600">
+                            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-sm font-semibold text-slate-600 border border-slate-200">
                                 {user.name[0]}
                             </div>
 
-                            <div className="flex-1">
-                                <h3 className="font-bold text-lg">{user.name}</h3>
-                                <div className="flex gap-2">
-                                    <Badge variant="outline" className="text-[10px] uppercase">{user.role}</Badge>
-                                    <Badge className="text-[10px] uppercase bg-blue-600">{user.rank ? user.rank.replace('_', ' ') : 'Trainee'}</Badge>
+                            <div className="flex-1 min-w-0">
+                                <h3 className="font-semibold text-base text-slate-900 truncate">{user.name}</h3>
+                                <div className="flex gap-1.5 mt-1">
+                                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 uppercase font-medium text-slate-500 border-slate-200">{user.role}</Badge>
+                                    <Badge variant="outline" className="text-[10px] py-0 px-1.5 uppercase font-medium bg-slate-950 text-white border-slate-950">{user.rank ? user.rank.replace('_', ' ') : 'Trainee'}</Badge>
                                 </div>
                             </div>
 
                             <div className="text-right">
-                                <div className="text-2xl font-black text-blue-700">{user.points?.toLocaleString()}</div>
-                                <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">Points</div>
+                                <div className="text-xl font-semibold text-slate-900">{user.points?.toLocaleString()}</div>
+                                <div className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Points</div>
                             </div>
                         </CardContent>
                     </Card>

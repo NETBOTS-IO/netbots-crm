@@ -271,49 +271,49 @@ const Clients = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                 <div className="flex items-center gap-3">
-                    <Users className="text-blue-600" size={28} />
+                    <Users className="text-slate-500" size={24} />
                     <div>
-                        <h2 className="text-2xl font-bold">Client Directory</h2>
-                        <p className="text-xs text-slate-500 font-bold uppercase">{filteredClients.length} Total Customers</p>
+                        <h2 className="text-xl font-semibold text-slate-900">Client Directory</h2>
+                        <p className="text-xs text-slate-500 font-medium uppercase mt-0.5">{filteredClients.length} Total Customers</p>
                     </div>
                 </div>
                 <div className="flex gap-2 items-center w-full md:w-auto">
                     <div className="relative w-full md:w-64">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <Input
-                            className="pl-10 h-10"
+                            className="pl-10 h-10 font-medium"
                             placeholder="Search client..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
                     {canManage && (
-                        <Button variant="outline" onClick={handleExportPDF} className="gap-1.5 h-10 border-red-200 text-red-700 hover:bg-red-50">
+                        <Button variant="outline" onClick={handleExportPDF} className="gap-1.5 h-10 border-slate-200 text-slate-700 hover:bg-slate-50">
                             <FileDown size={16} /> Export to PDF
                         </Button>
                     )}
                     {canManage && (
-                        <Button onClick={handleOpenAdd} className="gap-1.5 h-10">
+                        <Button onClick={handleOpenAdd} className="gap-1.5 h-10 bg-slate-950 hover:bg-slate-900 text-white">
                             <Plus size={16} /> Add Client
                         </Button>
                     )}
                 </div>
             </div>
 
-            <div className="rounded-md border bg-white overflow-x-auto shadow-sm">
+            <div className="rounded-lg border border-slate-200 bg-white overflow-x-auto shadow-sm">
                 <Table>
-                    <TableHeader className="bg-slate-50">
-                        <TableRow>
+                    <TableHeader className="bg-slate-50 border-b border-slate-200">
+                        <TableRow className="hover:bg-transparent">
                             <TableHead className="w-10"></TableHead>
-                            <TableHead>Company</TableHead>
-                            <TableHead>Contact & Phone</TableHead>
-                            <TableHead>Plan & Value</TableHead>
-                            <TableHead>Upfront & Remaining</TableHead>
-                            <TableHead>Start Date</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead className="text-slate-500 font-medium">Company</TableHead>
+                            <TableHead className="text-slate-500 font-medium">Contact & Phone</TableHead>
+                            <TableHead className="text-slate-500 font-medium">Plan & Value</TableHead>
+                            <TableHead className="text-slate-500 font-medium">Upfront & Remaining</TableHead>
+                            <TableHead className="text-slate-500 font-medium">Start Date</TableHead>
+                            <TableHead className="text-slate-500 font-medium">Status</TableHead>
+                            <TableHead className="text-right text-slate-500 font-medium">Actions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -328,51 +328,51 @@ const Clients = () => {
                                         </TableCell>
                                         <TableCell className="font-medium">
                                             <div className="flex flex-col gap-1">
-                                                <span className="font-bold text-slate-900">{client.companyName}</span>
+                                                <span className="font-semibold text-slate-900">{client.companyName}</span>
                                                 <span className="text-[10px] text-slate-500">{client.email || 'No email'}</span>
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="text-sm">
+                                            <div className="text-xs">
                                                 <div className="font-semibold text-slate-800">{client.contactName || 'N/A'}</div>
-                                                <div className="text-slate-500 text-xs">{client.phone || 'No phone'}</div>
+                                                <div className="text-slate-500 mt-0.5">{client.phone || 'No phone'}</div>
                                             </div>
                                         </TableCell>
                                         <TableCell>
                                             <div className="flex flex-col">
-                                                <span className="capitalize text-xs font-bold text-slate-800">{client.planType?.replace(/_/g, ' ')}</span>
-                                                <span className="font-extrabold text-blue-700 text-sm">
+                                                <span className="capitalize text-xs font-semibold text-slate-850">{client.planType?.replace(/_/g, ' ')}</span>
+                                                <span className="font-semibold text-slate-900 text-xs mt-0.5">
                                                     PKR {currentAmount.toLocaleString()}
                                                 </span>
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="text-xs font-semibold">
-                                                <div className="text-emerald-600">Upfront: PKR {(client.upfrontPaid || 0).toLocaleString()}</div>
-                                                <div className="text-rose-600">Remain: PKR {(client.remainingAmount || 0).toLocaleString()}</div>
+                                            <div className="text-xs font-medium">
+                                                <div className="text-slate-700">Upfront: PKR {(client.upfrontPaid || 0).toLocaleString()}</div>
+                                                <div className="text-slate-550">Remain: PKR {(client.remainingAmount || 0).toLocaleString()}</div>
                                             </div>
                                         </TableCell>
-                                        <TableCell className="text-xs font-medium text-slate-600">
+                                        <TableCell className="text-xs font-medium text-slate-500">
                                             {client.startDate ? new Date(client.startDate).toLocaleDateString() : 'N/A'}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge className={client.isActive ? "bg-emerald-500 hover:bg-emerald-600 text-white font-bold" : "bg-slate-500 text-white font-bold"}>
+                                            <Badge variant="outline" className={client.isActive ? "border-emerald-500 text-emerald-600 bg-emerald-50/50 font-medium" : "border-slate-350 text-slate-500 bg-slate-50/50 font-medium"}>
                                                 {client.isActive ? "ACTIVE" : "CHURNED"}
                                             </Badge>
                                         </TableCell>
                                         <TableCell onClick={(e) => e.stopPropagation()} className="text-right">
                                             <div className="flex justify-end gap-1.5">
-                                                <Button size="icon" variant="ghost" className="h-8 w-8 text-blue-600 hover:bg-blue-50" onClick={() => handleViewCompleteDetail(client)} title="View Complete Detail">
-                                                    <Eye size={16} />
+                                                <Button size="icon" variant="ghost" className="h-8 w-8 border border-slate-200 hover:bg-slate-50 text-slate-700" onClick={() => handleViewCompleteDetail(client)} title="View Complete Detail">
+                                                    <Eye size={14} />
                                                 </Button>
                                                 {canManage && (
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-amber-600 hover:bg-amber-50" onClick={() => handleOpenEdit(client)}>
-                                                        <Pencil size={16} />
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 border border-slate-200 hover:bg-slate-50 text-slate-700" onClick={() => handleOpenEdit(client)}>
+                                                        <Pencil size={14} />
                                                     </Button>
                                                 )}
                                                 {isAdmin && (
-                                                    <Button size="icon" variant="ghost" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => handleDeleteClient(client._id)}>
-                                                        <Trash2 size={16} />
+                                                    <Button size="icon" variant="ghost" className="h-8 w-8 border border-slate-200 hover:bg-slate-50 text-slate-700 hover:text-red-600" onClick={() => handleDeleteClient(client._id)}>
+                                                        <Trash2 size={14} />
                                                     </Button>
                                                 )}
                                             </div>
@@ -380,18 +380,18 @@ const Clients = () => {
                                     </TableRow>
 
                                     {isExpanded && (
-                                        <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                                            <TableCell colSpan={8} className="p-4 border-t border-b">
+                                        <TableRow className="bg-slate-50/20 hover:bg-slate-50/20">
+                                            <TableCell colSpan={8} className="p-4 border-t border-b border-slate-200">
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-slate-700">
                                                     {/* Engaged Team info */}
-                                                    <div className="space-y-3 bg-white p-3 rounded border border-slate-100 shadow-sm">
-                                                        <h4 className="font-bold text-slate-800 border-b pb-1.5 uppercase tracking-wider text-[10px]">Engaged Team & Commissions</h4>
+                                                    <div className="space-y-3 bg-white p-3 rounded border border-slate-200 shadow-sm">
+                                                        <h4 className="font-semibold text-slate-800 border-b pb-1.5 uppercase tracking-wider text-[10px]">Engaged Team & Commissions</h4>
                                                         {client.engagedTeam && client.engagedTeam.length > 0 ? (
                                                             <div className="space-y-2">
                                                                 {client.engagedTeam.map((item, idx) => (
-                                                                    <div key={idx} className="flex justify-between items-center py-1 border-b last:border-0">
-                                                                        <span className="font-semibold text-slate-700">{item.user?.name || 'Unknown'}</span>
-                                                                        <span className="font-bold text-emerald-600">PKR {(item.commissionAmount || 0).toLocaleString()}</span>
+                                                                    <div key={idx} className="flex justify-between items-center py-1 border-b border-slate-100 last:border-0">
+                                                                        <span className="font-medium text-slate-700">{item.user?.name || 'Unknown'}</span>
+                                                                        <span className="font-semibold text-slate-900">PKR {(item.commissionAmount || 0).toLocaleString()}</span>
                                                                     </div>
                                                                 ))}
                                                             </div>
@@ -401,32 +401,32 @@ const Clients = () => {
                                                     </div>
 
                                                     {/* Basic info metadata */}
-                                                    <div className="space-y-3 bg-white p-3 rounded border border-slate-100 shadow-sm">
-                                                        <h4 className="font-bold text-slate-800 border-b pb-1.5 uppercase tracking-wider text-[10px]">Lead Tracking & Assignment Details</h4>
+                                                    <div className="space-y-3 bg-white p-3 rounded border border-slate-200 shadow-sm">
+                                                        <h4 className="font-semibold text-slate-800 border-b pb-1.5 uppercase tracking-wider text-[10px]">Lead Tracking & Assignment Details</h4>
                                                         <div className="grid grid-cols-2 gap-3">
                                                             <div>
-                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">Lead Collected By</span>
-                                                                <span className="font-semibold text-slate-800">{client.leadCollectedBy || 'Unknown'}</span>
+                                                                <span className="text-[10px] text-slate-400 font-semibold uppercase block">Lead Collected By</span>
+                                                                <span className="font-medium text-slate-800">{client.leadCollectedBy || 'Unknown'}</span>
                                                             </div>
                                                             <div>
-                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">Lead Verified By</span>
-                                                                <span className="font-semibold text-slate-800">{client.leadVerifiedBy || 'System/N/A'}</span>
+                                                                <span className="text-[10px] text-slate-400 font-semibold uppercase block">Lead Verified By</span>
+                                                                <span className="font-medium text-slate-800">{client.leadVerifiedBy || 'System/N/A'}</span>
                                                             </div>
                                                             <div>
-                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">Sales Closed By</span>
-                                                                <span className="font-semibold text-slate-800">{client.salesClosedBy || 'Unknown'}</span>
+                                                                <span className="text-[10px] text-slate-400 font-semibold uppercase block">Sales Closed By</span>
+                                                                <span className="font-medium text-slate-800">{client.salesClosedBy || 'Unknown'}</span>
                                                             </div>
                                                             <div>
-                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">Lead Creation Date</span>
-                                                                <span className="font-semibold text-slate-800">{client.leadCreatedAt ? new Date(client.leadCreatedAt).toLocaleDateString() : 'N/A'}</span>
+                                                                <span className="text-[10px] text-slate-400 font-semibold uppercase block">Lead Creation Date</span>
+                                                                <span className="font-medium text-slate-800">{client.leadCreatedAt ? new Date(client.leadCreatedAt).toLocaleDateString() : 'N/A'}</span>
                                                             </div>
                                                             <div>
-                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">Business Type</span>
-                                                                <span className="font-semibold text-slate-800">{client.businessType || 'N/A'}</span>
+                                                                <span className="text-[10px] text-slate-400 font-semibold uppercase block">Business Type</span>
+                                                                <span className="font-medium text-slate-800">{client.businessType || 'N/A'}</span>
                                                             </div>
                                                             <div>
-                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">City</span>
-                                                                <span className="font-semibold text-slate-800">{client.city || 'N/A'}</span>
+                                                                <span className="text-[10px] text-slate-400 font-semibold uppercase block">City</span>
+                                                                <span className="font-medium text-slate-800">{client.city || 'N/A'}</span>
                                                             </div>
                                                         </div>
                                                     </div>

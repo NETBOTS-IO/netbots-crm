@@ -15,7 +15,7 @@ async function testEndpoints() {
         const loginRes = await fetch(`${BASE_URL}/auth/login`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: 'ceo@accounta.pk', password: 'admin123' })
+            body: JSON.stringify({ email: 'saqlain@netbots.io', password: 'SaqlainShah@110' })
         });
         const loginData = await loginRes.json();
         if (loginData.success) {

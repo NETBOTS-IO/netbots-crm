@@ -157,15 +157,15 @@ export default function PermissionsManagement() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-lg border shadow-sm">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                 <div>
-                    <h1 className="text-2xl font-black text-slate-800">Permissions & Access Controls</h1>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Manage templates and granular access levels for each team member.</p>
+                    <h1 className="text-xl font-semibold text-slate-900">Permissions & Access Controls</h1>
+                    <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-1">Manage templates and granular access levels for each team member.</p>
                 </div>
                 <div className="relative w-full md:w-64 shrink-0">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <Input
-                        className="pl-10 h-10 font-bold"
+                        className="pl-10 h-10 font-medium"
                         placeholder="Search team member..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -173,20 +173,20 @@ export default function PermissionsManagement() {
                 </div>
             </div>
 
-            <Card className="shadow-sm">
+            <Card className="border border-slate-200 shadow-sm">
                 <CardContent className="p-0">
                     <div className="overflow-x-auto">
                         <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-50 text-slate-500 border-b">
-                                <tr>
-                                    <th className="px-6 py-4 font-bold text-slate-700">User / Role</th>
-                                    <th className="px-6 py-4 font-bold text-slate-700 text-center">Presets / Templates</th>
+                            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                <tr className="hover:bg-transparent">
+                                    <th className="px-6 py-4 font-semibold text-slate-700">User / Role</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-700 text-center">Presets / Templates</th>
                                     {AVAILABLE_PERMISSIONS.map(p => (
-                                        <th key={p.key} className="px-6 py-4 font-medium text-center text-xs tracking-tight uppercase whitespace-nowrap">
+                                        <th key={p.key} className="px-6 py-4 font-medium text-center text-[10px] tracking-tight uppercase whitespace-nowrap text-slate-500">
                                             {p.label}
                                         </th>
                                     ))}
-                                    <th className="px-6 py-4 font-bold text-slate-700 text-right">Actions</th>
+                                    <th className="px-6 py-4 font-semibold text-slate-700 text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -199,16 +199,16 @@ export default function PermissionsManagement() {
                                     return (
                                         <tr key={member._id} className="hover:bg-slate-50/50">
                                             <td className="px-6 py-4">
-                                                <div className="font-bold text-slate-900">{member.name}</div>
-                                                <div className="text-slate-500 text-[10px] uppercase font-semibold">{Array.isArray(member.designation) && member.designation.length > 0 ? member.designation.join(', ') : (member.designation || member.role?.replace('_', ' '))}</div>
+                                                <div className="font-semibold text-slate-900">{member.name}</div>
+                                                <div className="text-slate-500 text-[10px] uppercase font-medium">{Array.isArray(member.designation) && member.designation.length > 0 ? member.designation.join(', ') : (member.designation || member.role?.replace('_', ' '))}</div>
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex flex-wrap gap-1.5 justify-center">
-                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-black uppercase py-0 px-2" onClick={() => applyTemplate(member._id, 'Supervisor')} disabled={member.role === 'admin'}>Supervisor</Button>
-                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-black uppercase py-0 px-2" onClick={() => applyTemplate(member._id, 'LeadCollector')} disabled={member.role === 'admin'}>Collector</Button>
-                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-black uppercase py-0 px-2" onClick={() => applyTemplate(member._id, 'LeadVerifier')} disabled={member.role === 'admin'}>Verifier</Button>
-                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-black uppercase py-0 px-2" onClick={() => applyTemplate(member._id, 'LeadCloser')} disabled={member.role === 'admin'}>Closer</Button>
-                                                    <Button variant="ghost" size="xs" className="h-6 text-[9px] font-black uppercase py-0 px-2 text-rose-600 hover:bg-rose-50" onClick={() => applyTemplate(member._id, 'Reset')} disabled={member.role === 'admin'}>Clear</Button>
+                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-medium uppercase py-0 px-2 border-slate-200 hover:bg-slate-50" onClick={() => applyTemplate(member._id, 'Supervisor')} disabled={member.role === 'admin'}>Supervisor</Button>
+                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-medium uppercase py-0 px-2 border-slate-200 hover:bg-slate-50" onClick={() => applyTemplate(member._id, 'LeadCollector')} disabled={member.role === 'admin'}>Collector</Button>
+                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-medium uppercase py-0 px-2 border-slate-200 hover:bg-slate-50" onClick={() => applyTemplate(member._id, 'LeadVerifier')} disabled={member.role === 'admin'}>Verifier</Button>
+                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-medium uppercase py-0 px-2 border-slate-200 hover:bg-slate-50" onClick={() => applyTemplate(member._id, 'LeadCloser')} disabled={member.role === 'admin'}>Closer</Button>
+                                                    <Button variant="ghost" size="xs" className="h-6 text-[9px] font-medium uppercase py-0 px-2 text-red-650 hover:bg-red-50 border border-transparent hover:border-red-200" onClick={() => applyTemplate(member._id, 'Reset')} disabled={member.role === 'admin'}>Clear</Button>
                                                 </div>
                                             </td>
                                             {AVAILABLE_PERMISSIONS.map(p => (
@@ -218,7 +218,7 @@ export default function PermissionsManagement() {
                                                         checked={!!member.permissions?.[p.key]}
                                                         onChange={() => handlePermissionToggle(member._id, p.key)}
                                                         disabled={member.role === 'admin'}
-                                                        className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500 cursor-pointer disabled:cursor-not-allowed"
+                                                        className="w-4 h-4 text-slate-900 bg-slate-100 border-slate-350 rounded focus:ring-slate-500 cursor-pointer disabled:cursor-not-allowed"
                                                     />
                                                 </td>
                                             ))}
@@ -230,7 +230,7 @@ export default function PermissionsManagement() {
                                                         title={allChecked ? "Uncheck All" : "Select All"}
                                                         onClick={() => toggleAllForUser(member._id, !allChecked)}
                                                         disabled={member.role === 'admin'}
-                                                        className="h-8 w-8 text-slate-500"
+                                                        className="h-8 w-8 text-slate-500 hover:bg-slate-100"
                                                     >
                                                         {allChecked ? <CheckSquare size={16} /> : <Square size={16} />}
                                                     </Button>
@@ -238,7 +238,7 @@ export default function PermissionsManagement() {
                                                         size="sm" 
                                                         onClick={() => handleSave(member._id)}
                                                         disabled={member.role === 'admin' || saving[member._id]}
-                                                        className="font-bold text-xs uppercase"
+                                                        className="font-semibold text-xs uppercase bg-slate-950 text-white hover:bg-slate-900 h-8 rounded"
                                                     >
                                                         {saving[member._id] ? 'Saving...' : 'Save'}
                                                     </Button>

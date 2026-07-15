@@ -148,15 +148,15 @@ const CommissionsLedger = () => {
         }
     };
 
-    const getStatusColor = (status) => {
+    const getStatusBadgeClass = (status) => {
         switch (status) {
             case 'completed':
             case 'paid': 
-                return 'bg-emerald-500 hover:bg-emerald-600';
+                return 'border-emerald-500 text-emerald-600 bg-emerald-50/50 hover:bg-emerald-50';
             case 'processing': 
-                return 'bg-amber-500 hover:bg-amber-600';
+                return 'border-amber-500 text-amber-600 bg-amber-50/50 hover:bg-amber-50';
             default: 
-                return 'bg-slate-500 hover:bg-slate-600';
+                return 'border-slate-300 text-slate-500 bg-slate-50/50 hover:bg-slate-50';
         }
     };
 
@@ -164,36 +164,36 @@ const CommissionsLedger = () => {
 
     return (
         <div className="space-y-6">
-            <div className="flex justify-between items-center bg-white p-4 rounded-lg border shadow-sm">
+            <div className="flex justify-between items-center bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
                 <div>
-                    <h2 className="text-xl font-bold text-slate-800">Commissions Ledger</h2>
-                    <p className="text-xs text-slate-500 font-bold uppercase">View and manage team earnings</p>
+                    <h2 className="text-xl font-semibold text-slate-900">Commissions Ledger</h2>
+                    <p className="text-xs text-slate-500 font-medium uppercase">View and manage team earnings</p>
                 </div>
                 <div className="flex gap-2">
                     {currentUser?.role === 'admin' && (
-                        <Button variant="outline" size="sm" className="gap-2 border-red-200 text-red-700 hover:bg-red-50" onClick={handleExportPDF}>
+                        <Button variant="outline" size="sm" className="gap-2 text-slate-700 hover:bg-slate-50 border-slate-200" onClick={handleExportPDF}>
                             <FileDown size={14} /> Export to PDF
                         </Button>
                     )}
                     {isPrivileged && (
-                        <Button size="sm" className="gap-2 bg-blue-600 hover:bg-blue-700" onClick={() => setIsAddOpen(true)}>
+                        <Button size="sm" className="gap-2 bg-slate-950 hover:bg-slate-900 text-white" onClick={() => setIsAddOpen(true)}>
                             <Plus size={14} /> Add Commission
                         </Button>
                     )}
                 </div>
             </div>
 
-            <Card>
+            <Card className="border border-slate-200">
                 <CardContent className="pt-6 overflow-x-auto">
                     <Table>
                         <TableHeader>
-                            <TableRow>
-                                <TableHead>Date</TableHead>
-                                {isPrivileged && <TableHead>User</TableHead>}
-                                <TableHead>Role</TableHead>
-                                <TableHead>Amount</TableHead>
-                                <TableHead>Status</TableHead>
-                                {isPrivileged && <TableHead className="text-right">Actions</TableHead>}
+                            <TableRow className="hover:bg-transparent">
+                                <TableHead className="text-slate-500 font-medium">Date</TableHead>
+                                {isPrivileged && <TableHead className="text-slate-500 font-medium">User</TableHead>}
+                                <TableHead className="text-slate-500 font-medium">Role</TableHead>
+                                <TableHead className="text-slate-500 font-medium">Amount</TableHead>
+                                <TableHead className="text-slate-500 font-medium">Status</TableHead>
+                                {isPrivileged && <TableHead className="text-right text-slate-500 font-medium">Actions</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -204,22 +204,22 @@ const CommissionsLedger = () => {
                                     </TableCell>
                                 </TableRow>
                             ) : commissions.map((comm) => (
-                                <TableRow key={comm._id}>
+                                <TableRow key={comm._id} className="hover:bg-slate-50/50">
                                     <TableCell>{new Date(comm.createdAt).toLocaleDateString()}</TableCell>
-                                    {isPrivileged && <TableCell>{comm.earnedBy?.name || 'Unknown'}</TableCell>}
-                                    <TableCell className="text-xs capitalize">{comm.commissionRole?.replace(/_/g, ' ')}</TableCell>
-                                    <TableCell className="font-bold text-emerald-600">${(comm.commissionAmount || comm.amount || 0).toLocaleString()}</TableCell>
+                                    {isPrivileged && <TableCell className="font-medium text-slate-900">{comm.earnedBy?.name || 'Unknown'}</TableCell>}
+                                    <TableCell className="text-xs text-slate-600 capitalize">{comm.commissionRole?.replace(/_/g, ' ')}</TableCell>
+                                    <TableCell className="font-semibold text-slate-900">PKR {(comm.commissionAmount || comm.amount || 0).toLocaleString()}</TableCell>
                                     <TableCell>
-                                        <Badge className={getStatusColor(comm.status)}>
+                                        <Badge variant="outline" className={getStatusBadgeClass(comm.status)}>
                                             {comm.status?.toUpperCase()}
                                         </Badge>
                                     </TableCell>
                                     {isPrivileged && (
                                         <TableCell className="text-right flex items-center justify-end gap-2">
-                                            <Button variant="outline" size="icon" onClick={() => handleEditAmount(comm._id, comm.commissionAmount || comm.amount)}>
-                                                <Pencil size={14} />
+                                            <Button variant="outline" size="icon" className="h-8 w-8 border-slate-200 hover:bg-slate-50" onClick={() => handleEditAmount(comm._id, comm.commissionAmount || comm.amount)}>
+                                                <Pencil size={14} className="text-slate-600" />
                                             </Button>
-                                            <Button variant="outline" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => handleDelete(comm._id)}>
+                                            <Button variant="outline" size="icon" className="h-8 w-8 text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-red-600" onClick={() => handleDelete(comm._id)}>
                                                 <Trash2 size={14} />
                                             </Button>
                                         </TableCell>

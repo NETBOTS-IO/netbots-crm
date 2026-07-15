@@ -30,16 +30,14 @@ ChartJS.register(
     Legend
 );
 
-const StatCard = ({ title, value, icon: Icon, description, colorClass = "text-slate-600", bgClass = "bg-slate-100" }) => (
-    <Card>
+const StatCard = ({ title, value, icon: Icon, description }) => (
+    <Card className="border border-slate-200 bg-white hover:border-slate-300 transition-all duration-200">
         <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium text-slate-500 uppercase tracking-wider">{title}</CardTitle>
-            <div className={`p-2 ${bgClass} rounded-lg ${colorClass}`}>
-                <Icon size={18} />
-            </div>
+            <CardTitle className="text-xs font-semibold text-slate-500 uppercase tracking-wider">{title}</CardTitle>
+            <Icon size={16} className="text-slate-400" />
         </CardHeader>
         <CardContent>
-            <div className="text-2xl font-bold">{value}</div>
+            <div className="text-2xl font-semibold text-slate-900 tracking-tight">{value}</div>
             <p className="text-xs text-slate-500 mt-1">{description}</p>
         </CardContent>
     </Card>
@@ -129,8 +127,8 @@ const SalesDashboard = () => {
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-1">
-                <h1 className="text-2xl font-bold tracking-tight">Sales Performance</h1>
-                <p className="text-slate-500 text-sm italic">"Don’t close a sale, open a relationship."</p>
+                <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Sales Performance</h1>
+                <p className="text-slate-500 text-xs italic">"Don’t close a sale, open a relationship."</p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -139,40 +137,32 @@ const SalesDashboard = () => {
                     value={performance.yearlyTotal}
                     icon={CheckCircle2}
                     description="Closed deals this year"
-                    bgClass="bg-emerald-50"
-                    colorClass="text-emerald-600"
                 />
                 <StatCard
                     title="Active SQLs"
                     value={stats.sqls}
                     icon={Target}
                     description="Ready to be closed"
-                    bgClass="bg-amber-50"
-                    colorClass="text-amber-600"
                 />
                 <StatCard
                     title="Conversion Goal"
                     value="15%"
                     icon={TrendingUp}
                     description="Target for this quarter"
-                    bgClass="bg-blue-50"
-                    colorClass="text-blue-600"
                 />
                 <StatCard
                     title="Avg Deal Value"
                     value="PKR 4,200"
                     icon={ActivityIcon}
                     description="Per client average"
-                    bgClass="bg-indigo-50"
-                    colorClass="text-indigo-600"
                 />
             </div>
 
             <div className="grid gap-6 lg:grid-cols-2">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between">
-                        <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                            <TrendingUp size={18} className="text-blue-600" />
+                <Card className="border border-slate-200">
+                    <CardHeader className="flex flex-row items-center justify-between pb-4">
+                        <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                            <TrendingUp size={16} className="text-slate-400" />
                             Sales Velocity
                         </CardTitle>
                         <div className="flex gap-1">
@@ -180,7 +170,7 @@ const SalesDashboard = () => {
                                 <button
                                     key={p}
                                     onClick={() => setPeriod(p)}
-                                    className={`px-2 py-1 text-[10px] font-bold uppercase border rounded transition-colors ${period === p ? 'bg-slate-900 text-white border-slate-900' : 'hover:bg-slate-50'}`}
+                                    className={`px-2.5 py-1 text-[10px] font-semibold uppercase border rounded transition-all duration-200 ${period === p ? 'bg-slate-950 text-white border-slate-950 shadow-sm' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                                 >
                                     {p}
                                 </button>
@@ -191,10 +181,10 @@ const SalesDashboard = () => {
                         {(performance[period] || []).map((p, idx) => (
                             <div key={idx} className="flex flex-col items-center gap-2 group">
                                 <div
-                                    className="w-8 bg-blue-500 rounded-t transition-all group-hover:bg-blue-600 shadow-sm"
+                                    className="w-8 bg-slate-900 rounded-t transition-all group-hover:bg-slate-800 shadow-sm"
                                     style={{ height: `${(p.count || 0) * 40 + 10}px` }}
                                 ></div>
-                                <span className="text-[9px] text-slate-500 font-bold">{p._id}</span>
+                                <span className="text-[9px] text-slate-500 font-semibold">{p._id}</span>
                             </div>
                         ))}
                         {performance[period]?.length === 0 && (
@@ -203,10 +193,10 @@ const SalesDashboard = () => {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border border-slate-200">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                            <Target size={18} className="text-indigo-600" />
+                        <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                            <Target size={16} className="text-slate-400" />
                             Conversion Funnel
                         </CardTitle>
                     </CardHeader>
@@ -217,23 +207,23 @@ const SalesDashboard = () => {
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
-                <Card>
+                <Card className="border border-slate-200">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                            <Clock size={18} className="text-amber-600" />
+                        <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                            <Clock size={16} className="text-slate-400" />
                             Recent Pipeline Alerts
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
                             {activities.map((act) => (
-                                <div key={act.id} className="flex items-start gap-4 text-sm border-b pb-3 last:border-0">
-                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 border">
+                                <div key={act.id} className="flex items-start gap-4 text-sm border-b border-slate-100 pb-3 last:border-0">
+                                    <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center shrink-0 border border-slate-150">
                                         <CheckCircle2 size={16} className="text-slate-400" />
                                     </div>
                                     <div>
-                                        <p className="font-semibold text-slate-800">{act.text}</p>
-                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight">{act.time}</p>
+                                        <p className="font-medium text-slate-800">{act.text}</p>
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight">{act.time}</p>
                                     </div>
                                 </div>
                             ))}
@@ -241,32 +231,32 @@ const SalesDashboard = () => {
                     </CardContent>
                 </Card>
 
-                <Card>
+                <Card className="border border-slate-200">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg font-bold">
-                            <IndianRupee size={18} className="text-emerald-600" />
+                        <CardTitle className="flex items-center gap-2 text-base font-semibold text-slate-900">
+                            <IndianRupee size={16} className="text-slate-400" />
                             Personal Commission Ledger
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <div className="rounded-xl border overflow-hidden shadow-sm">
+                        <div className="rounded-lg border border-slate-200 overflow-hidden shadow-sm bg-white">
                             <table className="w-full text-sm">
-                                <thead className="bg-slate-50 border-b">
+                                <thead className="bg-slate-50 border-b border-slate-200">
                                     <tr>
-                                        <th className="px-4 py-3 text-left font-bold text-slate-600 uppercase text-[10px]">Client</th>
-                                        <th className="px-4 py-3 text-left font-bold text-slate-600 uppercase text-[10px]">Amount</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-slate-500 uppercase text-[10px] tracking-wider">Client</th>
+                                        <th className="px-4 py-2.5 text-left font-medium text-slate-500 uppercase text-[10px] tracking-wider">Amount</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody className="divide-y divide-slate-100">
                                     {commissions.map((comm) => (
-                                        <tr key={comm._id} className="border-b last:border-0 hover:bg-slate-50/50 transition-colors">
+                                        <tr key={comm._id} className="hover:bg-slate-50/50 transition-colors">
                                             <td className="px-4 py-3 font-medium text-slate-700">{comm.clientId?.companyName || 'Unknown'}</td>
-                                            <td className="px-4 py-3 text-blue-700 font-black">PKR {comm.commissionAmount.toLocaleString()}</td>
+                                            <td className="px-4 py-3 text-slate-900 font-semibold">PKR {comm.commissionAmount.toLocaleString()}</td>
                                         </tr>
                                     ))}
                                     {commissions.length === 0 && (
                                         <tr>
-                                            <td colSpan="2" className="px-4 py-12 text-center text-slate-400 font-black uppercase text-[10px] tracking-widest bg-slate-50/30">
+                                            <td colSpan="2" className="px-4 py-12 text-center text-slate-400 font-semibold uppercase text-[10px] tracking-widest bg-slate-50/30">
                                                 No Earnings Recorded
                                             </td>
                                         </tr>

@@ -222,30 +222,30 @@ const LeadsPipeline = () => {
         const lockedByOtherCloser = lead.workingCloser && lead.workingCloser._id?.toString() !== myId;
         
         if (currentUser?.role !== 'admin' && ((isVerifier && lockedByOtherVerifier) || (isCloser && lockedByOtherCloser))) {
-            return "bg-slate-100/60 text-slate-400 hover:bg-slate-100/60 cursor-not-allowed select-none transition-colors";
+            return "bg-slate-50/50 text-slate-400 hover:bg-slate-50/50 cursor-not-allowed select-none transition-colors";
         }
 
         // Own active claim (highest priority highlight)
         if (isVerifierMine || isCloserMine) {
-            return "bg-emerald-100/90 hover:bg-emerald-200/95 text-emerald-950 transition-colors border-l-4 border-emerald-600 font-medium";
+            return "bg-emerald-50/50 hover:bg-emerald-100/60 text-slate-900 transition-colors border-l-2 border-emerald-500 font-medium";
         }
         
         // Claimed by both Verifier and Closer
         if (lead.workingVerifier && lead.workingCloser) {
-            return "bg-teal-100/80 hover:bg-teal-200/80 text-teal-950 transition-colors border-l-4 border-teal-500 font-medium";
+            return "bg-teal-50/50 hover:bg-teal-100/60 text-slate-900 transition-colors border-l-2 border-teal-500 font-medium";
         }
 
         // Claimed by Verifier only
         if (lead.workingVerifier) {
-            return "bg-amber-100/80 hover:bg-amber-200/80 text-amber-950 transition-colors border-l-4 border-amber-500 font-medium";
+            return "bg-amber-50/50 hover:bg-amber-100/60 text-slate-900 transition-colors border-l-2 border-amber-500 font-medium";
         }
 
         // Claimed by Closer only
         if (lead.workingCloser) {
-            return "bg-indigo-100/80 hover:bg-indigo-200/80 text-indigo-950 transition-colors border-l-4 border-indigo-500 font-medium";
+            return "bg-indigo-50/50 hover:bg-indigo-100/60 text-slate-900 transition-colors border-l-2 border-indigo-500 font-medium";
         }
         
-        return "hover:bg-slate-50 transition-colors";
+        return "hover:bg-slate-50/85 transition-colors";
     };
 
     const handleRowClick = (lead) => {
@@ -706,27 +706,27 @@ const LeadsPipeline = () => {
             )}
 
             {/* Color Legend / Indicators */}
-            <div id="tour-legend" className="flex flex-wrap items-center gap-4 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-600 shadow-sm">
-                <span className="text-[10px] uppercase font-black tracking-wider text-slate-400">Claims Legend:</span>
+            <div id="tour-legend" className="flex flex-wrap items-center gap-4 px-4 py-2 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-600">
+                <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400">Claims Legend:</span>
                 <div className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 rounded bg-emerald-200 border border-emerald-400 block shrink-0" />
+                    <span className="w-2.5 h-2.5 rounded bg-emerald-100 border border-emerald-500 block shrink-0" />
                     <span>My Active Claim</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 rounded bg-amber-200 border border-amber-400 block shrink-0" />
+                    <span className="w-2.5 h-2.5 rounded bg-amber-100 border border-amber-500 block shrink-0" />
                     <span>Claimed by Verifier</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 rounded bg-indigo-200 border border-indigo-400 block shrink-0" />
+                    <span className="w-2.5 h-2.5 rounded bg-indigo-100 border border-indigo-500 block shrink-0" />
                     <span>Claimed by Closer</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 rounded bg-teal-200 border border-teal-400 block shrink-0" />
+                    <span className="w-2.5 h-2.5 rounded bg-teal-100 border border-teal-500 block shrink-0" />
                     <span>Claimed by Both</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                    <span className="w-3.5 h-3.5 rounded bg-slate-100 border border-slate-300 block shrink-0 opacity-60" />
-                    <span className="opacity-75">Locked for Me</span>
+                    <span className="w-2.5 h-2.5 rounded bg-slate-50 border border-slate-200 block shrink-0" />
+                    <span className="text-slate-400">Locked for Me</span>
                 </div>
             </div>
 

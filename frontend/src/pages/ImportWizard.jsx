@@ -58,33 +58,34 @@ const ImportWizard = () => {
     };
 
     return (
-        <div className="max-w-3xl mx-auto space-y-6">
-            <h2 className="text-3xl font-bold">Import Data Wizard</h2>
+        <div className="max-w-2xl mx-auto space-y-6">
+            <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
+                <h2 className="text-xl font-semibold text-slate-900">Import Data Wizard</h2>
+                <p className="text-xs text-slate-500 font-medium">Bulk import business leads from CSV files directly into your sales pipeline.</p>
+            </div>
 
             {!result ? (
-                <Card className="border-dashed border-2">
+                <Card className="border border-slate-200 shadow-sm bg-white">
                     <CardHeader>
-                        <CardTitle className="text-lg">Upload CSV File</CardTitle>
+                        <CardTitle className="text-base font-semibold text-slate-900">Upload CSV File</CardTitle>
                     </CardHeader>
-                    <CardContent className="flex flex-col items-center py-10">
-                        <Upload size={48} className="text-slate-400 mb-4" />
+                    <CardContent className="flex flex-col items-center py-8">
+                        <Upload size={36} className="text-slate-400 mb-4" />
                         <Input
-                             type="file"
+                            type="file"
                             accept=".csv"
                             onChange={handleFileChange}
-                            className="max-w-xs mb-4"
+                            className="max-w-xs mb-4 border-slate-200"
                         />
-                        <p className="text-sm text-slate-500 max-w-lg text-center mt-4">
-                            Supported columns: Name, Phone, Email, Website, Address, Instagram, Facebook, Twitter, Linkedin, Yelp, Youtube, PlaceID, CID, Category, ReviewCount, AverageRating, Latitude, Longitude, and Working Hours (1_Monday to 7_Sunday).
+                        <p className="text-[11px] text-slate-500 max-w-lg text-center mt-2 leading-relaxed">
+                            Supported columns: Name, Phone, Email, Website, Address, Instagram, Facebook, Twitter, Linkedin, Yelp, Youtube, PlaceID, CID, Category, ReviewCount, AverageRating, Latitude, Longitude, and Working Hours.
                         </p>
                     </CardContent>
-                    <CardContent className="border-t px-6 py-4 bg-slate-50">
+                    <CardContent className="border-t border-slate-100 px-6 py-4 bg-slate-50/50">
                         <div className="flex flex-col gap-2 max-w-xs mx-auto">
-                            <Label className="text-xs font-bold text-slate-500 uppercase">Default Lead Priority</Label>
+                            <Label className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Default Lead Priority</Label>
                             <Select value={priority} onValueChange={setPriority}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select priority" />
-                                </SelectTrigger>
+                                <SelectTrigger className="border-slate-200 bg-white"><SelectValue placeholder="Select priority" /></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="low">Low Priority</SelectItem>
                                     <SelectItem value="medium">Medium Priority</SelectItem>
@@ -92,29 +93,29 @@ const ImportWizard = () => {
                                     <SelectItem value="urgent">Urgent</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <p className="text-[10px] text-slate-400 mt-1">This priority will be applied to all leads in the CSV.</p>
+                            <p className="text-[10px] text-slate-450 mt-1">This priority will be applied to all leads in the CSV.</p>
                         </div>
                     </CardContent>
-                    <CardFooter className="flex justify-end gap-3 border-t pt-4">
-                        <Button variant="outline" onClick={() => navigate('/leads')}>Cancel</Button>
-                        <Button onClick={handleUpload} disabled={!file || loading}>
+                    <CardFooter className="flex justify-end gap-3 border-t border-slate-100 pt-4 px-6 pb-6">
+                        <Button variant="outline" className="border-slate-200 text-slate-700 hover:bg-slate-50" onClick={() => navigate('/leads')}>Cancel</Button>
+                        <Button className="bg-slate-950 hover:bg-slate-900 text-white" onClick={handleUpload} disabled={!file || loading}>
                             {loading ? 'Processing...' : 'Start Import'}
                         </Button>
                     </CardFooter>
                 </Card>
             ) : (
                 <div className="space-y-4">
-                    <Card className="bg-emerald-50 border-emerald-200">
+                    <Card className="border border-emerald-500 bg-emerald-50/30">
                         <CardContent className="flex items-center gap-4 py-6">
-                            <CheckCircle2 className="text-emerald-600" size={32} />
+                            <CheckCircle2 className="text-emerald-600" size={24} />
                             <div>
-                                <h3 className="font-bold text-lg text-emerald-900">Import Successful</h3>
-                                <p className="text-emerald-700">
+                                <h3 className="font-semibold text-base text-slate-900">Import Successful</h3>
+                                <p className="text-xs text-slate-650 mt-0.5">
                                     Processed {result.summary.total} rows:
-                                    <span className="font-bold"> {result.summary.success} success</span>,
-                                    <span className="font-bold"> {result.summary.failed} failed</span>
+                                    <span className="font-semibold text-emerald-700"> {result.summary.success} success</span>,
+                                    <span className="font-semibold text-rose-600"> {result.summary.failed} failed</span>
                                     {result.summary.duplicates > 0 && (
-                                        <span> (including <span className="font-bold">{result.summary.duplicates} duplicates</span>)</span>
+                                        <span> (including <span className="font-semibold text-slate-800">{result.summary.duplicates} duplicates</span>)</span>
                                     )}.
                                 </p>
                             </div>
@@ -122,18 +123,18 @@ const ImportWizard = () => {
                     </Card>
 
                     {result.errors.length > 0 && (
-                        <Card className="border-amber-200">
+                        <Card className="border border-slate-200">
                             <CardHeader>
-                                <CardTitle className="text-sm flex items-center gap-2">
-                                    <AlertCircle size={16} className="text-amber-500" />
+                                <CardTitle className="text-sm font-semibold flex items-center gap-2 text-slate-900">
+                                    <AlertCircle size={16} className="text-slate-500" />
                                     Error Logs (Last 10)
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <div className="space-y-2">
                                     {result.errors.map((err, i) => (
-                                        <div key={i} className="text-xs p-2 bg-slate-50 border rounded">
-                                            <span className="font-bold">Row {i + 1}:</span> {err.error}
+                                        <div key={i} className="text-xs p-2 bg-slate-50 border border-slate-100 rounded">
+                                            <span className="font-semibold text-slate-700">Row {i + 1}:</span> {err.error}
                                         </div>
                                     ))}
                                 </div>
@@ -142,7 +143,7 @@ const ImportWizard = () => {
                     )}
 
                     <div className="flex justify-center">
-                        <Button onClick={() => navigate('/leads')}>Go to Pipeline</Button>
+                        <Button className="bg-slate-950 hover:bg-slate-900 text-white" onClick={() => navigate('/leads')}>Go to Pipeline</Button>
                     </div>
                 </div>
             )}

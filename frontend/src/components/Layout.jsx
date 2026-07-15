@@ -10,6 +10,7 @@ import {
     LogOut,
     Menu,
     ChevronRight,
+    ChevronLeft,
     Trophy,
     Wallet,
     FileText,
@@ -29,19 +30,21 @@ import { cn } from '@/lib/utils';
 import TimeTrackerDisplay from './TimeTrackerDisplay';
 import AgreementModal from './AgreementModal';
 
-const SidebarLink = ({ to, icon: Icon, label, active, onClick }) => (
+const SidebarLink = ({ to, icon: Icon, label, active, onClick, collapsed }) => (
     <Link
         to={to}
         onClick={onClick}
+        title={collapsed ? label : undefined}
         className={cn(
-            "flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors rounded-lg",
+            "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all rounded-md",
             active
-                ? "bg-slate-800 text-white"
-                : "text-slate-400 hover:text-white hover:bg-slate-800/50"
+                ? "bg-slate-100 text-slate-900 font-semibold"
+                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50",
+            collapsed && "md:justify-center md:px-2"
         )}
     >
-        <Icon size={20} />
-        <span>{label}</span>
+        <Icon size={18} className={active ? "text-slate-900" : "text-slate-400"} />
+        <span className={cn("truncate", collapsed && "md:hidden")}>{label}</span>
     </Link>
 );
 
@@ -51,6 +54,7 @@ const Layout = () => {
     const location = useLocation();
     const { toast } = useToast();
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isCollapsed, setIsCollapsed] = useState(() => localStorage.getItem('sidebar_collapsed') === 'true');
     
     // Change password state
     const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
@@ -82,6 +86,15 @@ const Layout = () => {
         } finally {
             setSubmittingPassword(false);
         }
+    };
+
+    // Save collapse state
+    const toggleCollapse = () => {
+        setIsCollapsed(prev => {
+            const next = !prev;
+            localStorage.setItem('sidebar_collapsed', String(next));
+            return next;
+        });
     };
 
     // Track global clicks
@@ -139,7 +152,6 @@ const Layout = () => {
         { to: '/audit-logs', icon: FileText, label: 'Audit Logs', permission: 'manage_permissions' },
         { to: '/packages', icon: Tag, label: 'Packages & Pricing', permission: 'view_dashboard' },
         { to: '/help', icon: HelpCircle, label: 'Help & Docs', permission: 'view_dashboard' },
-
     ];
 
     const filteredMenu = menuItems.filter(item => user?.role === 'admin' || user?.permissions?.[item.permission]);
@@ -150,71 +162,130 @@ const Layout = () => {
             {/* Mobile Backdrop Overlay */}
             {isMobileMenuOpen && (
                 <div 
-                    className="fixed inset-0 z-40 bg-black/50 md:hidden transition-opacity" 
+                    className="fixed inset-0 z-40 bg-black/40 md:hidden transition-opacity" 
                     onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
 
-            {/* Sidebar (Responsive Drawer) */}
+            {/* Sidebar (Responsive Drawer / Collapsible Desktop) */}
             <aside className={cn(
-                "fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 text-white flex flex-col transition-transform duration-300 ease-in-out md:translate-x-0 md:fixed md:h-screen md:top-0",
-                isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+                "fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 text-slate-950 flex flex-col transition-all duration-300 ease-in-out md:fixed md:h-screen md:top-0",
+                isCollapsed ? "md:w-16 w-60" : "w-60",
+                isMobileMenuOpen ? "w-60 translate-x-0" : "-translate-x-full md:translate-x-0"
             )}>
-                <div className="p-4 flex items-center justify-between border-b border-slate-800 mb-2">
-                    <div className="flex items-center gap-2">
-                        <img src="/logo.png" className="h-7 object-contain brightness-0 invert" alt="Net Bots Logo" />
-                    </div>
-                    <Button variant="ghost" size="icon" className="md:hidden text-slate-400 hover:text-white" onClick={() => setIsMobileMenuOpen(false)}>
-                        <Menu size={20} />
+                <div className="p-4 flex items-center justify-between border-b border-slate-100 min-h-[64px]">
+                    {!isCollapsed ? (
+                        <div className="flex items-center gap-2">
+                            <img src="/logo.png" className="h-7 object-contain" alt="Net Bots Logo" />
+                        </div>
+                    ) : (
+                        <div className="mx-auto font-black text-slate-900 text-sm tracking-widest md:block hidden">
+                            NB
+                        </div>
+                    )}
+                    {isCollapsed && (
+                        <div className="md:hidden flex items-center gap-2">
+                            <img src="/logo.png" className="h-7 object-contain" alt="Net Bots Logo" />
+                        </div>
+                    )}
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="md:hidden text-slate-500 hover:text-slate-950" 
+                        onClick={() => setIsMobileMenuOpen(false)}
+                    >
+                        <ChevronLeft size={20} />
                     </Button>
                 </div>
 
-                <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
+                <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
                     {filteredMenu.map((item) => (
                         <SidebarLink
                             key={item.to}
                             {...item}
+                            collapsed={isCollapsed}
                             active={location.pathname === item.to}
                             onClick={() => setIsMobileMenuOpen(false)}
                         />
                     ))}
                 </nav>
 
-                <div className="p-4 border-t border-slate-800">
-                    <div className="flex items-center gap-3 px-4 py-3">
-                        <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs">
-                            {user?.name?.[0]}
+                {/* Profile Options block */}
+                <div className="p-3 border-t border-slate-200 bg-white">
+                    <div className={cn("space-y-2", isCollapsed && "md:hidden")}>
+                        <div className="flex items-center gap-2.5 p-2 rounded-md bg-slate-50 border border-slate-100">
+                            <div className="w-8 h-8 rounded-full bg-slate-950 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                                {user?.name?.[0]}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold truncate text-slate-900">{user?.name}</p>
+                                <p className="text-[10px] text-slate-500 truncate uppercase font-medium mt-0.5">{user?.role}</p>
+                            </div>
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{user?.name}</p>
-                            <p className="text-xs text-slate-500 truncate uppercase">{user?.role}</p>
+                        <div className="px-1.5 py-1">
                             <TimeTrackerDisplay />
                         </div>
+                        <div className="grid grid-cols-2 gap-1.5 pt-1">
+                            <Button
+                                variant="outline"
+                                size="xs"
+                                className="h-8 text-[11px] font-medium border-slate-200 hover:bg-slate-50 gap-1.5 text-slate-700 w-full"
+                                onClick={() => setIsChangePasswordOpen(true)}
+                            >
+                                <KeyRound size={12} />
+                                Password
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="xs"
+                                className="h-8 text-[11px] font-medium border-slate-200 hover:bg-slate-50 hover:text-red-650 hover:border-red-200 gap-1.5 text-slate-750 w-full"
+                                onClick={logout}
+                            >
+                                <LogOut size={12} />
+                                Logout
+                            </Button>
+                        </div>
                     </div>
-                    <Button
-                        variant="ghost"
-                        className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800 gap-3 mt-1"
-                        onClick={() => setIsChangePasswordOpen(true)}
-                    >
-                        <KeyRound size={20} />
-                        <span>Change Password</span>
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        className="w-full justify-start text-slate-400 hover:text-white hover:bg-slate-800 gap-3 mt-1"
-                        onClick={logout}
-                    >
-                        <LogOut size={20} />
-                        <span>Logout</span>
-                    </Button>
+
+                    {isCollapsed && (
+                        <div className="hidden md:flex flex-col items-center gap-2">
+                            <div 
+                                className="w-8 h-8 rounded-full bg-slate-950 text-white flex items-center justify-center font-bold text-xs cursor-pointer hover:opacity-90"
+                                title={`${user?.name} (${user?.role})`}
+                            >
+                                {user?.name?.[0]}
+                            </div>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                                onClick={() => setIsChangePasswordOpen(true)}
+                                title="Change Password"
+                            >
+                                <KeyRound size={16} />
+                            </Button>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-slate-500 hover:text-red-650 hover:bg-red-50"
+                                onClick={logout}
+                                title="Logout"
+                            >
+                                <LogOut size={16} />
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 flex flex-col min-w-0 md:pl-64">
+            <main className={cn(
+                "flex-1 flex flex-col min-w-0 transition-all duration-300",
+                isCollapsed ? "md:pl-16" : "md:pl-60"
+            )}>
                 {/* Impersonation Banner */}
                 {isImpersonating && (
-                    <div className="sticky top-0 z-50 flex items-center justify-between px-4 py-2 bg-amber-400 text-amber-900 shadow-md">
+                    <div className="sticky top-0 z-50 flex items-center justify-between px-4 py-2 bg-amber-400 text-amber-905 shadow-sm">
                         <div className="flex items-center gap-2 text-sm font-semibold">
                             <UserX2 size={16} className="animate-pulse" />
                             <span>
@@ -233,30 +304,38 @@ const Layout = () => {
                         </Button>
                     </div>
                 )}
-                {/* Mobile Header */}
-                <header className="h-16 bg-white border-b flex items-center justify-between px-4 md:px-8">
-                    <div className="flex items-center gap-4">
+                {/* Mobile Header / Desktop Top Bar */}
+                <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 md:px-6">
+                    <div className="flex items-center gap-3">
                         <Button variant="ghost" size="icon" className="md:hidden" onClick={() => setIsMobileMenuOpen(true)}>
                             <Menu />
                         </Button>
+                        <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="hidden md:flex text-slate-500 hover:text-slate-900 hover:bg-slate-100" 
+                            onClick={toggleCollapse}
+                            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+                        >
+                            <Menu size={16} />
+                        </Button>
                         <div className="flex items-center gap-2">
-                            <img src="/logo.png" className="h-6 object-contain" alt="Net Bots Logo" />
-                            <span className="text-slate-300">|</span>
-                            <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">
+                            <span className="text-slate-200 hidden md:inline">|</span>
+                            <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">
                                 {location.pathname === '/' ? 'Dashboard' : location.pathname.split('/')[1].replace('-', ' ')}
                             </span>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {/* Removed Add Lead button based on user request */}
+                        {/* Right header actions can be loaded here if needed */}
                     </div>
                 </header>
 
-                <div className="p-4 md:p-8 flex-1 overflow-y-auto">
+                <div className="p-4 md:p-6 flex-1 overflow-y-auto">
                     <Outlet />
                 </div>
-                <footer className="py-4 text-center text-xs text-slate-400 bg-white border-t font-semibold">
+                <footer className="py-4 text-center text-[10px] text-slate-400 bg-white border-t border-slate-200 font-medium uppercase tracking-wider">
                     Intellectual property of Net Bots  (SMC-PRIVATE) LIMITED
                 </footer>
             </main>
@@ -264,35 +343,37 @@ const Layout = () => {
             <Dialog open={isChangePasswordOpen} onOpenChange={setIsChangePasswordOpen}>
                 <DialogContent className="sm:max-w-[400px] bg-white p-6 rounded-lg shadow-xl">
                     <DialogHeader>
-                        <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                            <KeyRound className="text-blue-500" size={20} />
+                        <DialogTitle className="text-lg font-semibold flex items-center gap-2 text-slate-900">
+                            <KeyRound className="text-slate-500" size={20} />
                             Change Password
                         </DialogTitle>
                     </DialogHeader>
                     <form onSubmit={handleChangePasswordSubmit} className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase">New Password</label>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">New Password</label>
                             <Input
                                 type="password"
                                 required
                                 placeholder="Enter at least 6 characters"
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
+                                className="border-slate-200"
                             />
                         </div>
-                        <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-500 uppercase">Confirm Password</label>
+                        <div className="space-y-1">
+                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Confirm Password</label>
                             <Input
                                 type="password"
                                 required
                                 placeholder="Re-enter new password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
+                                className="border-slate-200"
                             />
                         </div>
                         <DialogFooter className="pt-2">
-                            <Button type="button" variant="outline" onClick={() => setIsChangePasswordOpen(false)}>Cancel</Button>
-                            <Button type="submit" disabled={submittingPassword} className="bg-blue-600 hover:bg-blue-700 text-white font-bold">
+                            <Button type="button" variant="outline" className="border-slate-200" onClick={() => setIsChangePasswordOpen(false)}>Cancel</Button>
+                            <Button type="submit" disabled={submittingPassword} className="bg-slate-950 hover:bg-slate-900 text-white font-medium">
                                 {submittingPassword ? 'Saving...' : 'Update Password'}
                             </Button>
                         </DialogFooter>
