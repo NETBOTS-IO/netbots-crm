@@ -39,7 +39,9 @@ import SequenceBuilder from './pages/email/SequenceBuilder';
 import EmailAnalytics from './pages/email/EmailAnalytics';
 import Unsubscribes from './pages/email/Unsubscribes';
 
-
+// Finance Page Imports
+import FinanceDashboard from './pages/finance/FinanceDashboard';
+import IncomeExpense from './pages/finance/IncomeExpense';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -77,6 +79,18 @@ function App() {
             <Route path="super-dashboard" element={
               <RoleGate permission="view_sales_dashboard" action="View Super Dashboard">
                 <SuperDashboard />
+              </RoleGate>
+            } />
+
+            {/* Finance Routes */}
+            <Route path="finance" element={
+              <RoleGate permission="view_dashboard" action="View Finance Dashboard">
+                <FinanceDashboard />
+              </RoleGate>
+            } />
+            <Route path="finance/transactions" element={
+              <RoleGate permission="view_dashboard" action="Manage Transactions">
+                <IncomeExpense />
               </RoleGate>
             } />
 
