@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import packageJson from '../../package.json';
+
 import { useToast } from "@/hooks/use-toast";
 import { Button } from '@/components/ui/button';
 import { useState, useEffect } from 'react';
@@ -385,8 +387,10 @@ const Layout = () => {
                 <div className="p-4 md:p-6 flex-1 overflow-y-auto">
                     <Outlet />
                 </div>
-                <footer className="py-4 text-center text-[10px] text-slate-400 bg-white border-t border-slate-200 font-medium uppercase tracking-wider">
-                    Intellectual property of Net Bots  (SMC-PRIVATE) LIMITED
+                <footer className="py-4 text-center text-[10px] text-slate-400 bg-white border-t border-slate-200 font-medium uppercase tracking-wider flex items-center justify-center gap-2">
+                    <span>Intellectual property of Net Bots (SMC-PRIVATE) LIMITED</span>
+                    <span className="opacity-50">|</span>
+                    <span className="font-bold">v{packageJson.version}</span>
                 </footer>
             </main>
 
