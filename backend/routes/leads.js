@@ -372,6 +372,64 @@ router.get('/verified-closed', auth, async (req, res) => {
   }
 });
 
+// GET /api/leads/closer-active
+// Returns leads currently being worked by a closer (workingCloser set, not yet converted to client)
+router.get('/closer-active', auth, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search = '', closer = 'all' } = req.query;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    let query = {
+        workingCloser: { $ne: null },
+        convertedToClient: { $ne: true }
+    };
+
+    // Optionally filter by a specific closer
+    if (closer !== 'all') {
+        query.workingCloser = closer;
+    }
+
+    if (search) {
+        // Find matching users for name-based search
+        const matchingUsers = await User.find({
+            $or: [
+                { name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ]
+        }).select('_id');
+        const matchingIds = matchingUsers.map(u => u._id);
+
+        query.$or = [
+            { companyName: { $regex: search, $options: 'i' } },
+            { contactName: { $regex: search, $options: 'i' } },
+            { email: { $regex: search, $options: 'i' } },
+            ...(matchingIds.length > 0 ? [{ workingCloser: { $in: matchingIds } }] : [])
+        ];
+    }
+
+    const leads = await Lead.find(query)
+        .populate('submittedBy', 'name email')
+        .populate('workingVerifier', 'name email')
+        .populate('workingCloser', 'name email')
+        .sort({ priority: -1, updatedAt: -1 })
+        .skip(skip)
+        .limit(limitNum);
+
+    const total = await Lead.countDocuments(query);
+
+    res.json({
+        success: true,
+        data: leads,
+        pagination: { total, page: pageNum, pages: Math.ceil(total / limitNum) }
+    });
+  } catch (err) {
+    console.error('GET /api/leads/closer-active error:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 // POST /api/leads/bulk-action
 router.post('/bulk-action', auth, async (req, res) => {
     if (req.user.role !== 'admin' && (!req.user.permissions || !req.user.permissions.can_bulk_manage_leads)) {

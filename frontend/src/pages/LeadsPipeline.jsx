@@ -49,6 +49,12 @@ const LeadsPipeline = () => {
     const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('lead_active_tab') || 'pipeline');
     const [vcSearch, setVcSearch] = useState('');
     const [vcLoading, setVcLoading] = useState(false);
+    // Closer Pipeline tab state
+    const [closerLeads, setCloserLeads] = useState([]);
+    const [closerPagination, setCloserPagination] = useState({ total: 0, page: 1, pages: 1 });
+    const [closerSearch, setCloserSearch] = useState('');
+    const [closerFilterId, setCloserFilterId] = useState('all');
+    const [closerLoading, setCloserLoading] = useState(false);
     const [stats, setStats] = useState({ totalLeadsCount: 0, contactedCount: 0, commitmentsCount: 0, followUpCount: 0 });
     const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
     const [limit] = useState(50);
@@ -383,6 +389,32 @@ const LeadsPipeline = () => {
         if (activeTab === 'verified_closed') fetchVerifiedClosed();
     }, [activeTab, fetchVerifiedClosed]);
 
+    // Fetch closer-active leads
+    const fetchCloserLeads = useCallback(async () => {
+        setCloserLoading(true);
+        try {
+            const params = new URLSearchParams({
+                page: closerPagination.page,
+                limit: 50,
+                search: closerSearch,
+                closer: closerFilterId
+            });
+            const res = await api.get(`/leads/closer-active?${params.toString()}`);
+            if (res.success) {
+                setCloserLeads(res.data);
+                if (res.pagination) setCloserPagination(res.pagination);
+            }
+        } catch (err) {
+            console.error('Failed to fetch closer-active leads', err);
+        } finally {
+            setCloserLoading(false);
+        }
+    }, [closerPagination.page, closerSearch, closerFilterId]);
+
+    useEffect(() => {
+        if (activeTab === 'closer_pipeline') fetchCloserLeads();
+    }, [activeTab, fetchCloserLeads]);
+
     // Handle filter change (reset to page 1)
     useEffect(() => {
         setPagination(p => ({ ...p, page: 1 }));
@@ -591,6 +623,12 @@ const LeadsPipeline = () => {
                 >
                     <CheckSquare size={13} /> Verified & Closed
                 </button>
+                <button
+                    onClick={() => { setActiveTab('closer_pipeline'); }}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'closer_pipeline' ? 'bg-purple-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+                >
+                    <PhoneCall size={13} /> Closer Pipeline
+                </button>
             </div>
 
             {/* ─── VERIFIED & CLOSED TAB ─── */}
@@ -669,6 +707,143 @@ const LeadsPipeline = () => {
                                 <div className="flex gap-2">
                                     <Button size="sm" variant="outline" disabled={verifiedClosedPagination.page <= 1} onClick={() => setVerifiedClosedPagination(p => ({...p, page: p.page - 1}))}>Prev</Button>
                                     <Button size="sm" variant="outline" disabled={verifiedClosedPagination.page >= verifiedClosedPagination.pages} onClick={() => setVerifiedClosedPagination(p => ({...p, page: p.page + 1}))}>Next</Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ─── CLOSER PIPELINE TAB ─── */}
+            {activeTab === 'closer_pipeline' && (
+                <div className="space-y-4">
+                    {/* Header */}
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-lg border shadow-sm">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <PhoneCall className="text-purple-600" size={18} /> Closer Pipeline
+                            </h2>
+                            <p className="text-xs text-slate-500 mt-0.5">Leads jahan closer actively kaam kar raha hai — deal close hone tak</p>
+                        </div>
+                        <div className="text-xs font-bold text-purple-700 bg-purple-50 border border-purple-200 px-3 py-1.5 rounded-full">
+                            {closerPagination.total} active leads
+                        </div>
+                    </div>
+
+                    {/* Search + Closer Filter */}
+                    <div className="flex flex-wrap gap-3 items-center">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                            <input
+                                className="pl-9 h-9 w-64 border border-slate-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                placeholder="Search company, contact, closer..."
+                                value={closerSearch}
+                                onChange={(e) => { setCloserSearch(e.target.value); setCloserPagination(p => ({...p, page: 1})); }}
+                            />
+                        </div>
+                        {/* Filter by specific closer */}
+                        <select
+                            className="h-9 border border-slate-200 rounded-lg bg-white text-sm px-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                            value={closerFilterId}
+                            onChange={(e) => { setCloserFilterId(e.target.value); setCloserPagination(p => ({...p, page: 1})); }}
+                        >
+                            <option value="all">All Closers</option>
+                            {closersList.map(c => (
+                                <option key={c._id} value={c._id}>{c.name}</option>
+                            ))}
+                        </select>
+                        {(closerSearch || closerFilterId !== 'all') && (
+                            <button
+                                className="text-xs text-rose-600 font-bold hover:underline"
+                                onClick={() => { setCloserSearch(''); setCloserFilterId('all'); setCloserPagination(p => ({...p, page: 1})); }}
+                            >
+                                Clear
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Table */}
+                    <div className="rounded-md border bg-white overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-purple-50 border-b">
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Company</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Contact</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Closer</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Priority</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Stage</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Temperature</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Last Contacted</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Follow Up</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {closerLoading ? (
+                                    Array.from({ length: 6 }).map((_, i) => (
+                                        <tr key={i} className="border-b animate-pulse">
+                                            {Array.from({ length: 8 }).map((_, j) => (
+                                                <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-100 rounded w-3/4" /></td>
+                                            ))}
+                                        </tr>
+                                    ))
+                                ) : closerLeads.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} className="px-4 py-12 text-center text-slate-400 text-sm">
+                                            Koi active closer lead nahi mili. Closer ne abhi koi lead claim nahi ki.
+                                        </td>
+                                    </tr>
+                                ) : closerLeads.map((lead) => {
+                                    const priorityColors = { urgent: 'bg-red-100 text-red-700 border-red-200', high: 'bg-orange-100 text-orange-700 border-orange-200', medium: 'bg-yellow-100 text-yellow-700 border-yellow-200', low: 'bg-slate-100 text-slate-600 border-slate-200' };
+                                    const tempColors = { sql: 'bg-green-100 text-green-700', warm: 'bg-amber-100 text-amber-700', cold: 'bg-blue-100 text-blue-700', closed: 'bg-emerald-100 text-emerald-700' };
+                                    return (
+                                        <tr
+                                            key={lead._id}
+                                            className="border-b hover:bg-purple-50/40 transition-colors cursor-pointer"
+                                            onClick={() => navigate(`/leads/edit/${lead._id}`)}
+                                        >
+                                            <td className="px-4 py-3">
+                                                <div className="font-semibold text-slate-900">{lead.companyName}</div>
+                                                <div className="text-[10px] text-slate-400">{lead.email || ''}</div>
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-600">{lead.contactName || '—'}</td>
+                                            <td className="px-4 py-3">
+                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-50 border border-purple-200 text-purple-800 text-[11px] font-bold">
+                                                    <PhoneCall size={9} /> {lead.workingCloser?.name || '—'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-bold capitalize ${priorityColors[lead.priority] || 'bg-slate-100 text-slate-600'}`}>
+                                                    {lead.priority || 'medium'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-xs text-slate-600 capitalize">{lead.stage?.replace('_', ' ') || '—'}</td>
+                                            <td className="px-4 py-3">
+                                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold capitalize ${tempColors[lead.temperature] || 'bg-slate-100 text-slate-600'}`}>
+                                                    {lead.temperature || '—'}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-3 text-slate-500 text-xs">
+                                                {lead.lastContactedAt ? new Date(lead.lastContactedAt).toLocaleDateString() : '—'}
+                                            </td>
+                                            <td className="px-4 py-3 text-xs">
+                                                {lead.followUpDate ? (
+                                                    <span className={`font-semibold ${new Date(lead.followUpDate) < new Date() ? 'text-red-600' : 'text-amber-600'}`}>
+                                                        {new Date(lead.followUpDate).toLocaleDateString()}
+                                                    </span>
+                                                ) : '—'}
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                        {/* Closer Pipeline Pagination */}
+                        {closerPagination.pages > 1 && (
+                            <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50">
+                                <span className="text-xs text-slate-500">Page {closerPagination.page} of {closerPagination.pages} &mdash; {closerPagination.total} leads</span>
+                                <div className="flex gap-2">
+                                    <Button size="sm" variant="outline" disabled={closerPagination.page <= 1} onClick={() => setCloserPagination(p => ({...p, page: p.page - 1}))}>Prev</Button>
+                                    <Button size="sm" variant="outline" disabled={closerPagination.page >= closerPagination.pages} onClick={() => setCloserPagination(p => ({...p, page: p.page + 1}))}>Next</Button>
                                 </div>
                             </div>
                         )}
