@@ -145,4 +145,84 @@ router.post('/:id/impersonate', auth, requireRole(['admin']), async (req, res) =
   }
 });
 
+// GET /api/team/analytics
+// Returns individual member analytics: leads, verifications, closes, time per day (last 7 days)
+router.get('/analytics', auth, requireRole(['admin']), async (req, res) => {
+  try {
+    const users = await User.find({}).select('-password').sort('name');
+    const Lead = require('../models/Lead');
+    const Client = require('../models/Client');
+    const TimeLog = require('../models/TimeLog');
+
+    const now = new Date();
+    const startOfToday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+    // Last 7 days labels
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(startOfToday);
+      d.setUTCDate(d.getUTCDate() - (6 - i));
+      return d;
+    });
+
+    const analytics = await Promise.all(users.map(async (user) => {
+      const uid = user._id;
+      const uname = user.name;
+
+      // Leads collected (submittedBy = uid)
+      const leadsCollected = await Lead.countDocuments({ submittedBy: uid });
+
+      // Leads verified (leadVerifiedBy = name string)
+      const leadsVerified = await Lead.countDocuments({ leadVerifiedBy: uname, isVerifiedByVerifier: true });
+
+      // Deals closed (salesClosedBy = name string on Client, or workingCloser on Lead→Client)
+      const dealsClosed = await Client.countDocuments({ salesClosedBy: uname });
+
+      // Commission earned from User model
+      const commissionEarned = user.totalCommissionEarned || 0;
+
+      // Time logs last 7 days
+      const startOf7DaysAgo = last7Days[0];
+      const timeLogs = await TimeLog.find({
+        userId: uid,
+        date: { $gte: startOf7DaysAgo }
+      });
+
+      const dailyTime = last7Days.map(day => {
+        const log = timeLogs.find(l => l.date.getTime() === day.getTime());
+        return {
+          date: day.toISOString().split('T')[0],
+          seconds: log ? log.activeSeconds : 0
+        };
+      });
+
+      // Online status — consider online if lastActivityAt < 5 minutes ago
+      const fiveMinAgo = new Date(Date.now() - 5 * 60 * 1000);
+      const isOnline = user.lastActivityAt && new Date(user.lastActivityAt) > fiveMinAgo;
+
+      return {
+        _id: uid,
+        name: uname,
+        email: user.email,
+        role: user.role,
+        designation: user.designation,
+        rank: user.rank,
+        points: user.points || 0,
+        joinedAt: user.joinedAt,
+        lastActivityAt: user.lastActivityAt,
+        isOnline,
+        leadsCollected,
+        leadsVerified,
+        dealsClosed,
+        commissionEarned,
+        dailyTime
+      };
+    }));
+
+    res.json({ success: true, data: analytics });
+  } catch (err) {
+    console.error('Team analytics error:', err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
 module.exports = router;

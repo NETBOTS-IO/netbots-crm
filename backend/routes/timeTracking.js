@@ -29,6 +29,12 @@ router.post('/ping', auth, async (req, res) => {
             { new: true, upsert: true }
         );
 
+        // Also update User's lastActivityAt and activeStatus for presence tracking
+        await User.findByIdAndUpdate(req.user._id, {
+            lastActivityAt: new Date(),
+            activeStatus: 'online'
+        });
+
         res.status(200).json({ success: true, activeSeconds: timeLog.activeSeconds });
     } catch (error) {
         console.error('Ping error:', error);
