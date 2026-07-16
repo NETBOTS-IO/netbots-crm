@@ -637,9 +637,9 @@ const LeadsPipeline = () => {
                     <div className="flex items-center justify-between bg-white p-4 rounded-lg border shadow-sm">
                         <div>
                             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                <CheckSquare className="text-emerald-600" size={18} /> Verified & Closed Leads
+                                <CheckSquare className="text-emerald-600" size={18} /> Verified Leads
                             </h2>
-                            <p className="text-xs text-slate-500 mt-0.5">Leads jahan Verifier ne verify kiya aur deal close ho gayi</p>
+                            <p className="text-xs text-slate-500 mt-0.5">Ya vo sary leads hai jo verifer</p>
                         </div>
                         <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
                             {verifiedClosedPagination.total} records
@@ -1243,24 +1243,42 @@ const LeadsPipeline = () => {
                 {/* Pagination Controls */}
                 <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50">
                     <div className="text-sm text-slate-500">
-                        Showing {leads.length > 0 ? (pagination.page - 1) * limit + 1 : 0} to {Math.min(pagination.page * limit, pagination.total)} of {pagination.total} entries
+                        Showing {leads.length > 0 ? (pagination.page - 1) * limit + 1 : 0} to {Math.min(pagination.page * limit, pagination.total)} of <span className="font-bold text-slate-700">{pagination.total}</span> entries
                     </div>
-                    <div className="flex gap-2">
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
+                    <div className="flex items-center gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
                             disabled={pagination.page <= 1}
                             onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
                         >
-                            Previous
+                            ← Prev
                         </Button>
-                        <Button 
-                            variant="outline" 
-                            size="sm" 
+                        {/* Manual page entry */}
+                        <div className="flex items-center gap-1.5 border border-slate-200 rounded-lg bg-white px-2 py-1">
+                            <span className="text-xs text-slate-400">Page</span>
+                            <input
+                                type="number"
+                                min={1}
+                                max={pagination.pages}
+                                value={pagination.page}
+                                onChange={(e) => {
+                                    const val = parseInt(e.target.value);
+                                    if (val >= 1 && val <= pagination.pages) {
+                                        setPagination(p => ({ ...p, page: val }));
+                                    }
+                                }}
+                                className="w-12 text-center text-xs font-bold text-slate-800 border-0 outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                            />
+                            <span className="text-xs text-slate-400">/ {pagination.pages}</span>
+                        </div>
+                        <Button
+                            variant="outline"
+                            size="sm"
                             disabled={pagination.page >= pagination.pages}
                             onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
                         >
-                            Next
+                            Next →
                         </Button>
                     </div>
                 </div>

@@ -272,26 +272,44 @@ export default function AuditLogs() {
                     {/* Pagination */}
                     <div className="flex items-center justify-between px-6 py-4 border-t bg-slate-50">
                         <div className="text-[10px] text-slate-500 font-medium uppercase tracking-wider">
-                            Showing page {pagination.page} of {pagination.pages} (Total: {pagination.total} entries)
+                            Page {pagination.page} of {pagination.pages} &mdash; Total: <span className="font-black text-slate-700">{pagination.total}</span> entries
                         </div>
-                        <div className="flex gap-2">
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 disabled={pagination.page <= 1}
                                 onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
                                 className="h-8 border-slate-200 text-slate-700 hover:bg-slate-50"
                             >
-                                Previous
+                                ← Prev
                             </Button>
-                            <Button 
-                                variant="outline" 
-                                size="sm" 
+                            {/* Manual page number input */}
+                            <div className="flex items-center gap-1.5 border border-slate-200 rounded-lg bg-white px-2.5 py-1 h-8">
+                                <span className="text-[10px] text-slate-400 font-medium">Page</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={pagination.pages}
+                                    value={pagination.page}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        if (!isNaN(val) && val >= 1 && val <= pagination.pages) {
+                                            setPagination(p => ({ ...p, page: val }));
+                                        }
+                                    }}
+                                    className="w-12 text-center text-xs font-black text-slate-800 border-0 outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <span className="text-[10px] text-slate-400">/ {pagination.pages}</span>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
                                 disabled={pagination.page >= pagination.pages}
                                 onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
                                 className="h-8 border-slate-200 text-slate-700 hover:bg-slate-50"
                             >
-                                Next
+                                Next →
                             </Button>
                         </div>
                     </div>
