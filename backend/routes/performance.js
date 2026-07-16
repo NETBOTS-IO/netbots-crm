@@ -6,35 +6,48 @@ const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 
 // GET /api/performance
+// Root cause fix: leadVerifiedBy and leadCollectedBy are STRING fields (name-based),
+// while workingVerifier / workingCloser are ObjectId refs.
+// Performance stats must use the same fields consistently.
+// We now match by User name to correctly link collectors/verifiers to their stats.
 router.get('/', auth, async (req, res) => {
   try {
     // 1. COLLECTORS PERFORMANCE
+    // leadCollectedBy is a string (name), group by it
     const collectorsData = await Lead.aggregate([
+      { $match: { leadCollectedBy: { $exists: true, $ne: null, $ne: '' } } },
       {
         $group: {
-          _id: "$leadCollectedBy",
+          _id: '$leadCollectedBy',
           totalCollected: { $sum: 1 }
         }
-      }
+      },
+      { $sort: { totalCollected: -1 } }
     ]);
 
-    // Format Collectors
     const collectors = [];
     for (const item of collectorsData) {
       if (!item._id || item._id === 'Unknown') continue;
-      
+
       const total = item.totalCollected || 0;
-      const totalClosed = await Lead.countDocuments({ leadCollectedBy: item._id, convertedToClient: true });
-      const verified = await Lead.countDocuments({ 
-        leadCollectedBy: item._id, 
-        leadVerifiedBy: { $exists: true, $ne: null, $ne: "" } 
+
+      // closedCount: leads by this collector that became clients
+      const closedCount = await Lead.countDocuments({
+        leadCollectedBy: item._id,
+        convertedToClient: true
       });
 
-      const verificationRatio = total > 0 ? (verified / total) * 100 : 0;
-      const conversionRatio = total > 0 ? (totalClosed / total) * 100 : 0;
+      // verifiedCount: leads by this collector that were verified (isVerifiedByVerifier flag)
+      const verifiedCount = await Lead.countDocuments({
+        leadCollectedBy: item._id,
+        isVerifiedByVerifier: true
+      });
+
+      const verificationRatio = total > 0 ? (verifiedCount / total) * 100 : 0;
+      const conversionRatio = total > 0 ? (closedCount / total) * 100 : 0;
 
       // Suggest Commission (Up to 2% max)
-      let suggestedCommission = 1.0; // base 1%
+      let suggestedCommission = 1.0;
       if (verificationRatio > 75 && conversionRatio > 25) {
         suggestedCommission = 2.0;
       } else if (conversionRatio < 10) {
@@ -44,8 +57,8 @@ router.get('/', auth, async (req, res) => {
       collectors.push({
         name: item._id,
         totalCollected: total,
-        verifiedCount: verified,
-        closedCount: totalClosed,
+        verifiedCount,
+        closedCount,
         verificationRatio: parseFloat(verificationRatio.toFixed(1)),
         conversionRatio: parseFloat(conversionRatio.toFixed(1)),
         suggestedCommission: parseFloat(suggestedCommission.toFixed(2))
@@ -53,18 +66,22 @@ router.get('/', auth, async (req, res) => {
     }
 
     // 2. VERIFIERS PERFORMANCE
+    // leadVerifiedBy is a string (name), group by it
+    // Use isVerifiedByVerifier: true to only count actually verified leads
     const verifiersData = await Lead.aggregate([
       {
         $match: {
-          leadVerifiedBy: { $exists: true, $ne: null, $ne: "" }
+          isVerifiedByVerifier: true,
+          leadVerifiedBy: { $exists: true, $ne: null, $ne: '' }
         }
       },
       {
         $group: {
-          _id: "$leadVerifiedBy",
+          _id: '$leadVerifiedBy',
           totalVerified: { $sum: 1 }
         }
-      }
+      },
+      { $sort: { totalVerified: -1 } }
     ]);
 
     const verifiers = [];
@@ -72,11 +89,18 @@ router.get('/', auth, async (req, res) => {
       if (!item._id || item._id === 'System') continue;
 
       const total = item.totalVerified || 0;
-      const closed = await Lead.countDocuments({ leadVerifiedBy: item._id, convertedToClient: true });
-      const closeRatio = total > 0 ? (closed / total) * 100 : 0;
+
+      // Leads verified by this verifier that subsequently became clients
+      const closedCount = await Lead.countDocuments({
+        leadVerifiedBy: item._id,
+        isVerifiedByVerifier: true,
+        convertedToClient: true
+      });
+
+      const closeRatio = total > 0 ? (closedCount / total) * 100 : 0;
 
       // Suggest Commission (Up to 5% max)
-      let suggestedCommission = 2.5; // base 2.5%
+      let suggestedCommission = 2.5;
       if (closeRatio > 35) {
         suggestedCommission = 5.0;
       } else if (closeRatio < 15) {
@@ -86,20 +110,23 @@ router.get('/', auth, async (req, res) => {
       verifiers.push({
         name: item._id,
         totalVerified: total,
-        closedCount: closed,
+        closedCount,
         closeRatio: parseFloat(closeRatio.toFixed(1)),
         suggestedCommission: parseFloat(suggestedCommission.toFixed(2))
       });
     }
 
     // 3. CLOSERS PERFORMANCE
+    // salesClosedBy is a string (name) on Lead/Client — use Client model
     const closersData = await Client.aggregate([
+      { $match: { salesClosedBy: { $exists: true, $ne: null, $ne: '' } } },
       {
         $group: {
-          _id: "$salesClosedBy",
+          _id: '$salesClosedBy',
           totalClosed: { $sum: 1 }
         }
-      }
+      },
+      { $sort: { totalClosed: -1 } }
     ]);
 
     const closers = [];
@@ -108,7 +135,7 @@ router.get('/', auth, async (req, res) => {
 
       const closed = item.totalClosed || 0;
       // Suggest Commission (Up to 10% max)
-      let suggestedCommission = 7.0; // base 7%
+      let suggestedCommission = 7.0;
       if (closed >= 5) {
         suggestedCommission = 10.0;
       } else if (closed <= 1) {
@@ -122,17 +149,30 @@ router.get('/', auth, async (req, res) => {
       });
     }
 
+    // 4. SUMMARY STATS — single source of truth numbers for the dashboard cards
+    const totalLeads = await Lead.countDocuments({
+      convertedToClient: { $ne: true },
+      clientId: { $exists: false }
+    });
+    const totalVerifiedLeads = await Lead.countDocuments({ isVerifiedByVerifier: true });
+    const totalConvertedClients = await Client.countDocuments({});
+
     res.json({
       success: true,
       data: {
         collectors,
         verifiers,
-        closers
+        closers,
+        summary: {
+          totalLeads,
+          totalVerifiedLeads,
+          totalConvertedClients
+        }
       }
     });
 
   } catch (err) {
-    console.error("Performance API error:", err);
+    console.error('Performance API error:', err);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
