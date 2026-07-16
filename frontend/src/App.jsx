@@ -23,6 +23,22 @@ import PackagesPricing from './pages/PackagesPricing';
 import Followups from './pages/Followups';
 import { Toaster } from "@/components/ui/toaster"
 
+// MailFlow Page Imports
+import EmailDashboard from './pages/email/EmailDashboard';
+import EmailAccounts from './pages/email/EmailAccounts';
+import EmailTemplates from './pages/email/EmailTemplates';
+import TemplateEditor from './pages/email/TemplateEditor';
+import EmailCampaigns from './pages/email/EmailCampaigns';
+import CampaignBuilder from './pages/email/CampaignBuilder';
+import CampaignReport from './pages/email/CampaignReport';
+import EmailLists from './pages/email/EmailLists';
+import AudienceBuilder from './pages/email/AudienceBuilder';
+import EmailSequences from './pages/email/EmailSequences';
+import SequenceBuilder from './pages/email/SequenceBuilder';
+import EmailAnalytics from './pages/email/EmailAnalytics';
+import Unsubscribes from './pages/email/Unsubscribes';
+
+
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -161,6 +177,24 @@ function App() {
 
             {/* Help — open to all */}
             <Route path="help" element={<HelpPage />} />
+
+            {/* MailFlow Routes — Admin Only */}
+            <Route path="email" element={<RoleGate adminOnly action="View Email Dashboard"><EmailDashboard /></RoleGate>} />
+            <Route path="email/accounts" element={<RoleGate adminOnly action="Manage SMTP Accounts"><EmailAccounts /></RoleGate>} />
+            <Route path="email/templates" element={<RoleGate adminOnly action="Manage Templates"><EmailTemplates /></RoleGate>} />
+            <Route path="email/templates/new" element={<RoleGate adminOnly action="Create Template"><TemplateEditor /></RoleGate>} />
+            <Route path="email/templates/:id/edit" element={<RoleGate adminOnly action="Edit Template"><TemplateEditor /></RoleGate>} />
+            <Route path="email/campaigns" element={<RoleGate adminOnly action="Manage Campaigns"><EmailCampaigns /></RoleGate>} />
+            <Route path="email/campaigns/new" element={<RoleGate adminOnly action="Create Campaign"><CampaignBuilder /></RoleGate>} />
+            <Route path="email/campaigns/edit/:id" element={<RoleGate adminOnly action="Edit Campaign"><CampaignBuilder /></RoleGate>} />
+            <Route path="email/campaigns/:id/report" element={<RoleGate adminOnly action="Campaign Report"><CampaignReport /></RoleGate>} />
+            <Route path="email/lists" element={<RoleGate adminOnly action="Mailing Lists"><EmailLists /></RoleGate>} />
+            <Route path="email/audiences" element={<RoleGate adminOnly action="Manage Audiences"><AudienceBuilder /></RoleGate>} />
+            <Route path="email/sequences" element={<RoleGate adminOnly action="Manage Sequences"><EmailSequences /></RoleGate>} />
+            <Route path="email/sequences/new" element={<RoleGate adminOnly action="Create Sequence"><SequenceBuilder /></RoleGate>} />
+            <Route path="email/sequences/:id/edit" element={<RoleGate adminOnly action="Edit Sequence"><SequenceBuilder /></RoleGate>} />
+            <Route path="email/analytics" element={<RoleGate adminOnly action="Email Analytics"><EmailAnalytics /></RoleGate>} />
+            <Route path="email/unsubscribes" element={<RoleGate adminOnly action="Unsubscribes"><Unsubscribes /></RoleGate>} />
 
           </Route>
         </Routes>

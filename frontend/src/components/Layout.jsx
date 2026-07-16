@@ -138,23 +138,57 @@ const Layout = () => {
         }).catch(err => {});
     }, [user, location.pathname]);
 
-    const menuItems = [
-        { to: '/', icon: LayoutDashboard, label: 'Dashboard', permission: 'view_dashboard' },
-        { to: '/leads', icon: ClipboardList, label: 'Leads Pipeline', permission: 'can_view_leads' },
-        { to: '/followups', icon: Clock, label: 'Follow-ups', permission: 'can_view_leads' },
-        { to: '/clients', icon: UserSquare2, label: 'Clients', permission: 'manage_clients' },
-        { to: '/performance', icon: BarChart3, label: 'Performance Stats', permission: 'view_dashboard' },
-        { to: '/team', icon: Users, label: 'Team', permission: 'manage_team' },
-        { to: '/permissions', icon: UserSquare2, label: 'Permissions', permission: 'manage_permissions' },
-        { to: '/commissions', icon: IndianRupee, label: 'Commissions', permission: 'view_commissions' },
-        { to: '/payouts', icon: Wallet, label: 'Payouts', permission: 'manage_payouts' },
-        { to: '/leaderboard', icon: Trophy, label: 'Leaderboard', permission: 'view_leaderboard' },
-        { to: '/audit-logs', icon: FileText, label: 'Audit Logs', permission: 'manage_permissions' },
-        { to: '/packages', icon: Tag, label: 'Packages & Pricing', permission: 'view_dashboard' },
-        { to: '/help', icon: HelpCircle, label: 'Help & Docs', permission: 'view_dashboard' },
+    // Define navigation groups
+    const menuGroups = [
+        {
+            label: 'WORKSPACE',
+            items: [
+                { to: '/', icon: LayoutDashboard, label: 'Dashboard', permission: 'view_dashboard' },
+                { to: '/performance', icon: BarChart3, label: 'Performance Stats', permission: 'view_dashboard' },
+                { to: '/leaderboard', icon: Trophy, label: 'Leaderboard', permission: 'view_leaderboard' },
+            ]
+        },
+        {
+            label: 'SALES PIPELINE',
+            items: [
+                { to: '/leads', icon: ClipboardList, label: 'Leads Pipeline', permission: 'can_view_leads' },
+                { to: '/followups', icon: Clock, label: 'Follow-ups', permission: 'can_view_leads' },
+                { to: '/clients', icon: UserSquare2, label: 'Clients', permission: 'manage_clients' },
+            ]
+        },
+        {
+            label: 'EMAIL MARKETING',
+            adminOnly: true,
+            items: [
+                { to: '/email', icon: ClipboardList, label: 'Email Dashboard', permission: 'view_dashboard' },
+                { to: '/email/campaigns', icon: ClipboardList, label: 'Campaigns', permission: 'view_dashboard' },
+                { to: '/email/templates', icon: FileText, label: 'Templates', permission: 'view_dashboard' },
+                { to: '/email/sequences', icon: FileText, label: 'Email Funnels', permission: 'view_dashboard' },
+                { to: '/email/audiences', icon: Users, label: 'Audiences', permission: 'view_dashboard' },
+                { to: '/email/lists', icon: Users, label: 'Mailing Lists', permission: 'view_dashboard' },
+                { to: '/email/accounts', icon: UserSquare2, label: 'SMTP Accounts', permission: 'view_dashboard' },
+                { to: '/email/analytics', icon: BarChart3, label: 'Analytics', permission: 'view_dashboard' },
+                { to: '/email/unsubscribes', icon: UserX2, label: 'Unsubscribes', permission: 'view_dashboard' },
+            ]
+        },
+        {
+            label: 'ADMINISTRATION',
+            items: [
+                { to: '/team', icon: Users, label: 'Team', permission: 'manage_team' },
+                { to: '/permissions', icon: UserSquare2, label: 'Permissions', permission: 'manage_permissions' },
+                { to: '/commissions', icon: IndianRupee, label: 'Commissions', permission: 'view_commissions' },
+                { to: '/payouts', icon: Wallet, label: 'Payouts', permission: 'manage_payouts' },
+                { to: '/audit-logs', icon: FileText, label: 'Audit Logs', permission: 'manage_permissions' },
+            ]
+        },
+        {
+            label: 'RESOURCES',
+            items: [
+                { to: '/packages', icon: Tag, label: 'Packages & Pricing', permission: 'view_dashboard' },
+                { to: '/help', icon: HelpCircle, label: 'Help & Docs', permission: 'view_dashboard' },
+            ]
+        }
     ];
-
-    const filteredMenu = menuItems.filter(item => user?.role === 'admin' || user?.permissions?.[item.permission]);
 
     return (
         <div className="flex min-h-screen bg-slate-50 overflow-x-hidden">
@@ -162,8 +196,8 @@ const Layout = () => {
             {/* Mobile Backdrop Overlay */}
             {isMobileMenuOpen && (
                 <div 
-                    className="fixed inset-0 z-40 bg-black/40 md:hidden transition-opacity" 
-                    onClick={() => setIsMobileMenuOpen(false)}
+                     className="fixed inset-0 z-40 bg-black/40 md:hidden transition-opacity" 
+                     onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
 
@@ -198,16 +232,32 @@ const Layout = () => {
                     </Button>
                 </div>
 
-                <nav className="flex-1 px-3 py-3 space-y-1 overflow-y-auto">
-                    {filteredMenu.map((item) => (
-                        <SidebarLink
-                            key={item.to}
-                            {...item}
-                            collapsed={isCollapsed}
-                            active={location.pathname === item.to}
-                            onClick={() => setIsMobileMenuOpen(false)}
-                        />
-                    ))}
+                <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto">
+                    {menuGroups.map((group) => {
+                        const filteredItems = group.items.filter(item => user?.role === 'admin' || user?.permissions?.[item.permission]);
+                        if (filteredItems.length === 0) return null;
+                        // Hide admin-only groups from non-admins
+                        if (group.adminOnly && user?.role !== 'admin') return null;
+                        
+                        return (
+                            <div key={group.label} className="space-y-1">
+                                {!isCollapsed && (
+                                    <h4 className="px-3 text-[10px] font-semibold text-slate-400 tracking-wider uppercase mb-1 mt-2">
+                                        {group.label}
+                                    </h4>
+                                )}
+                                {filteredItems.map((item) => (
+                                    <SidebarLink
+                                        key={item.to}
+                                        {...item}
+                                        collapsed={isCollapsed}
+                                        active={location.pathname === item.to || location.pathname.startsWith(item.to + '/')}
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                    />
+                                ))}
+                            </div>
+                        );
+                    })}
                 </nav>
 
                 {/* Profile Options block */}
