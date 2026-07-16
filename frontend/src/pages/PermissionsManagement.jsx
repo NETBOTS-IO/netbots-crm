@@ -5,22 +5,39 @@ import { Input } from '@/components/ui/input';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import api from '@/lib/api';
-import { Search, ShieldAlert, CheckSquare, Square, RefreshCcw } from 'lucide-react';
+import { Search, ShieldAlert, CheckSquare, Square, RefreshCcw, Shield, UserCheck } from 'lucide-react';
 
-const AVAILABLE_PERMISSIONS = [
-    { key: 'view_dashboard', label: 'View Dashboard' },
-    { key: 'can_view_leads', label: 'View Leads' },
-    { key: 'can_add_leads', label: 'Add Leads' },
-    { key: 'can_edit_leads', label: 'Edit Leads' },
-    { key: 'can_delete_leads', label: 'Delete Leads' },
-    { key: 'manage_clients', label: 'Manage Clients' },
-    { key: 'manage_team', label: 'Manage Team' },
-    { key: 'manage_permissions', label: 'Manage Permissions' },
-    { key: 'view_commissions', label: 'View Commissions' },
-    { key: 'manage_payouts', label: 'Manage Payouts' },
-    { key: 'view_leaderboard', label: 'View Leaderboard' },
-    { key: 'can_bulk_manage_leads', label: 'Bulk Manage Leads' },
+const CATEGORIZED_PERMISSIONS = [
+    {
+        category: 'Workspace & General',
+        permissions: [
+            { key: 'view_dashboard', label: 'View Dashboard', desc: 'Allows access to the main dashboard screens' },
+            { key: 'view_leaderboard', label: 'View Leaderboard', desc: 'Allows viewing team rankings and stats' },
+        ]
+    },
+    {
+        category: 'Sales Pipeline',
+        permissions: [
+            { key: 'can_view_leads', label: 'View Leads Pipeline', desc: 'Allows viewing leads, closer view, and followups' },
+            { key: 'can_add_leads', label: 'Add New Leads', desc: 'Allows adding new prospects and importing CSVs' },
+            { key: 'can_edit_leads', label: 'Edit Leads', desc: 'Allows editing lead status, locks, and updating details' },
+            { key: 'can_delete_leads', label: 'Delete Leads', desc: 'Allows deleting leads from the pipeline' },
+            { key: 'can_bulk_manage_leads', label: 'Bulk Manage Leads', desc: 'Allows mass changing stage, temp, or deleting' },
+            { key: 'manage_clients', label: 'Manage Clients', desc: 'Allows managing active customers and conversions' },
+        ]
+    },
+    {
+        category: 'Team & Administration',
+        permissions: [
+            { key: 'manage_team', label: 'Manage Team', desc: 'Allows viewing member activity and modifying user stats' },
+            { key: 'manage_permissions', label: 'Manage Permissions Matrix', desc: 'Allows updating granular role distribution permissions' },
+            { key: 'view_commissions', label: 'View Commissions Ledger', desc: 'Allows viewing personal or team commission records' },
+            { key: 'manage_payouts', label: 'Manage Payouts & Invoices', desc: 'Allows processing commission payouts' },
+        ]
+    }
 ];
+
+const ALL_KEYS = CATEGORIZED_PERMISSIONS.reduce((acc, cat) => [...acc, ...cat.permissions.map(p => p.key)], []);
 
 const TEMPLATES = {
     Supervisor: {
@@ -57,6 +74,7 @@ export default function PermissionsManagement() {
     const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState({});
+    const [selectedMemberId, setSelectedMemberId] = useState(null);
 
     useEffect(() => {
         fetchTeam();
@@ -67,6 +85,9 @@ export default function PermissionsManagement() {
             const res = await api.get('/team');
             if (res.success) {
                 setTeam(res.data);
+                if (res.data.length > 0) {
+                    setSelectedMemberId(res.data[0]._id);
+                }
             }
         } catch (err) {
             console.error('Failed to fetch team', err);
@@ -103,8 +124,8 @@ export default function PermissionsManagement() {
         setTeam(prevTeam => prevTeam.map(member => {
             if (member._id === userId) {
                 const updated = {};
-                AVAILABLE_PERMISSIONS.forEach(p => {
-                    updated[p.key] = checkAll;
+                ALL_KEYS.forEach(k => {
+                    updated[k] = checkAll;
                 });
                 return { ...member, permissions: updated };
             }
@@ -143,13 +164,15 @@ export default function PermissionsManagement() {
     const filteredTeam = team.filter(member => 
         member.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         member.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.designation?.toLowerCase().includes(searchTerm.toLowerCase())
+        (Array.isArray(member.designation) ? member.designation.some(d => d.toLowerCase().includes(searchTerm.toLowerCase())) : member.designation?.toLowerCase().includes(searchTerm.toLowerCase()))
     );
+
+    const selectedMember = team.find(m => m._id === selectedMemberId);
 
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-500">
-                <RefreshCcw className="animate-spin text-blue-600 mb-4" size={32} />
+                <RefreshCcw className="animate-spin text-indigo-600 mb-4" size={32} />
                 <p className="font-bold uppercase text-xs tracking-widest">Loading granular permission schema...</p>
             </div>
         );
@@ -157,101 +180,154 @@ export default function PermissionsManagement() {
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-4 rounded-lg border border-slate-200 shadow-sm">
-                <div>
-                    <h1 className="text-xl font-semibold text-slate-900">Permissions & Access Controls</h1>
-                    <p className="text-xs text-slate-500 font-medium uppercase tracking-wider mt-1">Manage templates and granular access levels for each team member.</p>
-                </div>
-                <div className="relative w-full md:w-64 shrink-0">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                    <Input
-                        className="pl-10 h-10 font-medium"
-                        placeholder="Search team member..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
+            <div>
+                <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+                    <Shield className="text-indigo-600" size={24} /> Permissions & Role Distribution
+                </h1>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wide mt-1">
+                    Manage granular access levels and template presets for each contractor.
+                </p>
             </div>
 
-            <Card className="border border-slate-200 shadow-sm">
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
-                                <tr className="hover:bg-transparent">
-                                    <th className="px-6 py-4 font-semibold text-slate-700">User / Role</th>
-                                    <th className="px-6 py-4 font-semibold text-slate-700 text-center">Presets / Templates</th>
-                                    {AVAILABLE_PERMISSIONS.map(p => (
-                                        <th key={p.key} className="px-6 py-4 font-medium text-center text-[10px] tracking-tight uppercase whitespace-nowrap text-slate-500">
-                                            {p.label}
-                                        </th>
-                                    ))}
-                                    <th className="px-6 py-4 font-semibold text-slate-700 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {filteredTeam.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={ AVAILABLE_PERMISSIONS.length + 3 } className="text-center py-8 text-slate-400 italic">No team members match your criteria</td>
-                                    </tr>
-                                ) : filteredTeam.map((member) => {
-                                    const allChecked = AVAILABLE_PERMISSIONS.every(p => !!member.permissions?.[p.key]);
-                                    return (
-                                        <tr key={member._id} className="hover:bg-slate-50/50">
-                                            <td className="px-6 py-4">
-                                                <div className="font-semibold text-slate-900">{member.name}</div>
-                                                <div className="text-slate-500 text-[10px] uppercase font-medium">{Array.isArray(member.designation) && member.designation.length > 0 ? member.designation.join(', ') : (member.designation || member.role?.replace('_', ' '))}</div>
-                                            </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-wrap gap-1.5 justify-center">
-                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-medium uppercase py-0 px-2 border-slate-200 hover:bg-slate-50" onClick={() => applyTemplate(member._id, 'Supervisor')} disabled={member.role === 'admin'}>Supervisor</Button>
-                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-medium uppercase py-0 px-2 border-slate-200 hover:bg-slate-50" onClick={() => applyTemplate(member._id, 'LeadCollector')} disabled={member.role === 'admin'}>Collector</Button>
-                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-medium uppercase py-0 px-2 border-slate-200 hover:bg-slate-50" onClick={() => applyTemplate(member._id, 'LeadVerifier')} disabled={member.role === 'admin'}>Verifier</Button>
-                                                    <Button variant="outline" size="xs" className="h-6 text-[9px] font-medium uppercase py-0 px-2 border-slate-200 hover:bg-slate-50" onClick={() => applyTemplate(member._id, 'LeadCloser')} disabled={member.role === 'admin'}>Closer</Button>
-                                                    <Button variant="ghost" size="xs" className="h-6 text-[9px] font-medium uppercase py-0 px-2 text-red-650 hover:bg-red-50 border border-transparent hover:border-red-200" onClick={() => applyTemplate(member._id, 'Reset')} disabled={member.role === 'admin'}>Clear</Button>
-                                                </div>
-                                            </td>
-                                            {AVAILABLE_PERMISSIONS.map(p => (
-                                                <td key={p.key} className="px-6 py-4 text-center">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={!!member.permissions?.[p.key]}
-                                                        onChange={() => handlePermissionToggle(member._id, p.key)}
-                                                        disabled={member.role === 'admin'}
-                                                        className="w-4 h-4 text-slate-900 bg-slate-100 border-slate-350 rounded focus:ring-slate-500 cursor-pointer disabled:cursor-not-allowed"
-                                                    />
-                                                </td>
-                                            ))}
-                                            <td className="px-6 py-4 text-right">
-                                                <div className="flex gap-2 justify-end">
-                                                    <Button 
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        title={allChecked ? "Uncheck All" : "Select All"}
-                                                        onClick={() => toggleAllForUser(member._id, !allChecked)}
-                                                        disabled={member.role === 'admin'}
-                                                        className="h-8 w-8 text-slate-500 hover:bg-slate-100"
-                                                    >
-                                                        {allChecked ? <CheckSquare size={16} /> : <Square size={16} />}
-                                                    </Button>
-                                                    <Button 
-                                                        size="sm" 
-                                                        onClick={() => handleSave(member._id)}
-                                                        disabled={member.role === 'admin' || saving[member._id]}
-                                                        className="font-semibold text-xs uppercase bg-slate-950 text-white hover:bg-slate-900 h-8 rounded"
-                                                    >
-                                                        {saving[member._id] ? 'Saving...' : 'Save'}
-                                                    </Button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                {/* LEFT SIDEBAR: Members List */}
+                <div className="lg:col-span-4 space-y-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                        <Input
+                            className="pl-10 h-10 border-slate-200"
+                            placeholder="Search team member..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
-                </CardContent>
-            </Card>
+
+                    <div className="bg-white rounded-lg border border-slate-200 shadow-sm max-h-[600px] overflow-y-auto divide-y divide-slate-100">
+                        {filteredTeam.length === 0 ? (
+                            <div className="p-8 text-center text-slate-400 italic text-sm">
+                                No team members found
+                            </div>
+                        ) : (
+                            filteredTeam.map((member) => {
+                                const isSelected = member._id === selectedMemberId;
+                                return (
+                                    <div
+                                        key={member._id}
+                                        onClick={() => setSelectedMemberId(member._id)}
+                                        className={`p-4 cursor-pointer transition-colors flex items-center justify-between ${
+                                            isSelected ? 'bg-indigo-50/70 border-l-4 border-indigo-600' : 'hover:bg-slate-50/50'
+                                        }`}
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="font-bold text-sm text-slate-800 truncate">{member.name}</p>
+                                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight truncate mt-0.5">
+                                                {Array.isArray(member.designation) && member.designation.length > 0 ? member.designation.join(', ') : (member.designation || member.role)}
+                                            </p>
+                                        </div>
+                                        {member.role === 'admin' ? (
+                                            <span className="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider bg-slate-900 text-white shrink-0">
+                                                Admin
+                                            </span>
+                                        ) : (
+                                            <span className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200 shrink-0">
+                                                Staff
+                                            </span>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+
+                {/* RIGHT SIDEBAR: Permissions Detail */}
+                <div className="lg:col-span-8">
+                    {selectedMember ? (
+                        <Card className="border border-slate-200 shadow-sm bg-white">
+                            <CardHeader className="border-b border-slate-100 pb-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                                    <div>
+                                        <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                            <UserCheck className="text-indigo-600" size={20} /> {selectedMember.name}
+                                        </CardTitle>
+                                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                                            Role: {selectedMember.role} &mdash; Designations: {Array.isArray(selectedMember.designation) && selectedMember.designation.length > 0 ? selectedMember.designation.join(', ') : (selectedMember.designation || 'None')}
+                                        </p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            size="sm"
+                                            onClick={() => handleSave(selectedMember._id)}
+                                            disabled={selectedMember.role === 'admin' || saving[selectedMember._id]}
+                                            className="font-bold text-xs uppercase bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 rounded shadow-sm"
+                                        >
+                                            {saving[selectedMember._id] ? 'Saving...' : 'Save Changes'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-6 space-y-6">
+                                {/* Template Presets */}
+                                <div className="bg-slate-50 border border-slate-200/60 p-4 rounded-lg space-y-3">
+                                    <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Apply Template Presets:</span>
+                                    <div className="flex flex-wrap gap-2">
+                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-bold uppercase border-slate-200 hover:bg-white bg-transparent" onClick={() => applyTemplate(selectedMember._id, 'Supervisor')} disabled={selectedMember.role === 'admin'}>Supervisor</Button>
+                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-bold uppercase border-slate-200 hover:bg-white bg-transparent" onClick={() => applyTemplate(selectedMember._id, 'LeadCollector')} disabled={selectedMember.role === 'admin'}>Collector</Button>
+                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-bold uppercase border-slate-200 hover:bg-white bg-transparent" onClick={() => applyTemplate(selectedMember._id, 'LeadVerifier')} disabled={selectedMember.role === 'admin'}>Verifier</Button>
+                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-bold uppercase border-slate-200 hover:bg-white bg-transparent" onClick={() => applyTemplate(selectedMember._id, 'LeadCloser')} disabled={selectedMember.role === 'admin'}>Closer</Button>
+                                        <Button variant="ghost" size="xs" className="h-7 text-[9px] font-bold uppercase text-red-650 hover:bg-red-50 border border-transparent hover:border-red-200" onClick={() => applyTemplate(selectedMember._id, 'Reset')} disabled={selectedMember.role === 'admin'}>Clear All</Button>
+                                    </div>
+                                </div>
+
+                                {/* Permissions Categories Checklist */}
+                                <div className="space-y-6">
+                                    {CATEGORIZED_PERMISSIONS.map((category) => (
+                                        <div key={category.category} className="space-y-3">
+                                            <h3 className="text-xs font-black uppercase tracking-wider text-slate-400 border-b pb-1 border-slate-100">
+                                                {category.category}
+                                            </h3>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {category.permissions.map((p) => {
+                                                    const isChecked = !!selectedMember.permissions?.[p.key];
+                                                    return (
+                                                        <div 
+                                                            key={p.key} 
+                                                            onClick={() => {
+                                                                if (selectedMember.role !== 'admin') {
+                                                                    handlePermissionToggle(selectedMember._id, p.key);
+                                                                }
+                                                            }}
+                                                            className={`p-3 rounded-lg border flex items-start gap-3 select-none cursor-pointer transition-colors ${
+                                                                isChecked 
+                                                                    ? 'bg-indigo-50/20 border-indigo-200 hover:bg-indigo-50/40' 
+                                                                    : 'bg-white border-slate-200 hover:bg-slate-50/30'
+                                                            } ${selectedMember.role === 'admin' ? 'cursor-not-allowed opacity-75' : ''}`}
+                                                        >
+                                                            <div className="mt-0.5 shrink-0 text-indigo-650">
+                                                                {isChecked ? <CheckSquare size={16} /> : <Square size={16} className="text-slate-350" />}
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="text-xs font-bold text-slate-800">{p.label}</p>
+                                                                <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">{p.desc}</p>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ) : (
+                        <div className="bg-white border border-slate-200 rounded-lg p-12 text-center text-slate-400 italic">
+                            Select a team member to configure permissions
+                        </div>
+                    )}
+                </div>
+
+            </div>
         </div>
     );
 }

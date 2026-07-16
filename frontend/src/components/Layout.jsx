@@ -19,7 +19,12 @@ import {
     Tag,
     UserX2,
     KeyRound,
-    Clock
+    Clock,
+    Send,
+    FileCode2,
+    Workflow,
+    ListCollapse,
+    ShieldCheck
 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -55,40 +60,40 @@ const tabGroups = [
     {
         pattern: /^\/(leads|followups|clients)/,
         tabs: [
-            { to: '/leads', label: 'Leads Pipeline', permission: 'can_view_leads' },
-            { to: '/followups', label: 'Follow-ups', permission: 'can_view_leads' },
-            { to: '/clients', label: 'Clients', permission: 'manage_clients' },
+            { to: '/leads', label: 'Leads Pipeline', permission: 'can_view_leads', icon: ClipboardList },
+            { to: '/followups', label: 'Follow-ups', permission: 'can_view_leads', icon: Clock },
+            { to: '/clients', label: 'Clients', permission: 'manage_clients', icon: UserSquare2 },
         ]
     },
     {
         pattern: /^\/email/,
         tabs: [
-            { to: '/email', label: 'Dashboard', permission: 'view_dashboard' },
-            { to: '/email/campaigns', label: 'Campaigns', permission: 'view_dashboard' },
-            { to: '/email/templates', label: 'Templates', permission: 'view_dashboard' },
-            { to: '/email/sequences', label: 'Funnels', permission: 'view_dashboard' },
-            { to: '/email/audiences', label: 'Audiences', permission: 'view_dashboard' },
-            { to: '/email/lists', label: 'Mailing Lists', permission: 'view_dashboard' },
-            { to: '/email/accounts', label: 'SMTP Accounts', permission: 'view_dashboard' },
-            { to: '/email/analytics', label: 'Analytics', permission: 'view_dashboard' },
-            { to: '/email/unsubscribes', label: 'Unsubscribes', permission: 'view_dashboard' },
+            { to: '/email', label: 'Dashboard', permission: 'view_dashboard', icon: LayoutDashboard },
+            { to: '/email/campaigns', label: 'Campaigns', permission: 'view_dashboard', icon: Send },
+            { to: '/email/templates', label: 'Templates', permission: 'view_dashboard', icon: FileCode2 },
+            { to: '/email/sequences', label: 'Funnels', permission: 'view_dashboard', icon: Workflow },
+            { to: '/email/audiences', label: 'Audiences', permission: 'view_dashboard', icon: Users },
+            { to: '/email/lists', label: 'Mailing Lists', permission: 'view_dashboard', icon: ListCollapse },
+            { to: '/email/accounts', label: 'SMTP Accounts', permission: 'view_dashboard', icon: KeyRound },
+            { to: '/email/analytics', label: 'Analytics', permission: 'view_dashboard', icon: BarChart3 },
+            { to: '/email/unsubscribes', label: 'Unsubscribes', permission: 'view_dashboard', icon: UserX2 },
         ]
     },
     {
         pattern: /^\/(team|permissions|commissions|payouts|audit-logs)/,
         tabs: [
-            { to: '/team', label: 'Team Directory', permission: 'manage_team' },
-            { to: '/permissions', label: 'Permissions Matrix', permission: 'manage_permissions' },
-            { to: '/commissions', label: 'Commissions Ledger', permission: 'view_commissions' },
-            { to: '/payouts', label: 'Payouts Summary', permission: 'manage_payouts' },
-            { to: '/audit-logs', label: 'Audit Logs', permission: 'manage_permissions' },
+            { to: '/team', label: 'Team Directory', permission: 'manage_team', icon: Users },
+            { to: '/permissions', label: 'Permissions Matrix', permission: 'manage_permissions', icon: ShieldCheck },
+            { to: '/commissions', label: 'Commissions Ledger', permission: 'view_commissions', icon: IndianRupee },
+            { to: '/payouts', label: 'Payouts Summary', permission: 'manage_payouts', icon: Wallet },
+            { to: '/audit-logs', label: 'Audit Logs', permission: 'manage_permissions', icon: FileText },
         ]
     },
     {
         pattern: /^\/(packages|help)/,
         tabs: [
-            { to: '/packages', label: 'Packages & Pricing', permission: 'view_dashboard' },
-            { to: '/help', label: 'Help & Docs', permission: 'view_dashboard' },
+            { to: '/packages', label: 'Packages & Pricing', permission: 'view_dashboard', icon: Tag },
+            { to: '/help', label: 'Help & Docs', permission: 'view_dashboard', icon: HelpCircle },
         ]
     }
 ];
@@ -264,7 +269,18 @@ const Layout = () => {
 
                 <nav className="flex-1 px-3 py-3 space-y-4 overflow-y-auto">
                     {menuGroups.map((group) => {
-                        const filteredItems = group.items.filter(item => user?.role === 'admin' || user?.permissions?.[item.permission]);
+                        const filteredItems = group.items.filter(item => {
+                            if (user?.role === 'admin') return true;
+                            
+                            // Check if this item maps to a tab group
+                            const matchingGroup = tabGroups.find(tg => tg.pattern.test(item.to));
+                            if (matchingGroup) {
+                                // If any tab in the group is allowed for the user, show this sidebar link
+                                return matchingGroup.tabs.some(tab => !!user?.permissions?.[tab.permission]);
+                            }
+                            
+                            return !!user?.permissions?.[item.permission];
+                        });
                         if (filteredItems.length === 0) return null;
                         // Hide admin-only groups from non-admins
                         if (group.adminOnly && user?.role !== 'admin') return null;
@@ -422,22 +438,24 @@ const Layout = () => {
                         if (!showModuleTabs) return null;
 
                         return (
-                            <div className="flex border border-slate-200/80 bg-white p-1.5 gap-1 overflow-x-auto shrink-0 select-none shadow-sm rounded-lg">
+                            <div className="flex border border-slate-200 bg-slate-50/50 p-1.5 gap-1.5 overflow-x-auto shrink-0 select-none shadow-sm rounded-lg scrollbar-none">
                                 {currentGroup.tabs
                                     .filter(tab => user?.role === 'admin' || user?.permissions?.[tab.permission])
                                     .map((tab) => {
                                         const isActive = location.pathname === tab.to || (tab.to !== '/email' && location.pathname.startsWith(tab.to));
+                                        const Icon = tab.icon;
                                         return (
                                             <Link
                                                 key={tab.to}
                                                 to={tab.to}
                                                 className={cn(
-                                                    "px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-md transition-all whitespace-nowrap",
+                                                    "flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md transition-all whitespace-nowrap",
                                                     isActive 
                                                         ? "bg-indigo-600 text-white shadow-sm"
-                                                        : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"
+                                                        : "text-slate-500 hover:text-indigo-600 hover:bg-white border border-transparent hover:border-slate-250"
                                                 )}
                                             >
+                                                {Icon && <Icon size={12} />}
                                                 {tab.label}
                                             </Link>
                                         );
