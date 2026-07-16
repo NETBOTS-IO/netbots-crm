@@ -48,8 +48,9 @@ router.post('/sign', auth, async (req, res) => {
             </div>
         </div>
         `;
+        const recipientEmail = process.env.ADMIN_EMAIL || 'saqlainshahbaltee@gmail.com';
         await sendMailWithAttachment(
-            'saqlainshahbaltee@gmail.com',
+            recipientEmail,
             `Onboarding Contract Signed - ${user.name}`,
             emailHtml,
             [{ filename: `Signed_Agreement_${user.name.replace(/\s+/g, '_')}.pdf`, content: pdfBuffer }]

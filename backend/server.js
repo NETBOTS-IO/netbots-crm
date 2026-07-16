@@ -4,12 +4,39 @@ const cors = require('cors');
 const path = require('path');
 require('dotenv').config();
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const { initCronJobs } = require('./services/cronJobs');
 
 const app = express();
 
+// Trust proxy for rate limiting behind reverse proxies (Nginx/Hostinger/Cloudflare)
+app.set('trust proxy', 1);
+
+// Rate limiting configurations
+const apiLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000, // 15 minutes
+  max: 1000, // Limit each IP to 200 requests per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many requests, please try again later.' }
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30, // Strict limit of 30 attempts per 15 minutes
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, error: 'Too many login attempts. Please try again in 15 minutes.' }
+});
+
+// Apply rate limiters to routes
+app.use('/api/', apiLimiter);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
 // Security proofing middleware
 app.use(helmet());
+
 
 // Custom Mongo injection sanitize middleware compatible with Express 5
 app.use((req, res, next) => {

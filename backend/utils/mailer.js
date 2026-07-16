@@ -3,12 +3,18 @@ const nodemailer = require('nodemailer');
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.hostinger.com',
     port: parseInt(process.env.SMTP_PORT || '465'),
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    secure: process.env.SMTP_SECURE === 'true' || process.env.SMTP_PORT === '465', // true for 465, false for other ports
     auth: {
-        user: process.env.SMTP_USER || 'crm@netbots.io',
-        pass: process.env.SMTP_PASS || 'CRM-NetBots@110'
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
     }
 });
+
+// Guard check for missing credentials
+if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn("WARNING: SMTP_USER or SMTP_PASS environment variables are not set. Mailer service will fail to send emails.");
+}
+
 
 // Helper to send emails
 const sendMail = async (to, subject, html) => {
