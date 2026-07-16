@@ -38,17 +38,18 @@ const SidebarLink = ({ to, icon: Icon, label, active, onClick, collapsed }) => (
         onClick={onClick}
         title={collapsed ? label : undefined}
         className={cn(
-            "flex items-center gap-3 px-3 py-2 text-sm font-medium transition-all rounded-md",
+            "flex items-center gap-3 px-3 py-2 text-sm font-semibold transition-all rounded-md border-l-2 border-transparent",
             active
-                ? "bg-slate-100 text-slate-900 font-semibold"
-                : "text-slate-500 hover:text-slate-900 hover:bg-slate-50",
+                ? "bg-indigo-50 text-indigo-700 font-bold border-l-indigo-600"
+                : "text-slate-500 hover:text-indigo-600 hover:bg-indigo-50/40",
             collapsed && "md:justify-center md:px-2"
         )}
     >
-        <Icon size={18} className={active ? "text-slate-900" : "text-slate-400"} />
+        <Icon size={18} className={active ? "text-indigo-600" : "text-slate-400 group-hover:text-indigo-500"} />
         <span className={cn("truncate", collapsed && "md:hidden")}>{label}</span>
     </Link>
 );
+
 
 const Layout = () => {
     const { user, logout, isImpersonating, impersonatingAdminName, endImpersonation } = useAuth();
