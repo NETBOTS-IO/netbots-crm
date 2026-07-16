@@ -112,6 +112,8 @@ export default function SuperDashboard() {
     const auditLabels = data?.audits?.map(a => a._id?.replace('click_', '') || 'access') || ['login', 'edit_lead', 'payout'];
     const auditCounts = data?.audits?.map(a => a.count) || [45, 12, 8];
 
+    const timeTracking = data?.timeTracking || [];
+
     return (
         <div className="space-y-6 pb-12">
             {/* Page Header */}
