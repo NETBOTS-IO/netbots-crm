@@ -16,6 +16,7 @@ import {
     FileText,
     BarChart3,
     HelpCircle,
+    TrendingUp,
     Tag,
     UserX2,
     KeyRound,
@@ -194,6 +195,7 @@ const Layout = () => {
             label: 'WORKSPACE',
             items: [
                 { to: '/', icon: LayoutDashboard, label: 'Dashboard', permission: 'view_dashboard' },
+                { to: '/super-dashboard', icon: TrendingUp, label: 'Super Dashboard', permission: 'view_sales_dashboard' },
                 { to: '/performance', icon: BarChart3, label: 'Performance Stats', permission: 'view_dashboard' },
                 { to: '/leaderboard', icon: Trophy, label: 'Leaderboard', permission: 'view_leaderboard' },
             ]

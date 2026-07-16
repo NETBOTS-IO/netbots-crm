@@ -21,6 +21,7 @@ import Performance from './pages/Performance';
 import HelpPage from './pages/HelpPage';
 import PackagesPricing from './pages/PackagesPricing';
 import Followups from './pages/Followups';
+import SuperDashboard from './pages/SuperDashboard';
 import { Toaster } from "@/components/ui/toaster"
 
 // MailFlow Page Imports
@@ -69,6 +70,13 @@ function App() {
             <Route path="sales-dashboard" element={
               <RoleGate permission="view_sales_dashboard" action="View Sales Dashboard">
                 <SalesDashboard />
+              </RoleGate>
+            } />
+
+            {/* Super Dashboard — requires view_sales_dashboard */}
+            <Route path="super-dashboard" element={
+              <RoleGate permission="view_sales_dashboard" action="View Super Dashboard">
+                <SuperDashboard />
               </RoleGate>
             } />
 

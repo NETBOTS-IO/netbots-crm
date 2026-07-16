@@ -16,6 +16,7 @@ import { useAuth } from '@/context/AuthContext';
 const PAGE_PERMISSION_MAP = {
     '/': 'view_dashboard',
     '/sales-dashboard': 'view_sales_dashboard',
+    '/super-dashboard': 'view_sales_dashboard',
     '/leads': 'can_view_leads',
     '/leads/new': 'can_add_leads',
     '/followups': 'can_view_leads',
