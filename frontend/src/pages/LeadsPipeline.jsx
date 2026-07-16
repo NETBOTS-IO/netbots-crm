@@ -44,9 +44,15 @@ const getChannelBadge = (channel) => {
 
 const LeadsPipeline = () => {
     const [leads, setLeads] = useState([]);
+    const [verifiedClosedLeads, setVerifiedClosedLeads] = useState([]);
+    const [verifiedClosedPagination, setVerifiedClosedPagination] = useState({ total: 0, page: 1, pages: 1 });
+    const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('lead_active_tab') || 'pipeline');
+    const [vcSearch, setVcSearch] = useState('');
+    const [vcLoading, setVcLoading] = useState(false);
     const [stats, setStats] = useState({ totalLeadsCount: 0, contactedCount: 0, commitmentsCount: 0, followUpCount: 0 });
     const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
     const [limit] = useState(50);
+    const [isFetching, setIsFetching] = useState(false); // non-blocking refresh indicator
     
     // Tour state
     const [runTour, setRunTour] = useState(false);
@@ -117,6 +123,9 @@ const LeadsPipeline = () => {
     useEffect(() => {
         sessionStorage.setItem('lead_filter_channel', filterChannel);
     }, [filterChannel]);
+    useEffect(() => {
+        sessionStorage.setItem('lead_active_tab', activeTab);
+    }, [activeTab]);
 
     // Fetch team members list for verifiers & closers dropdowns
     useEffect(() => {
@@ -312,7 +321,12 @@ const LeadsPipeline = () => {
     };
 
     const fetchLeads = useCallback(async () => {
-        setLoading(true);
+        // Use isFetching (non-blocking) instead of loading (blocking) on subsequent refreshes
+        if (leads.length === 0) {
+            setLoading(true);
+        } else {
+            setIsFetching(true);
+        }
         try {
             const params = new URLSearchParams({
                 page: pagination.page,
@@ -333,19 +347,41 @@ const LeadsPipeline = () => {
                 setLeads(res.data);
                 if (res.stats) setStats(res.stats);
                 if (res.pagination) setPagination(res.pagination);
-                setSelectedLeads([]); // clear selection on fetch
+                setSelectedLeads([]);
             }
         } catch (err) {
             console.error("Failed to fetch leads", err);
             toast({ variant: "destructive", title: "Error", description: "Failed to load leads." });
         } finally {
             setLoading(false);
+            setIsFetching(false);
         }
     }, [pagination.page, limit, searchTerm, period, cardFilter, filterPriority, filterStage, filterTemp, filterContact, filterVerifier, filterCloser, filterChannel]);
 
     useEffect(() => {
         fetchLeads();
     }, [fetchLeads]);
+
+    // Fetch verified+closed leads for that tab
+    const fetchVerifiedClosed = useCallback(async () => {
+        setVcLoading(true);
+        try {
+            const params = new URLSearchParams({ page: verifiedClosedPagination.page, limit: 50, search: vcSearch });
+            const res = await api.get(`/leads/verified-closed?${params.toString()}`);
+            if (res.success) {
+                setVerifiedClosedLeads(res.data);
+                if (res.pagination) setVerifiedClosedPagination(res.pagination);
+            }
+        } catch (err) {
+            console.error('Failed to fetch verified-closed leads', err);
+        } finally {
+            setVcLoading(false);
+        }
+    }, [verifiedClosedPagination.page, vcSearch]);
+
+    useEffect(() => {
+        if (activeTab === 'verified_closed') fetchVerifiedClosed();
+    }, [activeTab, fetchVerifiedClosed]);
 
     // Handle filter change (reset to page 1)
     useEffect(() => {
@@ -540,6 +576,108 @@ const LeadsPipeline = () => {
     return (
         <div className="space-y-6">
             <LeadsTour run={runTour} setRun={setRunTour} steps={tourSteps} tourKey="hasRunLeadsPipelineTour" />
+
+            {/* Tab switcher */}
+            <div className="flex items-center gap-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm w-fit">
+                <button
+                    onClick={() => setActiveTab('pipeline')}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'pipeline' ? 'bg-blue-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+                >
+                    <TrendingUp size={13} /> Leads Pipeline
+                </button>
+                <button
+                    onClick={() => { setActiveTab('verified_closed'); }}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all ${activeTab === 'verified_closed' ? 'bg-emerald-600 text-white shadow' : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'}`}
+                >
+                    <CheckSquare size={13} /> Verified & Closed
+                </button>
+            </div>
+
+            {/* ─── VERIFIED & CLOSED TAB ─── */}
+            {activeTab === 'verified_closed' && (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between bg-white p-4 rounded-lg border shadow-sm">
+                        <div>
+                            <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+                                <CheckSquare className="text-emerald-600" size={18} /> Verified & Closed Leads
+                            </h2>
+                            <p className="text-xs text-slate-500 mt-0.5">Leads jahan Verifier ne verify kiya aur deal close ho gayi</p>
+                        </div>
+                        <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
+                            {verifiedClosedPagination.total} records
+                        </div>
+                    </div>
+
+                    {/* Search */}
+                    <div className="relative w-full max-w-sm">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+                        <input
+                            className="pl-9 h-9 w-full border border-slate-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                            placeholder="Search company, contact, verifier..."
+                            value={vcSearch}
+                            onChange={(e) => { setVcSearch(e.target.value); setVerifiedClosedPagination(p => ({...p, page: 1})); }}
+                        />
+                    </div>
+
+                    <div className="rounded-md border bg-white overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead className="bg-slate-50 border-b">
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Company</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Contact</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Verified By</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Collector</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Verified At</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Converted At</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {vcLoading ? (
+                                    Array.from({ length: 8 }).map((_, i) => (
+                                        <tr key={i} className="border-b animate-pulse">
+                                            {Array.from({ length: 6 }).map((_, j) => (
+                                                <td key={j} className="px-4 py-3"><div className="h-4 bg-slate-100 rounded w-3/4" /></td>
+                                            ))}
+                                        </tr>
+                                    ))
+                                ) : verifiedClosedLeads.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={6} className="px-4 py-12 text-center text-slate-400 text-sm">
+                                            Koi verified + closed lead nahi mili.
+                                        </td>
+                                    </tr>
+                                ) : verifiedClosedLeads.map((lead) => (
+                                    <tr key={lead._id} className="border-b hover:bg-emerald-50/40 transition-colors cursor-pointer" onClick={() => navigate(`/leads/details/${lead._id}`)}>
+                                        <td className="px-4 py-3 font-semibold text-slate-900">{lead.companyName}</td>
+                                        <td className="px-4 py-3 text-slate-600">{lead.contactName || '—'}</td>
+                                        <td className="px-4 py-3">
+                                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
+                                                {lead.leadVerifiedBy || lead.workingVerifier?.name || '—'}
+                                            </span>
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-500 text-xs">{lead.leadCollectedBy || lead.submittedBy?.name || '—'}</td>
+                                        <td className="px-4 py-3 text-slate-500 text-xs">{lead.verifiedAt ? new Date(lead.verifiedAt).toLocaleDateString() : '—'}</td>
+                                        <td className="px-4 py-3 text-emerald-700 text-xs font-semibold">{lead.convertedAt ? new Date(lead.convertedAt).toLocaleDateString() : '—'}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {/* Verified-Closed Pagination */}
+                        {verifiedClosedPagination.pages > 1 && (
+                            <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50">
+                                <span className="text-xs text-slate-500">Page {verifiedClosedPagination.page} of {verifiedClosedPagination.pages}</span>
+                                <div className="flex gap-2">
+                                    <Button size="sm" variant="outline" disabled={verifiedClosedPagination.page <= 1} onClick={() => setVerifiedClosedPagination(p => ({...p, page: p.page - 1}))}>Prev</Button>
+                                    <Button size="sm" variant="outline" disabled={verifiedClosedPagination.page >= verifiedClosedPagination.pages} onClick={() => setVerifiedClosedPagination(p => ({...p, page: p.page + 1}))}>Next</Button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* ─── MAIN PIPELINE TAB ─── */}
+            {activeTab === 'pipeline' && (<>
             {/* Header & Period Filter */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-lg border shadow-sm">
                 <div>
@@ -777,7 +915,14 @@ const LeadsPipeline = () => {
                     </TableHeader>
                     <TableBody>
                         {loading && leads.length === 0 ? (
-                            <TableRow><TableCell colSpan={11} className="text-center py-8">Loading...</TableCell></TableRow>
+                            // Skeleton rows on first load
+                            Array.from({ length: 8 }).map((_, i) => (
+                                <TableRow key={i} className="animate-pulse">
+                                    {Array.from({ length: 10 }).map((_, j) => (
+                                        <TableCell key={j}><div className="h-4 bg-slate-100 rounded w-full" /></TableCell>
+                                    ))}
+                                </TableRow>
+                            ))
                         ) : leads.map((lead) => (
                             <TableRow key={lead._id} className={getRowBgClass(lead)}>
                                 <TableCell className="text-center">
@@ -1092,6 +1237,7 @@ const LeadsPipeline = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+        </>) /* end activeTab === pipeline */ }
         </div>
     );
 };

@@ -203,15 +203,36 @@ router.get('/', auth, async (req, res) => {
         query.followUpDate = periodRange;
     }
 
-    // 2. Search filter
+    // 2. Search filter — also supports searching by user name (collector/verifier/closer)
     if (search) {
+        // First find matching user IDs for name/email search
+        const matchingUsers = await User.find({
+            $or: [
+                { name: { $regex: search, $options: 'i' } },
+                { email: { $regex: search, $options: 'i' } }
+            ]
+        }).select('_id name');
+        const matchingUserIds = matchingUsers.map(u => u._id);
+        const matchingUserNames = matchingUsers.map(u => u.name);
+
         query.$and = query.$and || [];
         query.$and.push({
             $or: [
                 { companyName: { $regex: search, $options: 'i' } },
                 { contactName: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
-                { phone: { $regex: search, $options: 'i' } }
+                { phone: { $regex: search, $options: 'i' } },
+                // Search by collector/verifier name (string fields)
+                ...(matchingUserNames.length > 0 ? [
+                    { leadCollectedBy: { $in: matchingUserNames } },
+                    { leadVerifiedBy: { $in: matchingUserNames } }
+                ] : []),
+                // Search by working verifier/closer (ObjectId refs)
+                ...(matchingUserIds.length > 0 ? [
+                    { submittedBy: { $in: matchingUserIds } },
+                    { workingVerifier: { $in: matchingUserIds } },
+                    { workingCloser: { $in: matchingUserIds } }
+                ] : [])
             ]
         });
     }
@@ -256,13 +277,38 @@ router.get('/', auth, async (req, res) => {
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    let leads = await Lead.find(query)
-        .populate('submittedBy', 'name email')
-        .populate('workingVerifier', 'name email')
-        .populate('workingCloser', 'name email')
-        .sort('-createdAt')
-        .skip(skip)
-        .limit(limitNum);
+    // Sort: active claimed leads on top (have workingVerifier OR workingCloser),
+    // then by updatedAt desc so recently touched leads appear first
+    const sortStage = [
+        {
+            $addFields: {
+                _activePriority: {
+                    $cond: [
+                        { $or: [
+                            { $ne: ['$workingVerifier', null] },
+                            { $ne: ['$workingCloser', null] }
+                        ]},
+                        0, 1
+                    ]
+                }
+            }
+        },
+        { $sort: { _activePriority: 1, updatedAt: -1 } },
+        { $skip: skip },
+        { $limit: limitNum }
+    ];
+
+    let leadsRaw = await Lead.aggregate([
+        { $match: query },
+        ...sortStage
+    ]);
+
+    // Populate refs manually after aggregate
+    let leads = await Lead.populate(leadsRaw, [
+        { path: 'submittedBy', select: 'name email' },
+        { path: 'workingVerifier', select: 'name email' },
+        { path: 'workingCloser', select: 'name email' }
+    ]);
     
     const totalCount = await Lead.countDocuments(query);
     const totalPages = Math.ceil(totalCount / limitNum);
@@ -279,6 +325,49 @@ router.get('/', auth, async (req, res) => {
     });
   } catch (err) {
     console.error("GET /api/leads error:", err);
+    res.status(500).json({ success: false, error: 'Server error' });
+  }
+});
+
+// GET /api/leads/verified-closed
+// Returns leads that are verified (isVerifiedByVerifier=true) and have been converted to clients
+router.get('/verified-closed', auth, async (req, res) => {
+  try {
+    const { page = 1, limit = 50, search = '' } = req.query;
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const skip = (pageNum - 1) * limitNum;
+
+    let query = {
+        isVerifiedByVerifier: true,
+        convertedToClient: true
+    };
+
+    if (search) {
+        query.$or = [
+            { companyName: { $regex: search, $options: 'i' } },
+            { contactName: { $regex: search, $options: 'i' } },
+            { leadVerifiedBy: { $regex: search, $options: 'i' } }
+        ];
+    }
+
+    const leads = await Lead.find(query)
+        .populate('submittedBy', 'name email')
+        .populate('workingVerifier', 'name email')
+        .populate('workingCloser', 'name email')
+        .sort('-convertedAt -updatedAt')
+        .skip(skip)
+        .limit(limitNum);
+
+    const total = await Lead.countDocuments(query);
+
+    res.json({
+        success: true,
+        data: leads,
+        pagination: { total, page: pageNum, pages: Math.ceil(total / limitNum) }
+    });
+  } catch (err) {
+    console.error('GET /api/leads/verified-closed error:', err);
     res.status(500).json({ success: false, error: 'Server error' });
   }
 });
