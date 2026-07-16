@@ -339,8 +339,7 @@ router.get('/verified-closed', auth, async (req, res) => {
     const skip = (pageNum - 1) * limitNum;
 
     let query = {
-        isVerifiedByVerifier: true,
-        convertedToClient: true
+        isVerifiedByVerifier: true
     };
 
     if (search) {

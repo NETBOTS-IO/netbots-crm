@@ -206,9 +206,8 @@ const Layout = () => {
         },
         {
             label: 'EMAIL MARKETING',
-            adminOnly: true,
             items: [
-                { to: '/email', icon: ClipboardList, label: 'Email Marketing', permission: 'view_dashboard' },
+                { to: '/email', icon: ClipboardList, label: 'Email Marketing', permission: 'view_email_dashboard' },
             ]
         },
         {
