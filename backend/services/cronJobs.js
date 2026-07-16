@@ -89,6 +89,36 @@ const initCronJobs = () => {
             console.error('Failed to run Hourly Follow-up Reminder Cron:', error);
         }
     });
+
+    // 4. Sequence automation engine processing loop (runs every minute)
+    cron.schedule('*/1 * * * *', async () => {
+        try {
+            const { processActiveEnrollments } = require('./sequenceEngine');
+            await processActiveEnrollments();
+        } catch (error) {
+            console.error('Failed to run Sequence Engine Cron:', error);
+        }
+    });
+
+    // 5. Incoming SMTP IMAP Inbox check for reply tracking (runs every 10 minutes)
+    cron.schedule('*/10 * * * *', async () => {
+        try {
+            const { checkAllIncomingReplies } = require('./replyChecker');
+            await checkAllIncomingReplies();
+        } catch (error) {
+            console.error('Failed to run Reply Checker IMAP Cron:', error);
+        }
+    });
+
+    // 6. Warmup engine sending loop (runs hourly)
+    cron.schedule('0 * * * *', async () => {
+        try {
+            const { processWarmup } = require('./warmupEngine');
+            await processWarmup();
+        } catch (error) {
+            console.error('Failed to run Warmup Engine Cron:', error);
+        }
+    });
 };
 
 module.exports = { initCronJobs };

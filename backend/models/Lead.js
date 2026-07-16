@@ -5,6 +5,7 @@ const LeadSchema = new mongoose.Schema({
   contactName: { type: String },
   phone: { type: String },
   email: { type: String },
+  additionalEmails: [{ type: String }],
   businessType: {
     type: String,
     enum: ['pharmacy', 'hotel', 'restaurant', 'retail_shop', 'retail', 'distribution', 'trader', 'ngo', 'ca_firm',
@@ -118,14 +119,13 @@ LeadSchema.index({ priority: 1 });
 LeadSchema.index({ stage: 1 });
 LeadSchema.index({ temperature: 1 });
 
-LeadSchema.pre('save', function(next) {
+LeadSchema.pre('save', async function() {
   const scoreMap = { cold: 1, warm: 3, sql: 7, closed: 20, retained: 30 };
   this.score = scoreMap[this.temperature] || 1;
 
   if (this.isModified('followUpDate')) {
     this.followUpReminderSent = false;
   }
-  next();
 });
 
 module.exports = mongoose.model('Lead', LeadSchema);

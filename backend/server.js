@@ -78,6 +78,16 @@ app.use('/api/audit-logs',    require('./routes/auditLogs'));
 app.use('/api/performance',   require('./routes/performance'));
 app.use('/api/agreement',     require('./routes/agreement'));
 
+// MailFlow Routing
+app.use('/api/email-accounts',   require('./routes/emailAccounts'));
+app.use('/api/email-campaigns',  require('./routes/emailCampaigns'));
+app.use('/api/email-templates',  require('./routes/emailTemplates'));
+app.use('/api/email-lists',      require('./routes/emailLists'));
+app.use('/api/email-segments',   require('./routes/emailSegments'));
+app.use('/api/email-sequences',  require('./routes/emailSequences'));
+app.use('/api/email-analytics',  require('./routes/emailAnalytics'));
+app.use('/api/email-webhooks',   require('./routes/emailWebhooks'));
+
 // Catch-all route to serve compiled React app for frontend routes
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
