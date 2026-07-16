@@ -59,10 +59,10 @@ const LeadsPipeline = () => {
     const [pagination, setPagination] = useState({ total: 0, page: 1, pages: 1 });
     const [limit] = useState(50);
     const [isFetching, setIsFetching] = useState(false); // non-blocking refresh indicator
-    
+
     // Tour state
     const [runTour, setRunTour] = useState(false);
-    
+
     // Helper to get session storage filter or fallback
     const getSessionFilter = (key, defaultValue) => {
         const stored = sessionStorage.getItem(key);
@@ -228,7 +228,7 @@ const LeadsPipeline = () => {
 
     const isLeadLockedForUser = (lead) => {
         if (currentUser?.role === 'admin') return false;
-        
+
         const isVerifier = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier');
         const isCloser = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser');
         const myId = currentUser?._id?.toString() || currentUser?.id?.toString();
@@ -244,18 +244,18 @@ const LeadsPipeline = () => {
 
     const getRowBgClass = (lead) => {
         if (!canView) return "blur-sm select-none";
-        
+
         const isVerifier = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier');
         const isCloser = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser');
         const myId = currentUser?._id?.toString() || currentUser?.id?.toString();
-        
+
         const isVerifierMine = lead.workingVerifier?._id?.toString() === myId;
         const isCloserMine = lead.workingCloser?._id?.toString() === myId;
-        
+
         // Locked by someone else of the same role -> Disabled / Muted look
         const lockedByOtherVerifier = lead.workingVerifier && lead.workingVerifier._id?.toString() !== myId;
         const lockedByOtherCloser = lead.workingCloser && lead.workingCloser._id?.toString() !== myId;
-        
+
         if (currentUser?.role !== 'admin' && ((isVerifier && lockedByOtherVerifier) || (isCloser && lockedByOtherCloser))) {
             return "bg-slate-50/50 text-slate-400 hover:bg-slate-50/50 cursor-not-allowed select-none transition-colors";
         }
@@ -264,7 +264,7 @@ const LeadsPipeline = () => {
         if (isVerifierMine || isCloserMine) {
             return "bg-emerald-50/50 hover:bg-emerald-100/60 text-slate-900 transition-colors border-l-2 border-emerald-500 font-medium";
         }
-        
+
         // Claimed by both Verifier and Closer
         if (lead.workingVerifier && lead.workingCloser) {
             return "bg-teal-50/50 hover:bg-teal-100/60 text-slate-900 transition-colors border-l-2 border-teal-500 font-medium";
@@ -279,36 +279,36 @@ const LeadsPipeline = () => {
         if (lead.workingCloser) {
             return "bg-indigo-50/50 hover:bg-indigo-100/60 text-slate-900 transition-colors border-l-2 border-indigo-500 font-medium";
         }
-        
+
         return "hover:bg-slate-50/85 transition-colors";
     };
 
     const handleRowClick = (lead) => {
         if (!canView) return;
-        
+
         const isVerifier = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier');
         const isCloser = Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser');
         const myId = currentUser?._id?.toString() || currentUser?.id?.toString();
-        
+
         if (currentUser?.role !== 'admin') {
             if (isVerifier && lead.workingVerifier && lead.workingVerifier._id?.toString() !== myId) {
-                toast({ 
-                    variant: "destructive", 
-                    title: "Lead Locked", 
-                    description: `This lead is currently locked. Lead Verifier "${lead.workingVerifier.name}" is working on it.` 
+                toast({
+                    variant: "destructive",
+                    title: "Lead Locked",
+                    description: `This lead is currently locked. Lead Verifier "${lead.workingVerifier.name}" is working on it.`
                 });
                 return;
             }
             if (isCloser && lead.workingCloser && lead.workingCloser._id?.toString() !== myId) {
-                toast({ 
-                    variant: "destructive", 
-                    title: "Lead Locked", 
-                    description: `This lead is currently locked. Lead Closer "${lead.workingCloser.name}" is working on it.` 
+                toast({
+                    variant: "destructive",
+                    title: "Lead Locked",
+                    description: `This lead is currently locked. Lead Closer "${lead.workingCloser.name}" is working on it.`
                 });
                 return;
             }
         }
-        
+
         navigate(`/leads/details/${lead._id}`);
     };
 
@@ -551,7 +551,7 @@ const LeadsPipeline = () => {
             content: (
                 <div className="space-y-3 max-h-[280px] overflow-y-auto pr-1">
                     <p>Leads list ke main columns aur unki options ye hain:</p>
-                    
+
                     <div className="space-y-1">
                         <span className="text-xs font-bold text-slate-800 uppercase block">1. Priority (Kab kya use karein):</span>
                         <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-slate-600">
@@ -639,7 +639,7 @@ const LeadsPipeline = () => {
                             <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
                                 <CheckSquare className="text-emerald-600" size={18} /> Verified Leads
                             </h2>
-                            <p className="text-xs text-slate-500 mt-0.5">Ya vo sary leads hai jo verifer</p>
+                            <p className="text-xs text-slate-500 mt-0.5">Ya vo sary leads hai jo verifier ne verify kiye hai aur</p>
                         </div>
                         <div className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full">
                             {verifiedClosedPagination.total} records
@@ -653,7 +653,7 @@ const LeadsPipeline = () => {
                             className="pl-9 h-9 w-full border border-slate-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                             placeholder="Search company, contact, verifier..."
                             value={vcSearch}
-                            onChange={(e) => { setVcSearch(e.target.value); setVerifiedClosedPagination(p => ({...p, page: 1})); }}
+                            onChange={(e) => { setVcSearch(e.target.value); setVerifiedClosedPagination(p => ({ ...p, page: 1 })); }}
                         />
                     </div>
 
@@ -705,8 +705,8 @@ const LeadsPipeline = () => {
                             <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50">
                                 <span className="text-xs text-slate-500">Page {verifiedClosedPagination.page} of {verifiedClosedPagination.pages}</span>
                                 <div className="flex gap-2">
-                                    <Button size="sm" variant="outline" disabled={verifiedClosedPagination.page <= 1} onClick={() => setVerifiedClosedPagination(p => ({...p, page: p.page - 1}))}>Prev</Button>
-                                    <Button size="sm" variant="outline" disabled={verifiedClosedPagination.page >= verifiedClosedPagination.pages} onClick={() => setVerifiedClosedPagination(p => ({...p, page: p.page + 1}))}>Next</Button>
+                                    <Button size="sm" variant="outline" disabled={verifiedClosedPagination.page <= 1} onClick={() => setVerifiedClosedPagination(p => ({ ...p, page: p.page - 1 }))}>Prev</Button>
+                                    <Button size="sm" variant="outline" disabled={verifiedClosedPagination.page >= verifiedClosedPagination.pages} onClick={() => setVerifiedClosedPagination(p => ({ ...p, page: p.page + 1 }))}>Next</Button>
                                 </div>
                             </div>
                         )}
@@ -738,14 +738,14 @@ const LeadsPipeline = () => {
                                 className="pl-9 h-9 w-64 border border-slate-200 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                 placeholder="Search company, contact, closer..."
                                 value={closerSearch}
-                                onChange={(e) => { setCloserSearch(e.target.value); setCloserPagination(p => ({...p, page: 1})); }}
+                                onChange={(e) => { setCloserSearch(e.target.value); setCloserPagination(p => ({ ...p, page: 1 })); }}
                             />
                         </div>
                         {/* Filter by specific closer */}
                         <select
                             className="h-9 border border-slate-200 rounded-lg bg-white text-sm px-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
                             value={closerFilterId}
-                            onChange={(e) => { setCloserFilterId(e.target.value); setCloserPagination(p => ({...p, page: 1})); }}
+                            onChange={(e) => { setCloserFilterId(e.target.value); setCloserPagination(p => ({ ...p, page: 1 })); }}
                         >
                             <option value="all">All Closers</option>
                             {closersList.map(c => (
@@ -755,7 +755,7 @@ const LeadsPipeline = () => {
                         {(closerSearch || closerFilterId !== 'all') && (
                             <button
                                 className="text-xs text-rose-600 font-bold hover:underline"
-                                onClick={() => { setCloserSearch(''); setCloserFilterId('all'); setCloserPagination(p => ({...p, page: 1})); }}
+                                onClick={() => { setCloserSearch(''); setCloserFilterId('all'); setCloserPagination(p => ({ ...p, page: 1 })); }}
                             >
                                 Clear
                             </button>
@@ -842,8 +842,8 @@ const LeadsPipeline = () => {
                             <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50">
                                 <span className="text-xs text-slate-500">Page {closerPagination.page} of {closerPagination.pages} &mdash; {closerPagination.total} leads</span>
                                 <div className="flex gap-2">
-                                    <Button size="sm" variant="outline" disabled={closerPagination.page <= 1} onClick={() => setCloserPagination(p => ({...p, page: p.page - 1}))}>Prev</Button>
-                                    <Button size="sm" variant="outline" disabled={closerPagination.page >= closerPagination.pages} onClick={() => setCloserPagination(p => ({...p, page: p.page + 1}))}>Next</Button>
+                                    <Button size="sm" variant="outline" disabled={closerPagination.page <= 1} onClick={() => setCloserPagination(p => ({ ...p, page: p.page - 1 }))}>Prev</Button>
+                                    <Button size="sm" variant="outline" disabled={closerPagination.page >= closerPagination.pages} onClick={() => setCloserPagination(p => ({ ...p, page: p.page + 1 }))}>Next</Button>
                                 </div>
                             </div>
                         )}
@@ -853,584 +853,584 @@ const LeadsPipeline = () => {
 
             {/* ─── MAIN PIPELINE TAB ─── */}
             {activeTab === 'pipeline' && (<>
-            {/* Header & Period Filter */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-lg border shadow-sm">
-                <div>
-                    <div className="flex items-center gap-2">
-                        <h2 className="text-xl font-bold text-slate-800">Leads Pipeline Overview</h2>
-                        <Button 
-                            size="sm" 
-                            variant="outline" 
-                            className="h-8 text-[11px] font-bold border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all flex items-center gap-1.5 shadow-sm rounded-lg shrink-0"
-                            onClick={() => setRunTour(true)}
-                        >
-                            <HelpCircle size={14} className="text-blue-500" /> Start Page Tour
-                        </Button>
-                    </div>
-                    <p className="text-xs text-slate-500 font-bold uppercase">Analyze and action your prospects</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-slate-500 uppercase shrink-0">Show Stats For:</span>
-                    <Select value={period} onValueChange={(v) => { setPeriod(v); setCardFilter('all'); }}>
-                        <SelectTrigger className="w-[140px] h-9">
-                            <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Time</SelectItem>
-                            <SelectItem value="today">Today Only</SelectItem>
-                            <SelectItem value="week">Past 7 Days</SelectItem>
-                            <SelectItem value="month">This Month</SelectItem>
-                            <SelectItem value="year">This Year</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
-            </div>
-
-            {/* Stats Dashboard Grid */}
-            <div id="tour-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card 
-                    onClick={() => setCardFilter('all')} 
-                    className={`cursor-pointer bg-gradient-to-br from-blue-50 to-white border-blue-100 shadow-sm hover:shadow transition-all ${cardFilter === 'all' ? 'ring-2 ring-blue-500 border-transparent shadow' : ''}`}
-                >
-                    <CardContent className="p-5 flex items-center justify-between">
-                        <div>
-                            <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Total Leads</p>
-                            <h3 className="text-2xl font-black text-blue-900 mt-1">{stats.totalLeadsCount}</h3>
-                        </div>
-                        <div className="p-3 bg-blue-500/10 rounded-full text-blue-600">
-                            <TrendingUp size={20} />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card 
-                    onClick={() => setCardFilter('contacted')} 
-                    className={`cursor-pointer bg-gradient-to-br from-amber-50 to-white border-amber-100 shadow-sm hover:shadow transition-all ${cardFilter === 'contacted' ? 'ring-2 ring-amber-500 border-transparent shadow' : ''}`}
-                >
-                    <CardContent className="p-5 flex items-center justify-between">
-                        <div>
-                            <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Contacted In Period</p>
-                            <h3 className="text-2xl font-black text-amber-950 mt-1">{stats.contactedCount}</h3>
-                        </div>
-                        <div className="p-3 bg-amber-500/10 rounded-full text-amber-600">
-                            <PhoneCall size={20} />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card 
-                    onClick={() => setCardFilter('commitments')} 
-                    className={`cursor-pointer bg-gradient-to-br from-emerald-50 to-white border-emerald-100 shadow-sm hover:shadow transition-all ${cardFilter === 'commitments' ? 'ring-2 ring-emerald-500 border-transparent shadow' : ''}`}
-                >
-                    <CardContent className="p-5 flex items-center justify-between">
-                        <div>
-                            <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Commitments (SQLs)</p>
-                            <h3 className="text-2xl font-black text-emerald-950 mt-1">{stats.commitmentsCount}</h3>
-                        </div>
-                        <div className="p-3 bg-emerald-500/10 rounded-full text-emerald-600">
-                            <CheckSquare size={20} />
-                        </div>
-                    </CardContent>
-                </Card>
-
-                <Card 
-                    onClick={() => setCardFilter('followup')} 
-                    className={`cursor-pointer bg-gradient-to-br from-purple-50 to-white border-purple-100 shadow-sm hover:shadow transition-all ${cardFilter === 'followup' ? 'ring-2 ring-purple-500 border-transparent shadow' : ''}`}
-                >
-                    <CardContent className="p-5 flex items-center justify-between">
-                        <div>
-                            <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Scheduled Follow-ups</p>
-                            <h3 className="text-2xl font-black text-purple-950 mt-1">{stats.followUpCount}</h3>
-                        </div>
-                        <div className="p-3 bg-purple-500/10 rounded-full text-purple-600">
-                            <Calendar size={20} />
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {cardFilter !== 'all' && (
-                <div className="flex items-center justify-between bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-lg text-xs text-slate-700">
-                    <span>
-                        Filtering pipeline to show: <strong className="uppercase font-extrabold text-blue-700">{cardFilter === 'contacted' ? 'Contacted in period' : cardFilter === 'commitments' ? 'Commitments' : 'Scheduled Follow-ups'}</strong>
-                    </span>
-                    <button className="h-7 px-3 text-[10px] font-black uppercase tracking-tight bg-slate-200 hover:bg-slate-300 text-slate-700 rounded transition-colors" onClick={() => setCardFilter('all')}>
-                        Clear Card Filter
-                    </button>
-                </div>
-            )}
-
-            {/* Filter controls panel */}
-            <div className="p-4 bg-white rounded-lg border shadow-sm space-y-4">
-                <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-[480px]">
-                        <div id="tour-search" className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                            <Input
-                                className="pl-10 h-10 w-full"
-                                placeholder="Search leads, contacts, emails or phone..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-                        <Button 
-                            id="tour-filters-btn"
-                            variant="outline" 
-                            className="h-10 gap-2 border-slate-200 text-slate-700 hover:bg-slate-50 relative font-semibold shrink-0"
-                            onClick={() => setIsFiltersOpen(true)}
-                        >
-                            <SlidersHorizontal size={15} />
-                            Filter & Sort
-                            {(filterPriority !== 'all' || filterStage !== 'all' || filterTemp !== 'all' || filterContact !== 'all' || filterVerifier !== 'all' || filterCloser !== 'all' || filterChannel !== 'all') && (
-                                <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow-sm animate-pulse">
-                                    !
-                                </span>
-                            )}
-                        </Button>
-                    </div>
-                    <div id="tour-actions" className="flex gap-2 w-full md:w-auto items-center justify-end">
-                        {currentUser?.role === 'admin' && (
-                            <Button variant="outline" size="sm" className="gap-2 border-red-200 text-red-700 hover:bg-red-50" onClick={handleExportPDF}>
-                                <FileDown size={14} /> Export to PDF
+                {/* Header & Period Filter */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 bg-white p-4 rounded-lg border shadow-sm">
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-xl font-bold text-slate-800">Leads Pipeline Overview</h2>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 text-[11px] font-bold border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300 transition-all flex items-center gap-1.5 shadow-sm rounded-lg shrink-0"
+                                onClick={() => setRunTour(true)}
+                            >
+                                <HelpCircle size={14} className="text-blue-500" /> Start Page Tour
                             </Button>
-                        )}
-                        <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate('/import/leads')}>
-                            <Upload size={14} /> Import CSV
-                        </Button>
-                        <Button variant="outline" size="sm" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => window.open('https://www.google.com/maps', '_blank')}>
-                            <Globe size={14} /> Find New Lead
-                        </Button>
-                        <Button 
-                            size="sm" 
-                            className="gap-2 bg-blue-600 hover:bg-blue-700" 
-                            onClick={() => navigate('/leads/new')}
-                            disabled={!canAdd}
-                            title={!canAdd ? "You do not have permission to add leads." : ""}
-                        >
-                            <Plus size={14} /> New Lead
-                        </Button>
+                        </div>
+                        <p className="text-xs text-slate-500 font-bold uppercase">Analyze and action your prospects</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-500 uppercase shrink-0">Show Stats For:</span>
+                        <Select value={period} onValueChange={(v) => { setPeriod(v); setCardFilter('all'); }}>
+                            <SelectTrigger className="w-[140px] h-9">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Time</SelectItem>
+                                <SelectItem value="today">Today Only</SelectItem>
+                                <SelectItem value="week">Past 7 Days</SelectItem>
+                                <SelectItem value="month">This Month</SelectItem>
+                                <SelectItem value="year">This Year</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
-            </div>
 
-            {/* Bulk Actions Bar */}
-            {selectedLeads.length > 0 && (
-                <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg animate-in fade-in slide-in-from-top-2">
-                    <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
-                        <Badge variant="secondary" className="bg-blue-200 text-blue-900 hover:bg-blue-300">
-                            {selectedLeads.length} Selected
-                        </Badge>
-                        <span>Apply bulk actions:</span>
+                {/* Stats Dashboard Grid */}
+                <div id="tour-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Card
+                        onClick={() => setCardFilter('all')}
+                        className={`cursor-pointer bg-gradient-to-br from-blue-50 to-white border-blue-100 shadow-sm hover:shadow transition-all ${cardFilter === 'all' ? 'ring-2 ring-blue-500 border-transparent shadow' : ''}`}
+                    >
+                        <CardContent className="p-5 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Total Leads</p>
+                                <h3 className="text-2xl font-black text-blue-900 mt-1">{stats.totalLeadsCount}</h3>
+                            </div>
+                            <div className="p-3 bg-blue-500/10 rounded-full text-blue-600">
+                                <TrendingUp size={20} />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card
+                        onClick={() => setCardFilter('contacted')}
+                        className={`cursor-pointer bg-gradient-to-br from-amber-50 to-white border-amber-100 shadow-sm hover:shadow transition-all ${cardFilter === 'contacted' ? 'ring-2 ring-amber-500 border-transparent shadow' : ''}`}
+                    >
+                        <CardContent className="p-5 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Contacted In Period</p>
+                                <h3 className="text-2xl font-black text-amber-950 mt-1">{stats.contactedCount}</h3>
+                            </div>
+                            <div className="p-3 bg-amber-500/10 rounded-full text-amber-600">
+                                <PhoneCall size={20} />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card
+                        onClick={() => setCardFilter('commitments')}
+                        className={`cursor-pointer bg-gradient-to-br from-emerald-50 to-white border-emerald-100 shadow-sm hover:shadow transition-all ${cardFilter === 'commitments' ? 'ring-2 ring-emerald-500 border-transparent shadow' : ''}`}
+                    >
+                        <CardContent className="p-5 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Commitments (SQLs)</p>
+                                <h3 className="text-2xl font-black text-emerald-950 mt-1">{stats.commitmentsCount}</h3>
+                            </div>
+                            <div className="p-3 bg-emerald-500/10 rounded-full text-emerald-600">
+                                <CheckSquare size={20} />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card
+                        onClick={() => setCardFilter('followup')}
+                        className={`cursor-pointer bg-gradient-to-br from-purple-50 to-white border-purple-100 shadow-sm hover:shadow transition-all ${cardFilter === 'followup' ? 'ring-2 ring-purple-500 border-transparent shadow' : ''}`}
+                    >
+                        <CardContent className="p-5 flex items-center justify-between">
+                            <div>
+                                <p className="text-[10px] uppercase font-black text-slate-400 tracking-wider">Scheduled Follow-ups</p>
+                                <h3 className="text-2xl font-black text-purple-950 mt-1">{stats.followUpCount}</h3>
+                            </div>
+                            <div className="p-3 bg-purple-500/10 rounded-full text-purple-600">
+                                <Calendar size={20} />
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {cardFilter !== 'all' && (
+                    <div className="flex items-center justify-between bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-lg text-xs text-slate-700">
+                        <span>
+                            Filtering pipeline to show: <strong className="uppercase font-extrabold text-blue-700">{cardFilter === 'contacted' ? 'Contacted in period' : cardFilter === 'commitments' ? 'Commitments' : 'Scheduled Follow-ups'}</strong>
+                        </span>
+                        <button className="h-7 px-3 text-[10px] font-black uppercase tracking-tight bg-slate-200 hover:bg-slate-300 text-slate-700 rounded transition-colors" onClick={() => setCardFilter('all')}>
+                            Clear Card Filter
+                        </button>
                     </div>
-                    <div className="flex gap-2">
-                        <Button size="sm" variant="outline" className="bg-white" onClick={() => promptBulkAction('updateStage')} disabled={!canBulkManage}>
-                            Change Stage
-                        </Button>
-                        <Button size="sm" variant="outline" className="bg-white" onClick={() => promptBulkAction('updateTemperature')} disabled={!canBulkManage}>
-                            Change Temp
-                        </Button>
-                        <Button size="sm" variant="outline" className="bg-white" onClick={() => promptBulkAction('updatePriority')} disabled={!canBulkManage}>
-                            Change Priority
-                        </Button>
-                        <Button size="sm" variant="destructive" className="gap-2" onClick={() => executeBulkAction('delete')} disabled={!canBulkManage}>
-                            <Trash2 size={14} /> Delete
-                        </Button>
-                    </div>
-                </div>
-            )}
+                )}
 
-            {/* Color Legend / Indicators */}
-            <div id="tour-legend" className="flex flex-wrap items-center gap-4 px-4 py-2 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-600">
-                <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400">Claims Legend:</span>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded bg-emerald-100 border border-emerald-500 block shrink-0" />
-                    <span>My Active Claim</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded bg-amber-100 border border-amber-500 block shrink-0" />
-                    <span>Claimed by Verifier</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded bg-indigo-100 border border-indigo-500 block shrink-0" />
-                    <span>Claimed by Closer</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded bg-teal-100 border border-teal-500 block shrink-0" />
-                    <span>Claimed by Both</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                    <span className="w-2.5 h-2.5 rounded bg-slate-50 border border-slate-200 block shrink-0" />
-                    <span className="text-slate-400">Locked for Me</span>
-                </div>
-            </div>
-
-            <div id="tour-table" className="rounded-md border bg-white overflow-x-auto">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead className="w-12 text-center">
-                                <input 
-                                    type="checkbox"
-                                    checked={leads.length > 0 && selectedLeads.length === leads.length}
-                                    onChange={(e) => handleSelectAll(e.target.checked)}
-                                    className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500"
+                {/* Filter controls panel */}
+                <div className="p-4 bg-white rounded-lg border shadow-sm space-y-4">
+                    <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full md:w-[480px]">
+                            <div id="tour-search" className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                <Input
+                                    className="pl-10 h-10 w-full"
+                                    placeholder="Search leads, contacts, emails or phone..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
                                 />
-                            </TableHead>
-                            <TableHead>Company</TableHead>
-                            <TableHead>Contact</TableHead>
-                            <TableHead>Industry</TableHead>
-                            <TableHead>Priority</TableHead>
-                            <TableHead>Temp</TableHead>
-                            <TableHead>Stage</TableHead>
-                            <TableHead>Source</TableHead>
-                            <TableHead id="tour-claim-section">Work Claim</TableHead>
-                            {isPrivileged && <TableHead>Researcher</TableHead>}
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {loading && leads.length === 0 ? (
-                            // Skeleton rows on first load
-                            Array.from({ length: 8 }).map((_, i) => (
-                                <TableRow key={i} className="animate-pulse">
-                                    {Array.from({ length: 10 }).map((_, j) => (
-                                        <TableCell key={j}><div className="h-4 bg-slate-100 rounded w-full" /></TableCell>
-                                    ))}
-                                </TableRow>
-                            ))
-                        ) : leads.map((lead) => (
-                            <TableRow key={lead._id} className={getRowBgClass(lead)}>
-                                <TableCell className="text-center">
-                                    <input 
+                            </div>
+                            <Button
+                                id="tour-filters-btn"
+                                variant="outline"
+                                className="h-10 gap-2 border-slate-200 text-slate-700 hover:bg-slate-50 relative font-semibold shrink-0"
+                                onClick={() => setIsFiltersOpen(true)}
+                            >
+                                <SlidersHorizontal size={15} />
+                                Filter & Sort
+                                {(filterPriority !== 'all' || filterStage !== 'all' || filterTemp !== 'all' || filterContact !== 'all' || filterVerifier !== 'all' || filterCloser !== 'all' || filterChannel !== 'all') && (
+                                    <span className="absolute -top-1 -right-1 flex h-4.5 w-4.5 items-center justify-center rounded-full bg-blue-600 text-[10px] font-bold text-white shadow-sm animate-pulse">
+                                        !
+                                    </span>
+                                )}
+                            </Button>
+                        </div>
+                        <div id="tour-actions" className="flex gap-2 w-full md:w-auto items-center justify-end">
+                            {currentUser?.role === 'admin' && (
+                                <Button variant="outline" size="sm" className="gap-2 border-red-200 text-red-700 hover:bg-red-50" onClick={handleExportPDF}>
+                                    <FileDown size={14} /> Export to PDF
+                                </Button>
+                            )}
+                            <Button variant="outline" size="sm" className="gap-2" onClick={() => navigate('/import/leads')}>
+                                <Upload size={14} /> Import CSV
+                            </Button>
+                            <Button variant="outline" size="sm" className="gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => window.open('https://www.google.com/maps', '_blank')}>
+                                <Globe size={14} /> Find New Lead
+                            </Button>
+                            <Button
+                                size="sm"
+                                className="gap-2 bg-blue-600 hover:bg-blue-700"
+                                onClick={() => navigate('/leads/new')}
+                                disabled={!canAdd}
+                                title={!canAdd ? "You do not have permission to add leads." : ""}
+                            >
+                                <Plus size={14} /> New Lead
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Bulk Actions Bar */}
+                {selectedLeads.length > 0 && (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg animate-in fade-in slide-in-from-top-2">
+                        <div className="flex items-center gap-2 text-sm font-medium text-blue-900">
+                            <Badge variant="secondary" className="bg-blue-200 text-blue-900 hover:bg-blue-300">
+                                {selectedLeads.length} Selected
+                            </Badge>
+                            <span>Apply bulk actions:</span>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="bg-white" onClick={() => promptBulkAction('updateStage')} disabled={!canBulkManage}>
+                                Change Stage
+                            </Button>
+                            <Button size="sm" variant="outline" className="bg-white" onClick={() => promptBulkAction('updateTemperature')} disabled={!canBulkManage}>
+                                Change Temp
+                            </Button>
+                            <Button size="sm" variant="outline" className="bg-white" onClick={() => promptBulkAction('updatePriority')} disabled={!canBulkManage}>
+                                Change Priority
+                            </Button>
+                            <Button size="sm" variant="destructive" className="gap-2" onClick={() => executeBulkAction('delete')} disabled={!canBulkManage}>
+                                <Trash2 size={14} /> Delete
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Color Legend / Indicators */}
+                <div id="tour-legend" className="flex flex-wrap items-center gap-4 px-4 py-2 bg-white border border-slate-200 rounded-md text-xs font-medium text-slate-600">
+                    <span className="text-[10px] uppercase font-semibold tracking-wider text-slate-400">Claims Legend:</span>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded bg-emerald-100 border border-emerald-500 block shrink-0" />
+                        <span>My Active Claim</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded bg-amber-100 border border-amber-500 block shrink-0" />
+                        <span>Claimed by Verifier</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded bg-indigo-100 border border-indigo-500 block shrink-0" />
+                        <span>Claimed by Closer</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded bg-teal-100 border border-teal-500 block shrink-0" />
+                        <span>Claimed by Both</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded bg-slate-50 border border-slate-200 block shrink-0" />
+                        <span className="text-slate-400">Locked for Me</span>
+                    </div>
+                </div>
+
+                <div id="tour-table" className="rounded-md border bg-white overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-12 text-center">
+                                    <input
                                         type="checkbox"
-                                        checked={selectedLeads.includes(lead._id)}
-                                        onChange={(e) => handleSelectLead(lead._id, e.target.checked)}
+                                        checked={leads.length > 0 && selectedLeads.length === leads.length}
+                                        onChange={(e) => handleSelectAll(e.target.checked)}
                                         className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500"
                                     />
-                                </TableCell>
-                                <TableCell className={`font-medium ${canView ? 'cursor-pointer hover:text-blue-600' : ''}`} onClick={() => handleRowClick(lead)}>
-                                    <div className="flex flex-col">
-                                        <span>{lead.companyName}</span>
-                                        <span className="text-[10px] text-slate-400 capitalize">{lead.source?.replace('_', ' ')}</span>
-                                    </div>
-                                </TableCell>
-                                <TableCell>
-                                    <div className="text-sm">
-                                        <div>{lead.contactName || 'N/A'}</div>
-                                        <div className="text-slate-500 text-xs">{lead.phone}</div>
-                                    </div>
-                                </TableCell>
-                                <TableCell className="capitalize text-xs">{lead.industry || lead.businessType}</TableCell>
-                                <TableCell>
-                                    <Badge variant="outline" className={`capitalize text-[10px] ${lead.priority === 'urgent' ? 'border-red-500 text-red-600 bg-red-50' :
-                                        lead.priority === 'high' ? 'border-orange-500 text-orange-600 bg-orange-50' : ''
-                                        }`}>
-                                        {lead.priority || 'medium'}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant="secondary" className={getTempColor(lead.temperature)}>
-                                        {lead.temperature?.toUpperCase()}
-                                    </Badge>
-                                </TableCell>
-                                <TableCell>
-                                    <Badge variant="outline" className="capitalize text-xs">{lead.stage}</Badge>
-                                </TableCell>
-                                <TableCell>
-                                    {getChannelBadge(lead.channel)}
-                                </TableCell>
-                                <TableCell>
-                                    <div className="flex flex-col gap-1">
-                                        {/* Verifier Lock Button */}
-                                        {(currentUser?.role === 'admin' || (Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier'))) && (
-                                            lead.workingVerifier ? (
-                                                (lead.workingVerifier._id === currentUser?._id || lead.workingVerifier._id === currentUser?.id) ? (
-                                                    <Button 
-                                                        size="xs" 
-                                                        className="h-6 text-[9px] px-2 font-bold uppercase tracking-tight bg-emerald-600 hover:bg-emerald-700 text-white" 
-                                                        onClick={() => handleUnlockVerifier(lead._id)}
-                                                    >
-                                                        Verifier: Mine (Unlock)
-                                                    </Button>
-                                                ) : (
-                                                    <Button 
-                                                        size="xs" 
-                                                        disabled 
-                                                        className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
-                                                        title={`Locked by ${lead.workingVerifier.name}`}
-                                                    >
-                                                        Verifier: {lead.workingVerifier.name}
-                                                    </Button>
-                                                )
-                                            ) : (
-                                                <Button 
-                                                    size="xs" 
-                                                    variant="outline" 
-                                                    className="h-6 text-[9px] px-2 font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
-                                                    onClick={() => handleLockVerifier(lead._id)}
-                                                >
-                                                    Claim Verifier
-                                                </Button>
-                                            )
-                                        )}
-
-                                        {/* Closer Lock Button */}
-                                        {(currentUser?.role === 'admin' || (Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser'))) && (
-                                            lead.workingCloser ? (
-                                                (lead.workingCloser._id === currentUser?._id || lead.workingCloser._id === currentUser?.id) ? (
-                                                    <Button 
-                                                        size="xs" 
-                                                        className="h-6 text-[9px] px-2 font-bold uppercase tracking-tight bg-blue-600 hover:bg-blue-700 text-white" 
-                                                        onClick={() => handleUnlockCloser(lead._id)}
-                                                    >
-                                                        Closer: Mine (Unlock)
-                                                    </Button>
-                                                ) : (
-                                                    <Button 
-                                                        size="xs" 
-                                                        disabled 
-                                                        className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
-                                                        title={`Locked by ${lead.workingCloser.name}`}
-                                                    >
-                                                        Closer: {lead.workingCloser.name}
-                                                    </Button>
-                                                )
-                                            ) : (
-                                                !lead.isVerifiedByVerifier ? (
-                                                    <Button 
-                                                        size="xs" 
-                                                        disabled
-                                                        className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
-                                                        title="Please wait for a Verifier to mark this lead as verified first."
-                                                    >
-                                                        Claim Closer
-                                                    </Button>
-                                                ) : (
-                                                    <Button 
-                                                        size="xs" 
-                                                        variant="outline" 
-                                                        className="h-6 text-[9px] px-2 font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
-                                                        onClick={() => handleLockCloser(lead._id)}
-                                                    >
-                                                        Claim Closer
-                                                    </Button>
-                                                )
-                                            )
-                                        )}
-                                    </div>
-                                </TableCell>
-                                {isPrivileged && (
-                                    <TableCell className="text-xs font-bold text-slate-600">
-                                        {lead.submittedBy?.name || 'Unknown'}
-                                    </TableCell>
-                                )}
-                                <TableCell className="text-right">
-                                    <Button 
-                                        variant="ghost" 
-                                        size="icon" 
-                                        onClick={() => navigate(`/leads/edit/${lead._id}`)}
-                                        disabled={!canEdit || isLeadLockedForUser(lead)}
-                                        title={!canEdit ? "You do not have permission to edit leads." : isLeadLockedForUser(lead) ? "This lead is locked by another team member." : ""}
-                                    >
-                                        <Pencil className="h-4 w-4" />
-                                    </Button>
-                                </TableCell>
+                                </TableHead>
+                                <TableHead>Company</TableHead>
+                                <TableHead>Contact</TableHead>
+                                <TableHead>Industry</TableHead>
+                                <TableHead>Priority</TableHead>
+                                <TableHead>Temp</TableHead>
+                                <TableHead>Stage</TableHead>
+                                <TableHead>Source</TableHead>
+                                <TableHead id="tour-claim-section">Work Claim</TableHead>
+                                {isPrivileged && <TableHead>Researcher</TableHead>}
+                                <TableHead className="text-right">Actions</TableHead>
                             </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-                
-                {/* Pagination Controls */}
-                <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50">
-                    <div className="text-sm text-slate-500">
-                        Showing {leads.length > 0 ? (pagination.page - 1) * limit + 1 : 0} to {Math.min(pagination.page * limit, pagination.total)} of <span className="font-bold text-slate-700">{pagination.total}</span> entries
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={pagination.page <= 1}
-                            onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
-                        >
-                            ← Prev
-                        </Button>
-                        {/* Manual page entry */}
-                        <div className="flex items-center gap-1.5 border border-slate-200 rounded-lg bg-white px-2 py-1">
-                            <span className="text-xs text-slate-400">Page</span>
-                            <input
-                                type="number"
-                                min={1}
-                                max={pagination.pages}
-                                value={pagination.page}
-                                onChange={(e) => {
-                                    const val = parseInt(e.target.value);
-                                    if (val >= 1 && val <= pagination.pages) {
-                                        setPagination(p => ({ ...p, page: val }));
-                                    }
-                                }}
-                                className="w-12 text-center text-xs font-bold text-slate-800 border-0 outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                            />
-                            <span className="text-xs text-slate-400">/ {pagination.pages}</span>
+                        </TableHeader>
+                        <TableBody>
+                            {loading && leads.length === 0 ? (
+                                // Skeleton rows on first load
+                                Array.from({ length: 8 }).map((_, i) => (
+                                    <TableRow key={i} className="animate-pulse">
+                                        {Array.from({ length: 10 }).map((_, j) => (
+                                            <TableCell key={j}><div className="h-4 bg-slate-100 rounded w-full" /></TableCell>
+                                        ))}
+                                    </TableRow>
+                                ))
+                            ) : leads.map((lead) => (
+                                <TableRow key={lead._id} className={getRowBgClass(lead)}>
+                                    <TableCell className="text-center">
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedLeads.includes(lead._id)}
+                                            onChange={(e) => handleSelectLead(lead._id, e.target.checked)}
+                                            className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500"
+                                        />
+                                    </TableCell>
+                                    <TableCell className={`font-medium ${canView ? 'cursor-pointer hover:text-blue-600' : ''}`} onClick={() => handleRowClick(lead)}>
+                                        <div className="flex flex-col">
+                                            <span>{lead.companyName}</span>
+                                            <span className="text-[10px] text-slate-400 capitalize">{lead.source?.replace('_', ' ')}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="text-sm">
+                                            <div>{lead.contactName || 'N/A'}</div>
+                                            <div className="text-slate-500 text-xs">{lead.phone}</div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="capitalize text-xs">{lead.industry || lead.businessType}</TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className={`capitalize text-[10px] ${lead.priority === 'urgent' ? 'border-red-500 text-red-600 bg-red-50' :
+                                            lead.priority === 'high' ? 'border-orange-500 text-orange-600 bg-orange-50' : ''
+                                            }`}>
+                                            {lead.priority || 'medium'}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="secondary" className={getTempColor(lead.temperature)}>
+                                            {lead.temperature?.toUpperCase()}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Badge variant="outline" className="capitalize text-xs">{lead.stage}</Badge>
+                                    </TableCell>
+                                    <TableCell>
+                                        {getChannelBadge(lead.channel)}
+                                    </TableCell>
+                                    <TableCell>
+                                        <div className="flex flex-col gap-1">
+                                            {/* Verifier Lock Button */}
+                                            {(currentUser?.role === 'admin' || (Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadVerifier'))) && (
+                                                lead.workingVerifier ? (
+                                                    (lead.workingVerifier._id === currentUser?._id || lead.workingVerifier._id === currentUser?.id) ? (
+                                                        <Button
+                                                            size="xs"
+                                                            className="h-6 text-[9px] px-2 font-bold uppercase tracking-tight bg-emerald-600 hover:bg-emerald-700 text-white"
+                                                            onClick={() => handleUnlockVerifier(lead._id)}
+                                                        >
+                                                            Verifier: Mine (Unlock)
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            size="xs"
+                                                            disabled
+                                                            className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
+                                                            title={`Locked by ${lead.workingVerifier.name}`}
+                                                        >
+                                                            Verifier: {lead.workingVerifier.name}
+                                                        </Button>
+                                                    )
+                                                ) : (
+                                                    <Button
+                                                        size="xs"
+                                                        variant="outline"
+                                                        className="h-6 text-[9px] px-2 font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                        onClick={() => handleLockVerifier(lead._id)}
+                                                    >
+                                                        Claim Verifier
+                                                    </Button>
+                                                )
+                                            )}
+
+                                            {/* Closer Lock Button */}
+                                            {(currentUser?.role === 'admin' || (Array.isArray(currentUser?.designation) && currentUser.designation.includes('LeadCloser'))) && (
+                                                lead.workingCloser ? (
+                                                    (lead.workingCloser._id === currentUser?._id || lead.workingCloser._id === currentUser?.id) ? (
+                                                        <Button
+                                                            size="xs"
+                                                            className="h-6 text-[9px] px-2 font-bold uppercase tracking-tight bg-blue-600 hover:bg-blue-700 text-white"
+                                                            onClick={() => handleUnlockCloser(lead._id)}
+                                                        >
+                                                            Closer: Mine (Unlock)
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            size="xs"
+                                                            disabled
+                                                            className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
+                                                            title={`Locked by ${lead.workingCloser.name}`}
+                                                        >
+                                                            Closer: {lead.workingCloser.name}
+                                                        </Button>
+                                                    )
+                                                ) : (
+                                                    !lead.isVerifiedByVerifier ? (
+                                                        <Button
+                                                            size="xs"
+                                                            disabled
+                                                            className="h-6 text-[9px] px-2 font-semibold bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed select-none"
+                                                            title="Please wait for a Verifier to mark this lead as verified first."
+                                                        >
+                                                            Claim Closer
+                                                        </Button>
+                                                    ) : (
+                                                        <Button
+                                                            size="xs"
+                                                            variant="outline"
+                                                            className="h-6 text-[9px] px-2 font-semibold border-slate-200 text-slate-600 hover:bg-slate-50"
+                                                            onClick={() => handleLockCloser(lead._id)}
+                                                        >
+                                                            Claim Closer
+                                                        </Button>
+                                                    )
+                                                )
+                                            )}
+                                        </div>
+                                    </TableCell>
+                                    {isPrivileged && (
+                                        <TableCell className="text-xs font-bold text-slate-600">
+                                            {lead.submittedBy?.name || 'Unknown'}
+                                        </TableCell>
+                                    )}
+                                    <TableCell className="text-right">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => navigate(`/leads/edit/${lead._id}`)}
+                                            disabled={!canEdit || isLeadLockedForUser(lead)}
+                                            title={!canEdit ? "You do not have permission to edit leads." : isLeadLockedForUser(lead) ? "This lead is locked by another team member." : ""}
+                                        >
+                                            <Pencil className="h-4 w-4" />
+                                        </Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+
+                    {/* Pagination Controls */}
+                    <div className="flex items-center justify-between px-4 py-3 border-t bg-slate-50">
+                        <div className="text-sm text-slate-500">
+                            Showing {leads.length > 0 ? (pagination.page - 1) * limit + 1 : 0} to {Math.min(pagination.page * limit, pagination.total)} of <span className="font-bold text-slate-700">{pagination.total}</span> entries
                         </div>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            disabled={pagination.page >= pagination.pages}
-                            onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
-                        >
-                            Next →
-                        </Button>
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={pagination.page <= 1}
+                                onClick={() => setPagination(p => ({ ...p, page: p.page - 1 }))}
+                            >
+                                ← Prev
+                            </Button>
+                            {/* Manual page entry */}
+                            <div className="flex items-center gap-1.5 border border-slate-200 rounded-lg bg-white px-2 py-1">
+                                <span className="text-xs text-slate-400">Page</span>
+                                <input
+                                    type="number"
+                                    min={1}
+                                    max={pagination.pages}
+                                    value={pagination.page}
+                                    onChange={(e) => {
+                                        const val = parseInt(e.target.value);
+                                        if (val >= 1 && val <= pagination.pages) {
+                                            setPagination(p => ({ ...p, page: val }));
+                                        }
+                                    }}
+                                    className="w-12 text-center text-xs font-bold text-slate-800 border-0 outline-none bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                />
+                                <span className="text-xs text-slate-400">/ {pagination.pages}</span>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={pagination.page >= pagination.pages}
+                                onClick={() => setPagination(p => ({ ...p, page: p.page + 1 }))}
+                            >
+                                Next →
+                            </Button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <Dialog open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-                <DialogContent className="sm:max-w-[500px]">
-                    <DialogHeader>
-                        <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                            <SlidersHorizontal className="h-5 w-5 text-slate-600" />
-                            Filter & Sort Leads
-                        </DialogTitle>
-                    </DialogHeader>
-                    
-                    <div className="grid grid-cols-2 gap-4 py-4">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Priority</label>
-                            <Select value={filterPriority} onValueChange={setFilterPriority}>
-                                <SelectTrigger className="h-10">
-                                    <SelectValue placeholder="Priority" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Priorities</SelectItem>
-                                    <SelectItem value="low">Low</SelectItem>
-                                    <SelectItem value="medium">Medium</SelectItem>
-                                    <SelectItem value="high">High</SelectItem>
-                                    <SelectItem value="urgent">Urgent</SelectItem>
-                                </SelectContent>
-                            </Select>
+                <Dialog open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
+                    <DialogContent className="sm:max-w-[500px]">
+                        <DialogHeader>
+                            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                                <SlidersHorizontal className="h-5 w-5 text-slate-600" />
+                                Filter & Sort Leads
+                            </DialogTitle>
+                        </DialogHeader>
+
+                        <div className="grid grid-cols-2 gap-4 py-4">
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Priority</label>
+                                <Select value={filterPriority} onValueChange={setFilterPriority}>
+                                    <SelectTrigger className="h-10">
+                                        <SelectValue placeholder="Priority" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Priorities</SelectItem>
+                                        <SelectItem value="low">Low</SelectItem>
+                                        <SelectItem value="medium">Medium</SelectItem>
+                                        <SelectItem value="high">High</SelectItem>
+                                        <SelectItem value="urgent">Urgent</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Stage</label>
+                                <Select value={filterStage} onValueChange={setFilterStage}>
+                                    <SelectTrigger className="h-10">
+                                        <SelectValue placeholder="Stage" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Stages</SelectItem>
+                                        <SelectItem value="identify">Identify</SelectItem>
+                                        <SelectItem value="qualify">Qualify</SelectItem>
+                                        <SelectItem value="nurture">Nurture</SelectItem>
+                                        <SelectItem value="close">Close (Commitment)</SelectItem>
+                                        <SelectItem value="onboard">Onboard</SelectItem>
+                                        <SelectItem value="retain">Retain</SelectItem>
+                                        <SelectItem value="refer">Refer</SelectItem>
+                                        <SelectItem value="rejected">Rejected</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Temperature</label>
+                                <Select value={filterTemp} onValueChange={setFilterTemp}>
+                                    <SelectTrigger className="h-10">
+                                        <SelectValue placeholder="Temperature" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Temperatures</SelectItem>
+                                        <SelectItem value="cold">Cold</SelectItem>
+                                        <SelectItem value="warm">Warm</SelectItem>
+                                        <SelectItem value="sql">SQL</SelectItem>
+                                        <SelectItem value="closed">Closed</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Activity / Contact</label>
+                                <Select value={filterContact} onValueChange={setFilterContact}>
+                                    <SelectTrigger className="h-10">
+                                        <SelectValue placeholder="Activity / Contact" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Activities</SelectItem>
+                                        <SelectItem value="contacted_today">Contacted Today</SelectItem>
+                                        <SelectItem value="needs_followup">Needs Follow-up</SelectItem>
+                                        <SelectItem value="commitments">Has Commitments</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Verifier</label>
+                                <Select value={filterVerifier} onValueChange={setFilterVerifier}>
+                                    <SelectTrigger className="h-10">
+                                        <SelectValue placeholder="Verifier" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Verifiers</SelectItem>
+                                        <SelectItem value="unassigned">Unassigned Only</SelectItem>
+                                        {verifiersList.map(v => (
+                                            <SelectItem key={v._id} value={v._id}>{v.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Closer</label>
+                                <Select value={filterCloser} onValueChange={setFilterCloser}>
+                                    <SelectTrigger className="h-10">
+                                        <SelectValue placeholder="Closer" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Closers</SelectItem>
+                                        <SelectItem value="unassigned">Unassigned Only</SelectItem>
+                                        {closersList.map(c => (
+                                            <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Channel</label>
+                                <Select value={filterChannel} onValueChange={setFilterChannel}>
+                                    <SelectTrigger className="h-10">
+                                        <SelectValue placeholder="Channel" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Channels</SelectItem>
+                                        <SelectItem value="Website">Website</SelectItem>
+                                        <SelectItem value="Manual">Manual</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Stage</label>
-                            <Select value={filterStage} onValueChange={setFilterStage}>
-                                <SelectTrigger className="h-10">
-                                    <SelectValue placeholder="Stage" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Stages</SelectItem>
-                                    <SelectItem value="identify">Identify</SelectItem>
-                                    <SelectItem value="qualify">Qualify</SelectItem>
-                                    <SelectItem value="nurture">Nurture</SelectItem>
-                                    <SelectItem value="close">Close (Commitment)</SelectItem>
-                                    <SelectItem value="onboard">Onboard</SelectItem>
-                                    <SelectItem value="retain">Retain</SelectItem>
-                                    <SelectItem value="refer">Refer</SelectItem>
-                                    <SelectItem value="rejected">Rejected</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Temperature</label>
-                            <Select value={filterTemp} onValueChange={setFilterTemp}>
-                                <SelectTrigger className="h-10">
-                                    <SelectValue placeholder="Temperature" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Temperatures</SelectItem>
-                                    <SelectItem value="cold">Cold</SelectItem>
-                                    <SelectItem value="warm">Warm</SelectItem>
-                                    <SelectItem value="sql">SQL</SelectItem>
-                                    <SelectItem value="closed">Closed</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Activity / Contact</label>
-                            <Select value={filterContact} onValueChange={setFilterContact}>
-                                <SelectTrigger className="h-10">
-                                    <SelectValue placeholder="Activity / Contact" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Activities</SelectItem>
-                                    <SelectItem value="contacted_today">Contacted Today</SelectItem>
-                                    <SelectItem value="needs_followup">Needs Follow-up</SelectItem>
-                                    <SelectItem value="commitments">Has Commitments</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Verifier</label>
-                            <Select value={filterVerifier} onValueChange={setFilterVerifier}>
-                                <SelectTrigger className="h-10">
-                                    <SelectValue placeholder="Verifier" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Verifiers</SelectItem>
-                                    <SelectItem value="unassigned">Unassigned Only</SelectItem>
-                                    {verifiersList.map(v => (
-                                        <SelectItem key={v._id} value={v._id}>{v.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Closer</label>
-                            <Select value={filterCloser} onValueChange={setFilterCloser}>
-                                <SelectTrigger className="h-10">
-                                    <SelectValue placeholder="Closer" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Closers</SelectItem>
-                                    <SelectItem value="unassigned">Unassigned Only</SelectItem>
-                                    {closersList.map(c => (
-                                        <SelectItem key={c._id} value={c._id}>{c.name}</SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Channel</label>
-                            <Select value={filterChannel} onValueChange={setFilterChannel}>
-                                <SelectTrigger className="h-10">
-                                    <SelectValue placeholder="Channel" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="all">All Channels</SelectItem>
-                                    <SelectItem value="Website">Website</SelectItem>
-                                    <SelectItem value="Manual">Manual</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-
-                    <DialogFooter className="flex justify-between items-center sm:justify-between w-full border-t pt-4">
-                        <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-bold uppercase tracking-wider"
-                            onClick={() => {
-                                handleClearAllFilters();
-                                setIsFiltersOpen(false);
-                            }}
-                        >
-                            Reset All
-                        </Button>
-                        <Button 
-                            size="sm" 
-                            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
-                            onClick={() => setIsFiltersOpen(false)}
-                        >
-                            Apply Filters
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-        </>) /* end activeTab === pipeline */ }
+                        <DialogFooter className="flex justify-between items-center sm:justify-between w-full border-t pt-4">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-xs text-rose-600 hover:text-rose-700 hover:bg-rose-50 font-bold uppercase tracking-wider"
+                                onClick={() => {
+                                    handleClearAllFilters();
+                                    setIsFiltersOpen(false);
+                                }}
+                            >
+                                Reset All
+                            </Button>
+                            <Button
+                                size="sm"
+                                className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                                onClick={() => setIsFiltersOpen(false)}
+                            >
+                                Apply Filters
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            </>) /* end activeTab === pipeline */}
         </div>
     );
 };
