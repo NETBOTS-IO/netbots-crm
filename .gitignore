@@ -27,6 +27,9 @@ dist-ssr
 *.sln
 *.sw?
 
+graphify-out/*
+.agents/*
+.gemini/*
 node_modules
 package-lock.json
 # Project-specific
