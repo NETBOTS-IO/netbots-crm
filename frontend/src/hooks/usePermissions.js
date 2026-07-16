@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 // Map of route paths to the required permission key
 const PAGE_PERMISSION_MAP = {
     '/': 'view_dashboard',
+    '/sales-dashboard': 'view_sales_dashboard',
     '/leads': 'can_view_leads',
     '/leads/new': 'can_add_leads',
     '/followups': 'can_view_leads',
@@ -25,15 +26,32 @@ const PAGE_PERMISSION_MAP = {
     '/commissions': 'view_commissions',
     '/payouts': 'manage_payouts',
     '/leaderboard': 'view_leaderboard',
-    '/audit-logs': 'manage_permissions',
+    '/audit-logs': 'view_audit_logs',
     '/import/leads': 'can_add_leads',
-    '/packages': 'admin_only',
+    '/packages': 'view_dashboard', // open to all staff
     '/help': null, // everyone
+    '/email': 'view_email_dashboard',
+    '/email/accounts': 'manage_smtp_accounts',
+    '/email/templates': 'manage_email_templates',
+    '/email/templates/new': 'manage_email_templates',
+    '/email/templates/:id/edit': 'manage_email_templates',
+    '/email/campaigns': 'manage_email_campaigns',
+    '/email/campaigns/new': 'manage_email_campaigns',
+    '/email/campaigns/edit/:id': 'manage_email_campaigns',
+    '/email/campaigns/:id/report': 'manage_email_campaigns',
+    '/email/lists': 'manage_email_lists',
+    '/email/audiences': 'manage_email_audiences',
+    '/email/sequences': 'manage_email_sequences',
+    '/email/sequences/new': 'manage_email_sequences',
+    '/email/sequences/:id/edit': 'manage_email_sequences',
+    '/email/analytics': 'view_email_analytics',
+    '/email/unsubscribes': 'manage_unsubscribes',
 };
 
 // Map of permissions to human-friendly labels
 export const PERMISSION_LABELS = {
     view_dashboard: 'View Dashboard',
+    view_sales_dashboard: 'View Sales Dashboard',
     can_view_leads: 'View Leads Pipeline',
     can_add_leads: 'Add New Leads',
     can_edit_leads: 'Edit Leads',
@@ -45,6 +63,16 @@ export const PERMISSION_LABELS = {
     manage_payouts: 'Manage Payouts',
     view_leaderboard: 'View Leaderboard',
     can_bulk_manage_leads: 'Bulk Manage Leads',
+    view_audit_logs: 'View Audit Logs',
+    view_email_dashboard: 'View Email Dashboard',
+    manage_smtp_accounts: 'Manage SMTP Accounts',
+    manage_email_templates: 'Manage Email Templates',
+    manage_email_campaigns: 'Manage Email Campaigns',
+    manage_email_lists: 'Manage Email Lists',
+    manage_email_audiences: 'Manage Email Audiences',
+    manage_email_sequences: 'Manage Email Sequences',
+    view_email_analytics: 'View Email Analytics',
+    manage_unsubscribes: 'Manage Unsubscribes',
     admin_only: 'Administrator Access',
 };
 

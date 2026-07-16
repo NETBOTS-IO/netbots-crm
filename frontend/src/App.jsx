@@ -65,9 +65,9 @@ function App() {
               </RoleGate>
             } />
 
-            {/* Sales Dashboard — admin only */}
+            {/* Sales Dashboard — requires view_sales_dashboard */}
             <Route path="sales-dashboard" element={
-              <RoleGate adminOnly action="View Sales Dashboard">
+              <RoleGate permission="view_sales_dashboard" action="View Sales Dashboard">
                 <SalesDashboard />
               </RoleGate>
             } />
@@ -161,9 +161,9 @@ function App() {
               </RoleGate>
             } />
 
-            {/* Audit Logs — admin only */}
+            {/* Audit Logs — requires view_audit_logs */}
             <Route path="audit-logs" element={
-              <RoleGate adminOnly action="View Audit Logs">
+              <RoleGate permission="view_audit_logs" action="View Audit Logs">
                 <AuditLogs />
               </RoleGate>
             } />
@@ -178,23 +178,23 @@ function App() {
             {/* Help — open to all */}
             <Route path="help" element={<HelpPage />} />
 
-            {/* MailFlow Routes — Admin Only */}
-            <Route path="email" element={<RoleGate adminOnly action="View Email Dashboard"><EmailDashboard /></RoleGate>} />
-            <Route path="email/accounts" element={<RoleGate adminOnly action="Manage SMTP Accounts"><EmailAccounts /></RoleGate>} />
-            <Route path="email/templates" element={<RoleGate adminOnly action="Manage Templates"><EmailTemplates /></RoleGate>} />
-            <Route path="email/templates/new" element={<RoleGate adminOnly action="Create Template"><TemplateEditor /></RoleGate>} />
-            <Route path="email/templates/:id/edit" element={<RoleGate adminOnly action="Edit Template"><TemplateEditor /></RoleGate>} />
-            <Route path="email/campaigns" element={<RoleGate adminOnly action="Manage Campaigns"><EmailCampaigns /></RoleGate>} />
-            <Route path="email/campaigns/new" element={<RoleGate adminOnly action="Create Campaign"><CampaignBuilder /></RoleGate>} />
-            <Route path="email/campaigns/edit/:id" element={<RoleGate adminOnly action="Edit Campaign"><CampaignBuilder /></RoleGate>} />
-            <Route path="email/campaigns/:id/report" element={<RoleGate adminOnly action="Campaign Report"><CampaignReport /></RoleGate>} />
-            <Route path="email/lists" element={<RoleGate adminOnly action="Mailing Lists"><EmailLists /></RoleGate>} />
-            <Route path="email/audiences" element={<RoleGate adminOnly action="Manage Audiences"><AudienceBuilder /></RoleGate>} />
-            <Route path="email/sequences" element={<RoleGate adminOnly action="Manage Sequences"><EmailSequences /></RoleGate>} />
-            <Route path="email/sequences/new" element={<RoleGate adminOnly action="Create Sequence"><SequenceBuilder /></RoleGate>} />
-            <Route path="email/sequences/:id/edit" element={<RoleGate adminOnly action="Edit Sequence"><SequenceBuilder /></RoleGate>} />
-            <Route path="email/analytics" element={<RoleGate adminOnly action="Email Analytics"><EmailAnalytics /></RoleGate>} />
-            <Route path="email/unsubscribes" element={<RoleGate adminOnly action="Unsubscribes"><Unsubscribes /></RoleGate>} />
+            {/* MailFlow Routes — Granular Permissions */}
+            <Route path="email" element={<RoleGate permission="view_email_dashboard" action="View Email Dashboard"><EmailDashboard /></RoleGate>} />
+            <Route path="email/accounts" element={<RoleGate permission="manage_smtp_accounts" action="Manage SMTP Accounts"><EmailAccounts /></RoleGate>} />
+            <Route path="email/templates" element={<RoleGate permission="manage_email_templates" action="Manage Templates"><EmailTemplates /></RoleGate>} />
+            <Route path="email/templates/new" element={<RoleGate permission="manage_email_templates" action="Create Template"><TemplateEditor /></RoleGate>} />
+            <Route path="email/templates/:id/edit" element={<RoleGate permission="manage_email_templates" action="Edit Template"><TemplateEditor /></RoleGate>} />
+            <Route path="email/campaigns" element={<RoleGate permission="manage_email_campaigns" action="Manage Campaigns"><EmailCampaigns /></RoleGate>} />
+            <Route path="email/campaigns/new" element={<RoleGate permission="manage_email_campaigns" action="Create Campaign"><CampaignBuilder /></RoleGate>} />
+            <Route path="email/campaigns/edit/:id" element={<RoleGate permission="manage_email_campaigns" action="Edit Campaign"><CampaignBuilder /></RoleGate>} />
+            <Route path="email/campaigns/:id/report" element={<RoleGate permission="manage_email_campaigns" action="Campaign Report"><CampaignReport /></RoleGate>} />
+            <Route path="email/lists" element={<RoleGate permission="manage_email_lists" action="Mailing Lists"><EmailLists /></RoleGate>} />
+            <Route path="email/audiences" element={<RoleGate permission="manage_email_audiences" action="Manage Audiences"><AudienceBuilder /></RoleGate>} />
+            <Route path="email/sequences" element={<RoleGate permission="manage_email_sequences" action="Manage Sequences"><EmailSequences /></RoleGate>} />
+            <Route path="email/sequences/new" element={<RoleGate permission="manage_email_sequences" action="Create Sequence"><SequenceBuilder /></RoleGate>} />
+            <Route path="email/sequences/:id/edit" element={<RoleGate permission="manage_email_sequences" action="Edit Sequence"><SequenceBuilder /></RoleGate>} />
+            <Route path="email/analytics" element={<RoleGate permission="view_email_analytics" action="Email Analytics"><EmailAnalytics /></RoleGate>} />
+            <Route path="email/unsubscribes" element={<RoleGate permission="manage_unsubscribes" action="Unsubscribes"><Unsubscribes /></RoleGate>} />
 
           </Route>
         </Routes>

@@ -25,29 +25,44 @@ router.post('/login', async (req, res) => {
 
 const TEMPLATES = {
     Supervisor: {
-        view_dashboard: true, can_view_leads: true, can_add_leads: true, can_edit_leads: true,
+        view_dashboard: true, view_sales_dashboard: true, can_view_leads: true, can_add_leads: true, can_edit_leads: true,
         can_delete_leads: true, manage_clients: true, manage_team: true, manage_permissions: true,
-        view_commissions: true, manage_payouts: true, view_leaderboard: true, can_bulk_manage_leads: true
+        view_commissions: true, manage_payouts: true, view_leaderboard: true, can_bulk_manage_leads: true,
+        view_email_dashboard: true, manage_smtp_accounts: true, manage_email_templates: true, manage_email_campaigns: true,
+        manage_email_lists: true, manage_email_audiences: true, manage_email_sequences: true, view_email_analytics: true,
+        manage_unsubscribes: true, view_audit_logs: true
     },
     LeadCollector: {
-        view_dashboard: true, can_view_leads: true, can_add_leads: true, can_edit_leads: false,
+        view_dashboard: true, view_sales_dashboard: false, can_view_leads: true, can_add_leads: true, can_edit_leads: false,
         can_delete_leads: false, manage_clients: false, manage_team: false, manage_permissions: false,
-        view_commissions: true, manage_payouts: false, view_leaderboard: true, can_bulk_manage_leads: false
+        view_commissions: true, manage_payouts: false, view_leaderboard: true, can_bulk_manage_leads: false,
+        view_email_dashboard: false, manage_smtp_accounts: false, manage_email_templates: false, manage_email_campaigns: false,
+        manage_email_lists: false, manage_email_audiences: false, manage_email_sequences: false, view_email_analytics: false,
+        manage_unsubscribes: false, view_audit_logs: false
     },
     LeadVerifier: {
-        view_dashboard: true, can_view_leads: true, can_add_leads: false, can_edit_leads: true,
+        view_dashboard: true, view_sales_dashboard: false, can_view_leads: true, can_add_leads: false, can_edit_leads: true,
         can_delete_leads: false, manage_clients: false, manage_team: false, manage_permissions: false,
-        view_commissions: true, manage_payouts: false, view_leaderboard: true, can_bulk_manage_leads: false
+        view_commissions: true, manage_payouts: false, view_leaderboard: true, can_bulk_manage_leads: false,
+        view_email_dashboard: false, manage_smtp_accounts: false, manage_email_templates: false, manage_email_campaigns: false,
+        manage_email_lists: false, manage_email_audiences: false, manage_email_sequences: false, view_email_analytics: false,
+        manage_unsubscribes: false, view_audit_logs: false
     },
     LeadCloser: {
-        view_dashboard: true, can_view_leads: true, can_edit_leads: true, can_add_leads: false,
+        view_dashboard: true, view_sales_dashboard: false, can_view_leads: true, can_edit_leads: true, can_add_leads: false,
         can_delete_leads: false, manage_clients: true, manage_team: false, manage_permissions: false,
-        view_commissions: true, manage_payouts: false, view_leaderboard: true, can_bulk_manage_leads: false
+        view_commissions: true, manage_payouts: false, view_leaderboard: true, can_bulk_manage_leads: false,
+        view_email_dashboard: false, manage_smtp_accounts: false, manage_email_templates: false, manage_email_campaigns: false,
+        manage_email_lists: false, manage_email_audiences: false, manage_email_sequences: false, view_email_analytics: false,
+        manage_unsubscribes: false, view_audit_logs: false
     },
     Reset: {
-        view_dashboard: false, can_view_leads: false, can_add_leads: false, can_edit_leads: false,
+        view_dashboard: false, view_sales_dashboard: false, can_view_leads: false, can_add_leads: false, can_edit_leads: false,
         can_delete_leads: false, manage_clients: false, manage_team: false, manage_permissions: false,
-        view_commissions: false, manage_payouts: false, view_leaderboard: false, can_bulk_manage_leads: false
+        view_commissions: false, manage_payouts: false, view_leaderboard: false, can_bulk_manage_leads: false,
+        view_email_dashboard: false, manage_smtp_accounts: false, manage_email_templates: false, manage_email_campaigns: false,
+        manage_email_lists: false, manage_email_audiences: false, manage_email_sequences: false, view_email_analytics: false,
+        manage_unsubscribes: false, view_audit_logs: false
     }
 };
 
