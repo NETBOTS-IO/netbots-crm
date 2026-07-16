@@ -203,9 +203,67 @@ export default function PermissionsManagement() {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[400px] text-slate-500">
-                <RefreshCcw className="animate-spin text-indigo-600 mb-4" size={32} />
-                <p className="font-bold uppercase text-xs tracking-widest">Loading granular permission schema...</p>
+            <div className="space-y-6 animate-pulse">
+                {/* Header Skeleton */}
+                <div className="h-20 bg-slate-200 rounded-xl w-full"></div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                    {/* Left Sidebar List Skeleton */}
+                    <div className="lg:col-span-3 space-y-4">
+                        <div className="h-10 bg-slate-200 rounded-lg w-full"></div>
+                        <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-4">
+                            {[1, 2, 3, 4, 5].map((n) => (
+                                <div key={n} className="flex justify-between items-center">
+                                    <div className="space-y-2 flex-1">
+                                        <div className="h-3.5 bg-slate-200 rounded w-2/3"></div>
+                                        <div className="h-2.5 bg-slate-100 rounded w-1/2"></div>
+                                    </div>
+                                    <div className="h-5 bg-slate-200 rounded w-10"></div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Right Panel Skeleton */}
+                    <div className="lg:col-span-9 bg-white border border-slate-200 rounded-xl p-6 space-y-6">
+                        <div className="flex justify-between items-center border-b pb-4">
+                            <div className="space-y-2 flex-1">
+                                <div className="h-5 bg-slate-200 rounded w-1/4"></div>
+                                <div className="h-3 bg-slate-100 rounded w-1/3"></div>
+                            </div>
+                            <div className="h-9 bg-slate-200 rounded-lg w-24"></div>
+                        </div>
+
+                        {/* Presets block */}
+                        <div className="bg-slate-50 border border-slate-200/80 p-4 rounded-xl space-y-3">
+                            <div className="h-2 bg-slate-200 rounded w-20"></div>
+                            <div className="flex gap-2">
+                                {[1, 2, 3, 4].map(n => <div key={n} className="h-7 bg-slate-200 rounded-full w-16"></div>)}
+                            </div>
+                        </div>
+
+                        {/* Categories block */}
+                        <div className="space-y-6">
+                            {[1, 2].map((cat) => (
+                                <div key={cat} className="space-y-3">
+                                    <div className="h-3.5 bg-slate-200 rounded w-32 border-b pb-1"></div>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+                                        {[1, 2, 3].map((card) => (
+                                            <div key={card} className="p-3 border border-slate-150 rounded-lg flex gap-2">
+                                                <div className="h-4 bg-slate-200 rounded w-4 mt-0.5 shrink-0"></div>
+                                                <div className="space-y-2 flex-1">
+                                                    <div className="h-3 bg-slate-200 rounded w-3/4"></div>
+                                                    <div className="h-2.5 bg-slate-100 rounded w-5/6"></div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                    </div>
+                </div>
             </div>
         );
     }
@@ -294,7 +352,7 @@ export default function PermissionsManagement() {
                                             size="sm"
                                             onClick={() => handleSave(selectedMember._id)}
                                             disabled={selectedMember.role === 'admin' || saving[selectedMember._id]}
-                                            className="font-bold text-xs uppercase bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 rounded-lg shadow transition-all duration-200"
+                                            className="font-bold text-xs uppercase bg-indigo-600 hover:bg-indigo-700 text-white h-9 px-4 rounded-lg shadow hover:shadow-md hover:scale-[1.03] active:scale-[0.97] transition-all duration-300"
                                         >
                                             {saving[selectedMember._id] ? 'Saving...' : 'Save Changes'}
                                         </Button>
@@ -306,11 +364,11 @@ export default function PermissionsManagement() {
                                 <div className="bg-slate-50 border border-slate-200/80 p-3.5 rounded-xl space-y-2">
                                     <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Apply Template Presets:</span>
                                     <div className="flex flex-wrap gap-1.5">
-                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-black uppercase border-slate-200 hover:bg-indigo-600 hover:text-white rounded-full bg-white transition-all shadow-sm px-3" onClick={() => applyTemplate(selectedMember._id, 'Supervisor')} disabled={selectedMember.role === 'admin'}>Supervisor</Button>
-                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-black uppercase border-slate-200 hover:bg-indigo-600 hover:text-white rounded-full bg-white transition-all shadow-sm px-3" onClick={() => applyTemplate(selectedMember._id, 'LeadCollector')} disabled={selectedMember.role === 'admin'}>Collector</Button>
-                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-black uppercase border-slate-200 hover:bg-indigo-600 hover:text-white rounded-full bg-white transition-all shadow-sm px-3" onClick={() => applyTemplate(selectedMember._id, 'LeadVerifier')} disabled={selectedMember.role === 'admin'}>Verifier</Button>
-                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-black uppercase border-slate-200 hover:bg-indigo-600 hover:text-white rounded-full bg-white transition-all shadow-sm px-3" onClick={() => applyTemplate(selectedMember._id, 'LeadCloser')} disabled={selectedMember.role === 'admin'}>Closer</Button>
-                                        <Button variant="ghost" size="xs" className="h-7 text-[9px] font-black uppercase text-red-650 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-full transition-all px-3" onClick={() => applyTemplate(selectedMember._id, 'Reset')} disabled={selectedMember.role === 'admin'}>Clear All</Button>
+                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-black uppercase border-slate-200 hover:bg-indigo-600 hover:text-white rounded-full bg-white transition-all shadow-sm px-3 hover:scale-[1.03] active:scale-[0.97] duration-300" onClick={() => applyTemplate(selectedMember._id, 'Supervisor')} disabled={selectedMember.role === 'admin'}>Supervisor</Button>
+                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-black uppercase border-slate-200 hover:bg-indigo-600 hover:text-white rounded-full bg-white transition-all shadow-sm px-3 hover:scale-[1.03] active:scale-[0.97] duration-300" onClick={() => applyTemplate(selectedMember._id, 'LeadCollector')} disabled={selectedMember.role === 'admin'}>Collector</Button>
+                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-black uppercase border-slate-200 hover:bg-indigo-600 hover:text-white rounded-full bg-white transition-all shadow-sm px-3 hover:scale-[1.03] active:scale-[0.97] duration-300" onClick={() => applyTemplate(selectedMember._id, 'LeadVerifier')} disabled={selectedMember.role === 'admin'}>Verifier</Button>
+                                        <Button variant="outline" size="xs" className="h-7 text-[9px] font-black uppercase border-slate-200 hover:bg-indigo-600 hover:text-white rounded-full bg-white transition-all shadow-sm px-3 hover:scale-[1.03] active:scale-[0.97] duration-300" onClick={() => applyTemplate(selectedMember._id, 'LeadCloser')} disabled={selectedMember.role === 'admin'}>Closer</Button>
+                                        <Button variant="ghost" size="xs" className="h-7 text-[9px] font-black uppercase text-red-650 hover:bg-red-50 border border-transparent hover:border-red-200 rounded-full transition-all px-3 hover:scale-[1.03] active:scale-[0.97] duration-300" onClick={() => applyTemplate(selectedMember._id, 'Reset')} disabled={selectedMember.role === 'admin'}>Clear All</Button>
                                     </div>
                                 </div>
 
