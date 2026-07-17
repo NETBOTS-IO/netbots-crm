@@ -41,7 +41,6 @@ import Unsubscribes from './pages/email/Unsubscribes';
 
 // Finance Page Imports
 import FinanceDashboard from './pages/finance/FinanceDashboard';
-import IncomeExpense from './pages/finance/IncomeExpense';
 
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -89,8 +88,8 @@ function App() {
               </RoleGate>
             } />
             <Route path="finance/transactions" element={
-              <RoleGate permission="view_dashboard" action="Manage Transactions">
-                <IncomeExpense />
+              <RoleGate permission="view_dashboard" action="View Finance Dashboard">
+                <FinanceDashboard />
               </RoleGate>
             } />
 
