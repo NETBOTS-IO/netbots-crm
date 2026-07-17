@@ -158,6 +158,7 @@ const FinanceDashboard = () => {
     issuerDetails: '2nd Floor, Shah Plaza, Opp Pakeeza Bakers,\nKarasmathang Chowk, Skardu\ninfo@netbots.io\n+92 343 3757372',
     advancePaid: 0,
     discountPercent: 0,
+    note: '',
     items: [
       { description: 'Consulting & Implementation', quantity: 1, rate: 1500, discount: 150 }
     ]
@@ -1604,6 +1605,15 @@ const FinanceDashboard = () => {
                   onChange={e => setInvoiceForm(prev => ({ ...prev, issuerDetails: e.target.value }))}
                 />
               </div>
+              <div className="col-span-2">
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Receipt Note / Terms</label>
+                <textarea
+                  className="w-full text-xs border border-slate-200 rounded p-2 font-mono h-16 bg-white"
+                  value={invoiceForm.note}
+                  onChange={e => setInvoiceForm(prev => ({ ...prev, note: e.target.value }))}
+                  placeholder="e.g. Terms: 50% advance, balance on delivery. Thank you for your business!"
+                />
+              </div>
             </div>
 
             {/* Items control table */}
@@ -1831,7 +1841,17 @@ const FinanceDashboard = () => {
                 </div>
               </div>
 
-              <div>--------------------------------</div>
+              {invoiceForm.note && (
+                <>
+                  <div className="py-1">--------------------------------</div>
+                  <div className="text-left whitespace-pre-line text-[10px] text-slate-750 font-mono leading-relaxed py-1">
+                    <span className="font-bold text-slate-800">NOTE:</span><br />
+                    {invoiceForm.note}
+                  </div>
+                </>
+              )}
+
+              <div className="py-1">--------------------------------</div>
 
               {/* Barcode simulation & Thank you */}
               <div className="text-center space-y-2 mt-4">
