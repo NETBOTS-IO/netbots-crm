@@ -1767,31 +1767,33 @@ const FinanceDashboard = () => {
                 <div className="pt-0.5">--------------------------------</div>
               </div>
 
-              {/* Items grid */}
-              <div className="space-y-1 my-3 text-[10px]">
-                <div className="grid grid-cols-12 font-bold border-b border-dashed pb-1">
-                  <span className="col-span-5">ITEM / UNIT</span>
-                  <span className="col-span-2 text-right">RATE</span>
-                  <span className="col-span-1 text-center">QTY</span>
-                  <span className="col-span-2 text-right">DISC</span>
-                  <span className="col-span-2 text-right">TOTAL</span>
-                </div>
-                {invoiceForm.items.map((item, idx) => {
-                  const subTotal = item.quantity * item.rate;
-                  const finalTotal = subTotal - Number(item.discount || 0);
-                  return (
-                    <div key={idx} className="grid grid-cols-12 py-0.5 border-b border-slate-100/50">
-                      <span className="col-span-5 truncate font-semibold">{item.description}</span>
-                      <span className="col-span-2 text-right">{item.rate}</span>
-                      <span className="col-span-1 text-center">{item.quantity}</span>
-                      <span className="col-span-2 text-right text-slate-500">-{item.discount}</span>
-                      <span className="col-span-2 text-right font-bold">{finalTotal}</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div>--------------------------------</div>
+              {/* Items Table */}
+              <table className="w-full text-[10px] my-3 border-collapse text-slate-900 font-mono">
+                <thead>
+                  <tr className="font-bold border-b border-dashed border-slate-300">
+                    <th className="text-left pb-1 font-mono font-bold" style={{ width: '45%' }}>ITEM / UNIT</th>
+                    <th className="text-right pb-1 font-mono font-bold" style={{ width: '15%' }}>RATE</th>
+                    <th className="text-center pb-1 font-mono font-bold" style={{ width: '10%' }}>QTY</th>
+                    <th className="text-right pb-1 font-mono font-bold" style={{ width: '15%' }}>DISC</th>
+                    <th className="text-right pb-1 font-mono font-bold" style={{ width: '15%' }}>TOTAL</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {invoiceForm.items.map((item, idx) => {
+                    const subTotal = item.quantity * item.rate;
+                    const finalTotal = subTotal - Number(item.discount || 0);
+                    return (
+                      <tr key={idx} className="border-b border-slate-100/50">
+                        <td className="py-1.5 text-left font-semibold font-mono truncate max-w-[120px]">{item.description}</td>
+                        <td className="py-1.5 text-right font-mono">{item.rate}</td>
+                        <td className="py-1.5 text-center font-mono">{item.quantity}</td>
+                        <td className="py-1.5 text-right font-mono text-slate-505">-{item.discount}</td>
+                        <td className="py-1.5 text-right font-bold font-mono">{finalTotal}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
 
               {/* Totals & Advance */}
               <div className="space-y-1 my-3 font-semibold text-right text-[10px]">
