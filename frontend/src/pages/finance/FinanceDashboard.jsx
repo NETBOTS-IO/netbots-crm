@@ -157,6 +157,7 @@ const FinanceDashboard = () => {
     issuerName: 'Net Bots (SMC-PRIVATE) LIMITED',
     issuerDetails: '2nd Floor, Shah Plaza, Opp Pakeeza Bakers,\nKarasmathang Chowk, Skardu\ninfo@netbots.io\n+92 343 3757372',
     advancePaid: 0,
+    discountPercent: 0,
     items: [
       { description: 'Consulting & Implementation', quantity: 1, rate: 1500, discount: 150 }
     ]
@@ -610,9 +611,15 @@ const FinanceDashboard = () => {
   const invoiceSubtotals = invoiceForm.items.map(item => item.quantity * item.rate);
   const invoiceDiscounts = invoiceForm.items.map(item => Number(item.discount || 0));
   const invoiceGrossTotal = invoiceSubtotals.reduce((a, b) => a + b, 0);
-  const invoiceTotalDiscount = invoiceDiscounts.reduce((a, b) => a + b, 0);
+  const itemTotalDiscount = invoiceDiscounts.reduce((a, b) => a + b, 0);
+  
+  const netAfterItemDiscounts = invoiceGrossTotal - itemTotalDiscount;
+  const percentDiscountAmount = Number(((netAfterItemDiscounts * (invoiceForm.discountPercent || 0)) / 100).toFixed(2));
+  
+  const invoiceTotalDiscount = itemTotalDiscount + percentDiscountAmount;
   const invoiceNetTotal = invoiceGrossTotal - invoiceTotalDiscount;
-  const invoiceBalancePending = invoiceNetTotal - Number(invoiceForm.advancePaid || 0);
+  const invoiceBalancePending = Math.max(0, invoiceNetTotal - Number(invoiceForm.advancePaid || 0));
+  const displayedAdvance = Math.min(invoiceNetTotal, Number(invoiceForm.advancePaid || 0));
 
   return (
     <div className="space-y-6">
@@ -1577,6 +1584,16 @@ const FinanceDashboard = () => {
                   onChange={e => setInvoiceForm(prev => ({ ...prev, advancePaid: Number(e.target.value || 0) }))}
                 />
               </div>
+              <div>
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Total Discount (%)</label>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={invoiceForm.discountPercent}
+                  onChange={e => setInvoiceForm(prev => ({ ...prev, discountPercent: Number(e.target.value || 0) }))}
+                />
+              </div>
               <div className="col-span-2">
                 <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">NetBots Contact & Address Details</label>
                 <textarea
@@ -1775,13 +1792,25 @@ const FinanceDashboard = () => {
               <div>--------------------------------</div>
 
               {/* Totals & Advance */}
-              <div className="space-y-1 my-3 font-semibold text-right">
+              <div className="space-y-1 my-3 font-semibold text-right text-[10px]">
                 <div className="flex justify-between">
                   <span>GROSS SUBTOTAL:</span>
                   <span>PKR {invoiceGrossTotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-slate-600">
-                  <span>TOTAL DISCOUNT:</span>
+                {itemTotalDiscount > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>ITEM DISCOUNTS:</span>
+                    <span>-PKR {itemTotalDiscount.toFixed(2)}</span>
+                  </div>
+                )}
+                {percentDiscountAmount > 0 && (
+                  <div className="flex justify-between text-slate-600">
+                    <span>TOTAL DISCOUNT ({invoiceForm.discountPercent}%):</span>
+                    <span>-PKR {percentDiscountAmount.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-slate-600 font-bold">
+                  <span>COMBINED DISCOUNT:</span>
                   <span>-PKR {invoiceTotalDiscount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-green-700 font-bold border-t pt-1">
@@ -1790,9 +1819,9 @@ const FinanceDashboard = () => {
                 </div>
                 <div className="flex justify-between text-indigo-700">
                   <span>ADVANCE RECEIVED:</span>
-                  <span>-PKR {Number(invoiceForm.advancePaid || 0).toFixed(2)}</span>
+                  <span>-PKR {displayedAdvance.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-red-700 font-black border-t border-double pt-1 text-[12px]">
+                <div className="flex justify-between text-red-700 font-black border-t border-double pt-1 text-[11px]">
                   <span>BALANCE DUE:</span>
                   <span>PKR {invoiceBalancePending.toFixed(2)}</span>
                 </div>
