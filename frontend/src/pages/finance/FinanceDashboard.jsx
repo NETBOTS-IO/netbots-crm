@@ -197,25 +197,25 @@ const FinanceDashboard = () => {
         api.get('/finance/reports/balance-sheet')
       ]);
 
-      setAccounts(accountsRes.data?.data || []);
-      setIncomes(incomesRes.data?.data || []);
-      setExpenses(expensesRes.data?.data || []);
-      setAssets(assetsRes.data?.data || []);
-      setLiabilities(liabilitiesRes.data?.data || []);
+      setAccounts(accountsRes?.data || []);
+      setIncomes(incomesRes?.data || []);
+      setExpenses(expensesRes?.data || []);
+      setAssets(assetsRes?.data || []);
+      setLiabilities(liabilitiesRes?.data || []);
       setCrmData({
-        clients: clientsRes.data?.data || [],
-        vendors: vendorsRes.data?.data || [],
-        projects: projectsRes.data?.data || []
+        clients: clientsRes?.data || [],
+        vendors: vendorsRes?.data || [],
+        projects: projectsRes?.data || []
       });
 
       const trialBalanceRes = await api.get('/finance/reports/trial-balance');
-      const cashAcct = trialBalanceRes.data?.data?.accounts?.find(a => a.account === 'Cash on Hand');
+      const cashAcct = trialBalanceRes?.data?.accounts?.find(a => a.account === 'Cash on Hand');
       const cashBalance = cashAcct ? (cashAcct.debit - cashAcct.credit) : 0;
 
       setSummaryData({
-        netProfit: pnlRes.data?.data?.netProfit || 0,
-        totalAssets: bsRes.data?.data?.totalAssets || 0,
-        totalLiabilities: bsRes.data?.data?.totalLiabilities || 0,
+        netProfit: pnlRes?.data?.netProfit || 0,
+        totalAssets: bsRes?.data?.totalAssets || 0,
+        totalLiabilities: bsRes?.data?.totalLiabilities || 0,
         cashOnHand: cashBalance
       });
     } catch (err) {
@@ -240,7 +240,7 @@ const FinanceDashboard = () => {
     try {
       const endpoint = `/finance/reports/${selectedReport}`;
       const res = await api.get(endpoint);
-      setReportData(res.data?.data);
+      setReportData(res?.data);
     } catch (err) {
       console.error(err);
       toast({ variant: "destructive", title: "Report Error", description: "Failed to generate report." });
