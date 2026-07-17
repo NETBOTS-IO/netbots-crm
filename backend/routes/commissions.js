@@ -61,7 +61,7 @@ router.put('/:id', auth, requireRole(['admin']), async (req, res) => {
     const commission = await Commission.findByIdAndUpdate(
       req.params.id,
       { $set: req.body },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
     if (!commission) return res.status(404).json({ success: false, error: 'Commission not found' });
     res.json({ success: true, data: commission });

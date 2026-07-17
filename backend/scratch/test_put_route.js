@@ -56,7 +56,7 @@ async function testPutRoute() {
     const lockCheck = await checkLeadLock(lead._id, admin);
     console.log('Simulation LockCheck allowed:', lockCheck.allowed);
 
-    const updatedDoc = await Lead.findByIdAndUpdate(lead._id, updateData, { new: true });
+    const updatedDoc = await Lead.findByIdAndUpdate(lead._id, updateData, { returnDocument: 'after' });
     console.log('Simulation findByIdAndUpdate Success:', updatedDoc.companyName);
 
     process.exit(0);

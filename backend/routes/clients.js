@@ -62,7 +62,7 @@ router.post('/', auth, requirePermission('manage_clients'), async (req, res) => 
 // PUT /api/clients/:id - Update client (Admin or manage_clients)
 router.put('/:id', auth, requirePermission('manage_clients'), async (req, res) => {
   try {
-    const client = await Client.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const client = await Client.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
     if (!client) return res.status(404).json({ success: false, error: 'Client not found' });
 
     // Sync commissions for engagedTeam

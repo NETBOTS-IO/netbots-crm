@@ -49,7 +49,7 @@ router.put('/:id', auth, requireRole(['admin']), async (req, res) => {
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { $set: { name, email, role, designation, phone, rank } },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     res.json({ success: true, data: user });
@@ -70,7 +70,7 @@ router.put('/:id/reset-password', auth, requireRole(['admin']), async (req, res)
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { $set: { password: hashedPassword } },
-      { new: true }
+      { returnDocument: 'after' }
     );
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     res.json({ success: true, message: 'Password reset successful.' });
@@ -98,7 +98,7 @@ router.put('/:id/permissions', auth, requireRole(['admin', 'ceo']), async (req, 
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { $set: { permissions } },
-      { new: true, runValidators: true }
+      { returnDocument: 'after', runValidators: true }
     );
     if (!user) return res.status(404).json({ success: false, error: 'User not found' });
     res.json({ success: true, data: user });

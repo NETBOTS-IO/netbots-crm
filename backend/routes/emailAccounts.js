@@ -36,7 +36,7 @@ router.post('/', async (req, res) => {
 // PUT /api/email-accounts/:id
 router.put('/:id', async (req, res) => {
   try {
-    const updated = await EmailAccount.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updated = await EmailAccount.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });

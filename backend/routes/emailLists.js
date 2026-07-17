@@ -44,7 +44,7 @@ router.post('/', auth, async (req, res) => {
 // PUT /api/email-lists/:id
 router.put('/:id', auth, async (req, res) => {
   try {
-    const updated = await EmailList.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updated = await EmailList.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
     if (updated) {
       updated.stats.totalSubscribers = updated.subscribers ? updated.subscribers.length : 0;
       updated.stats.activeSubscribers = updated.subscribers ? updated.subscribers.filter(s => s.status === 'subscribed').length : 0;

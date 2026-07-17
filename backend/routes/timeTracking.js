@@ -26,7 +26,7 @@ router.post('/ping', auth, async (req, res) => {
         const timeLog = await TimeLog.findOneAndUpdate(
             { userId: req.user._id, date },
             { $inc: { activeSeconds: incrementSeconds } },
-            { new: true, upsert: true }
+            { returnDocument: 'after', upsert: true }
         );
 
         // Also update User's lastActivityAt and activeStatus for presence tracking

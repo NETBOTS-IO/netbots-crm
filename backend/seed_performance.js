@@ -27,36 +27,36 @@ async function seed() {
   const collector1 = await User.findOneAndUpdate(
     { email: 'ali@netbots.io' },
     { name: 'Ali Collector', password: hash, role: 'lead_gen', designation: 'LeadCollector' },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
   const collector2 = await User.findOneAndUpdate(
     { email: 'zain@netbots.io' },
     { name: 'Zain Collector', password: hash, role: 'lead_gen', designation: 'LeadCollector' },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
   // 2. Verifiers
   const verifier1 = await User.findOneAndUpdate(
     { email: 'sarah@netbots.io' },
     { name: 'Sarah Verifier', password: hash, role: 'lead_gen', designation: 'LeadVerifier' },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
   const verifier2 = await User.findOneAndUpdate(
     { email: 'asad@netbots.io' },
     { name: 'Asad Verifier', password: hash, role: 'lead_gen', designation: 'LeadVerifier' },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
   // 3. Closers
   const closer1 = await User.findOneAndUpdate(
     { email: 'karamat_closer@netbots.io' },
     { name: 'Karamat Closer', password: hash, role: 'sales', designation: 'LeadCloser' },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
   const closer2 = await User.findOneAndUpdate(
     { email: 'saqlain_closer@netbots.io' },
     { name: 'Saqlain Closer', password: hash, role: 'sales', designation: 'LeadCloser' },
-    { upsert: true, new: true }
+    { upsert: true, returnDocument: 'after' }
   );
 
   console.log('Seeded mock users.');

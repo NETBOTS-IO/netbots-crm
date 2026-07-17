@@ -677,7 +677,7 @@ router.put('/:id', auth, async (req, res) => {
         }
     }
 
-    const updatedLead = await Lead.findByIdAndUpdate(req.params.id, updateData, { new: true });
+    const updatedLead = await Lead.findByIdAndUpdate(req.params.id, updateData, { returnDocument: 'after' });
     res.json({ success: true, data: updatedLead });
   } catch (err) {
     res.status(500).json({ success: false, error: 'Server error' });
