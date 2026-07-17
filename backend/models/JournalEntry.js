@@ -5,7 +5,7 @@ const journalEntrySchema = new mongoose.Schema({
   description: { type: String, required: true },
   source_type: { 
     type: String, 
-    enum: ['Income', 'Expense', 'Asset', 'Liability', 'Manual', 'InvoicePayment'], 
+    enum: ['Income', 'Expense', 'Asset', 'Liability', 'Manual', 'InvoicePayment', 'AssetDepreciation', 'AssetDisposal', 'LiabilityRepayment'], 
     required: true 
   },
   source_id: { type: mongoose.Schema.Types.ObjectId, required: true }, // Ref to Income, Expense, etc.
@@ -19,7 +19,7 @@ const journalEntrySchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Pre-save validation to ensure Debits = Credits
-journalEntrySchema.pre('save', function(next) {
+journalEntrySchema.pre('save', async function() {
   let totalDebit = 0;
   let totalCredit = 0;
   
@@ -30,10 +30,8 @@ journalEntrySchema.pre('save', function(next) {
   
   // Floating point comparison safeguard
   if (Math.abs(totalDebit - totalCredit) > 0.001) {
-    return next(new Error(`Journal Entry is unbalanced. Debits: ${totalDebit}, Credits: ${totalCredit}`));
+    throw new Error(`Journal Entry is unbalanced. Debits: ${totalDebit}, Credits: ${totalCredit}`);
   }
-  
-  next();
 });
 
 module.exports = mongoose.model('JournalEntry', journalEntrySchema);

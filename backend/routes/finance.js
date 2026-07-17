@@ -65,6 +65,23 @@ router.get('/accounts', auth, async (req, res) => {
   }
 });
 
+// Add Account Category
+router.post('/accounts', auth, async (req, res) => {
+  try {
+    const { name, type, description, parent_account } = req.body;
+    const account = new Account({
+      name,
+      type,
+      description,
+      parent_account: parent_account || null
+    });
+    await account.save();
+    res.status(201).json({ success: true, data: account });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // GET Incomes
 router.get('/income', auth, async (req, res) => {
   try {
@@ -460,7 +477,7 @@ router.post('/liabilities/:id/repay/:repaymentId', auth, async (req, res) => {
 // CRM HELPERS
 router.get('/clients', auth, async (req, res) => {
   try {
-    const clients = await Client.find({}, 'name email company');
+    const clients = await Client.find({}, 'companyName contactName email');
     res.json({ success: true, data: clients });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

@@ -15,11 +15,10 @@ const assetSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 // Pre-save to set initial book value
-assetSchema.pre('save', function(next) {
+assetSchema.pre('save', async function() {
   if (this.isNew && this.current_book_value === undefined) {
     this.current_book_value = this.purchase_value;
   }
-  next();
 });
 
 module.exports = mongoose.model('Asset', assetSchema);
