@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
 import { jsPDF } from 'jspdf';
+import html2canvas from 'html2canvas';
 import {
   LayoutDashboard,
   IndianRupee,
@@ -28,7 +29,8 @@ import {
   ArrowDownRight,
   Calculator,
   ShieldCheck,
-  FileText
+  FileText,
+  Receipt
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -77,7 +79,7 @@ const FinanceDashboard = () => {
   const initialTab = location.pathname.endsWith('/transactions') ? 'transactions' : 'overview';
   const [activeTab, setActiveTab] = useState(initialTab);
 
-  // Sync activeTab with route path updates (e.g. clicking subheader links Dashboard / Transactions)
+  // Sync activeTab with route path updates
   useEffect(() => {
     const tab = location.pathname.endsWith('/transactions') ? 'transactions' : 'overview';
     setActiveTab(tab);
@@ -144,6 +146,20 @@ const FinanceDashboard = () => {
     start_date: new Date().toISOString().substring(0, 10),
     installments: 1,
     vendor: ''
+  });
+
+  // Invoice generator state
+  const [invoiceForm, setInvoiceForm] = useState({
+    invoiceNo: 'INV-' + Math.floor(1000 + Math.random() * 9000),
+    date: new Date().toISOString().substring(0, 10),
+    clientName: '',
+    clientAddress: '',
+    issuerName: 'NetBots Group',
+    issuerDetails: 'Plot 4, Sector I-9, Islamabad\ninfo@thenetbots.com\n+92 300 0000000',
+    advancePaid: 0,
+    items: [
+      { description: 'Consulting & Implementation', quantity: 1, rate: 1500, discount: 150 }
+    ]
   });
 
   // Load essential data
@@ -366,6 +382,20 @@ const FinanceDashboard = () => {
     }
   };
 
+  // POS Receipt JPG download function
+  const handleDownloadReceiptJpg = () => {
+    const element = document.getElementById('thermal-receipt-preview');
+    if (!element) return;
+    
+    html2canvas(element, { scale: 3, useCORS: true }).then((canvas) => {
+      const link = document.createElement('a');
+      link.download = `receipt-${invoiceForm.invoiceNo || 'pos'}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 1.0);
+      link.click();
+      toast({ title: "JPG Downloaded", description: "Thermal receipt exported successfully." });
+    });
+  };
+
   // PDF Download Logic
   const handleDownloadPDF = () => {
     if (!reportData) return;
@@ -576,6 +606,14 @@ const FinanceDashboard = () => {
     }]
   };
 
+  // Helper calculations for thermal invoice preview
+  const invoiceSubtotals = invoiceForm.items.map(item => item.quantity * item.rate);
+  const invoiceDiscounts = invoiceForm.items.map(item => Number(item.discount || 0));
+  const invoiceGrossTotal = invoiceSubtotals.reduce((a, b) => a + b, 0);
+  const invoiceTotalDiscount = invoiceDiscounts.reduce((a, b) => a + b, 0);
+  const invoiceNetTotal = invoiceGrossTotal - invoiceTotalDiscount;
+  const invoiceBalancePending = invoiceNetTotal - Number(invoiceForm.advancePaid || 0);
+
   return (
     <div className="space-y-6">
       {/* Upper header */}
@@ -618,7 +656,7 @@ const FinanceDashboard = () => {
 
       {/* Tabs list */}
       <div className="flex border-b border-slate-200 gap-6 select-none">
-        {['overview', 'transactions', 'assets', 'liabilities', 'reports', 'categories'].map(tab => (
+        {['overview', 'transactions', 'assets', 'liabilities', 'reports', 'categories', 'invoice-generator'].map(tab => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -628,7 +666,7 @@ const FinanceDashboard = () => {
                 : 'border-transparent text-slate-500 hover:text-indigo-650'
             }`}
           >
-            {tab === 'overview' ? 'Overview' : tab === 'categories' ? 'Chart of Accounts' : tab}
+            {tab === 'overview' ? 'Overview' : tab === 'categories' ? 'Chart of Accounts' : tab === 'invoice-generator' ? 'Invoice Generator' : tab}
           </button>
         ))}
       </div>
@@ -1011,7 +1049,7 @@ const FinanceDashboard = () => {
                         {reportData.incomeDetails?.map((d, i) => (
                           <div key={i} className="flex justify-between p-3">
                             <span className="text-slate-655">{d.account}</span>
-                            <span className="font-semibold text-slate-800">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            <span className="font-semibold text-slate-808">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                           </div>
                         ))}
                         <div className="flex justify-between p-3 bg-green-50/50 font-bold text-green-700">
@@ -1479,6 +1517,273 @@ const FinanceDashboard = () => {
               </div>
               <Button type="submit" className="w-full bg-slate-900 text-white font-bold h-10">Create Category</Button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Invoice Generator Tab */}
+      {activeTab === 'invoice-generator' && (
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+          {/* Invoice Creator Form Controls */}
+          <div className="lg:col-span-3 bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4">
+            <h3 className="text-sm font-bold text-slate-800 border-b pb-2 flex items-center gap-1.5">
+              <Receipt size={16} className="text-indigo-600" /> POS thermal invoice generator
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-4 text-xs font-semibold text-slate-600">
+              <div>
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Invoice Number</label>
+                <Input
+                  value={invoiceForm.invoiceNo}
+                  onChange={e => setInvoiceForm(prev => ({ ...prev, invoiceNo: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Invoice Date</label>
+                <Input
+                  type="date"
+                  value={invoiceForm.date}
+                  onChange={e => setInvoiceForm(prev => ({ ...prev, date: e.target.value }))}
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Client / Person Name</label>
+                <Input
+                  value={invoiceForm.clientName}
+                  onChange={e => setInvoiceForm(prev => ({ ...prev, clientName: e.target.value }))}
+                  placeholder="e.g. Acme Corporation"
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Client Address</label>
+                <Input
+                  value={invoiceForm.clientAddress}
+                  onChange={e => setInvoiceForm(prev => ({ ...prev, clientAddress: e.target.value }))}
+                  placeholder="e.g. 5th Avenue, NYC"
+                />
+              </div>
+              <div>
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Issuer Organization</label>
+                <Input
+                  value={invoiceForm.issuerName}
+                  onChange={e => setInvoiceForm(prev => ({ ...prev, issuerName: e.target.value }))}
+                />
+              </div>
+              <div>
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Advance Paid ($)</label>
+                <Input
+                  type="number"
+                  value={invoiceForm.advancePaid}
+                  onChange={e => setInvoiceForm(prev => ({ ...prev, advancePaid: Number(e.target.value || 0) }))}
+                />
+              </div>
+              <div className="col-span-2">
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">NetBots Contact & Address Details</label>
+                <textarea
+                  className="w-full text-xs border border-slate-200 rounded p-2 font-mono h-16 bg-white"
+                  value={invoiceForm.issuerDetails}
+                  onChange={e => setInvoiceForm(prev => ({ ...prev, issuerDetails: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            {/* Items control table */}
+            <div className="border-t border-slate-100 pt-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-xs font-bold text-slate-700">Services & Discount Lines:</span>
+                <Button
+                  size="xs"
+                  onClick={() => setInvoiceForm(prev => ({
+                    ...prev,
+                    items: [...prev.items, { description: 'New Service', quantity: 1, rate: 0, discount: 0 }]
+                  }))}
+                  className="bg-slate-900 text-white font-bold h-7 text-[10px]"
+                >
+                  Add Row
+                </Button>
+              </div>
+
+              <div className="space-y-2">
+                {invoiceForm.items.map((item, idx) => (
+                  <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded border border-slate-200">
+                    <div className="col-span-5">
+                      <input
+                        type="text"
+                        className="w-full border border-slate-200 bg-white rounded p-1 text-xs"
+                        placeholder="Service Name"
+                        value={item.description}
+                        onChange={e => {
+                          const newItems = [...invoiceForm.items];
+                          newItems[idx].description = e.target.value;
+                          setInvoiceForm(prev => ({ ...prev, items: newItems }));
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        className="w-full border border-slate-200 bg-white rounded p-1 text-xs text-center"
+                        placeholder="Qty"
+                        value={item.quantity}
+                        min="1"
+                        onChange={e => {
+                          const newItems = [...invoiceForm.items];
+                          newItems[idx].quantity = Number(e.target.value || 1);
+                          setInvoiceForm(prev => ({ ...prev, items: newItems }));
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        className="w-full border border-slate-200 bg-white rounded p-1 text-xs text-right"
+                        placeholder="Rate"
+                        value={item.rate}
+                        onChange={e => {
+                          const newItems = [...invoiceForm.items];
+                          newItems[idx].rate = Number(e.target.value || 0);
+                          setInvoiceForm(prev => ({ ...prev, items: newItems }));
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        className="w-full border border-slate-200 bg-white rounded p-1 text-xs text-right"
+                        placeholder="Disc"
+                        value={item.discount}
+                        onChange={e => {
+                          const newItems = [...invoiceForm.items];
+                          newItems[idx].discount = Number(e.target.value || 0);
+                          setInvoiceForm(prev => ({ ...prev, items: newItems }));
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-1 text-center">
+                      <button
+                        type="button"
+                        onClick={() => setInvoiceForm(prev => ({
+                          ...prev,
+                          items: prev.items.filter((_, i) => i !== idx)
+                        }))}
+                        className="text-red-500 hover:text-red-700"
+                        disabled={invoiceForm.items.length === 1}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* POS Thermal live Preview */}
+          <div className="lg:col-span-2 flex flex-col items-center">
+            <Button
+              onClick={handleDownloadReceiptJpg}
+              className="w-full max-w-[300px] mb-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-10 gap-1.5"
+            >
+              <Download size={14} /> Download Receipt (JPG)
+            </Button>
+
+            {/* Thermal Receipt Container */}
+            <div
+              id="thermal-receipt-preview"
+              className="w-[300px] bg-white p-5 border border-slate-300 shadow-lg text-slate-900 font-mono text-[11px] leading-tight select-none print:shadow-none"
+              style={{ fontFamily: "'Courier New', Courier, monospace" }}
+            >
+              {/* Header */}
+              <div className="text-center space-y-1">
+                <div className="text-sm font-black tracking-widest uppercase">*** {invoiceForm.issuerName} ***</div>
+                <div className="whitespace-pre-line text-[10px] text-slate-600">{invoiceForm.issuerDetails}</div>
+                <div>--------------------------------</div>
+              </div>
+
+              {/* Invoice Meta */}
+              <div className="space-y-0.5 my-3">
+                <div className="flex justify-between">
+                  <span>DATE: {new Date(invoiceForm.date).toLocaleDateString()}</span>
+                  <span>TIME: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <div>INV NO: {invoiceForm.invoiceNo}</div>
+                {invoiceForm.clientName && (
+                  <div className="truncate">CLIENT: {invoiceForm.clientName}</div>
+                )}
+                {invoiceForm.clientAddress && (
+                  <div className="truncate">ADDR: {invoiceForm.clientAddress}</div>
+                )}
+                <div>--------------------------------</div>
+              </div>
+
+              {/* Items grid */}
+              <div className="space-y-1 my-3">
+                <div className="grid grid-cols-12 font-bold border-b border-dashed pb-1">
+                  <span className="col-span-6">ITEM / UNIT</span>
+                  <span className="col-span-2 text-center">QTY</span>
+                  <span className="col-span-2 text-right">DISC</span>
+                  <span className="col-span-2 text-right">TOTAL</span>
+                </div>
+                {invoiceForm.items.map((item, idx) => {
+                  const subTotal = item.quantity * item.rate;
+                  const finalTotal = subTotal - Number(item.discount || 0);
+                  return (
+                    <div key={idx} className="grid grid-cols-12 py-0.5 border-b border-slate-100/50">
+                      <span className="col-span-6 truncate font-semibold">{item.description}</span>
+                      <span className="col-span-2 text-center">{item.quantity}</span>
+                      <span className="col-span-2 text-right text-slate-500">-${item.discount}</span>
+                      <span className="col-span-2 text-right font-bold">${finalTotal}</span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div>--------------------------------</div>
+
+              {/* Totals & Advance */}
+              <div className="space-y-1 my-3 font-semibold text-right">
+                <div className="flex justify-between">
+                  <span>GROSS SUBTOTAL:</span>
+                  <span>${invoiceGrossTotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-slate-600">
+                  <span>TOTAL DISCOUNT:</span>
+                  <span>-${invoiceTotalDiscount.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-green-700 font-bold border-t pt-1">
+                  <span>NET TOTAL:</span>
+                  <span>${invoiceNetTotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-indigo-700">
+                  <span>ADVANCE RECEIVED:</span>
+                  <span>-${Number(invoiceForm.advancePaid || 0).toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-red-700 font-black border-t border-double pt-1 text-[12px]">
+                  <span>BALANCE DUE:</span>
+                  <span>${invoiceBalancePending.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div>--------------------------------</div>
+
+              {/* Barcode simulation & Thank you */}
+              <div className="text-center space-y-2 mt-4">
+                <div className="text-[10px] uppercase font-bold tracking-widest text-slate-500">*** THANK YOU ***</div>
+                <div className="text-[9px] text-slate-400">Powered by NetBots ERP Core</div>
+                
+                {/* Visual barcode simulation */}
+                <div className="flex justify-center items-stretch h-8 gap-[1px] mt-2 opacity-80 px-4">
+                  {[3,1,2,4,1,3,2,1,4,2,3,1,2,1,4,1,3,2,1,4,3,2,1,3,4,2,1,3].map((w, i) => (
+                    <div
+                      key={i}
+                      className="bg-black"
+                      style={{ width: `${w}px` }}
+                    />
+                  ))}
+                </div>
+                <div className="text-[8px] tracking-[3px] text-slate-500 mt-1">{invoiceForm.invoiceNo}</div>
+              </div>
+            </div>
           </div>
         </div>
       )}
