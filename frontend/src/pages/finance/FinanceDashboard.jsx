@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import api from '@/lib/api';
 import { useToast } from "@/hooks/use-toast";
+import { jsPDF } from 'jspdf';
 import {
   LayoutDashboard,
   IndianRupee,
@@ -78,6 +79,7 @@ const FinanceDashboard = () => {
 
   // States
   const [loading, setLoading] = useState(true);
+  const [seedingLoading, setSeedingLoading] = useState(false);
   const [crmData, setCrmData] = useState({ clients: [], vendors: [], projects: [] });
   const [accounts, setAccounts] = useState([]);
   const [incomes, setIncomes] = useState([]);
@@ -143,7 +145,7 @@ const FinanceDashboard = () => {
   const loadDashboardData = async () => {
     setLoading(true);
     try {
-      // Seed accounts first just in case
+      // Seed default accounts structure first
       await api.post('/finance/accounts/seed').catch(() => {});
       
       const [
@@ -181,7 +183,6 @@ const FinanceDashboard = () => {
         projects: projectsRes.data?.data || []
       });
 
-      // Find Cash account balance specifically
       const trialBalanceRes = await api.get('/finance/reports/trial-balance');
       const cashAcct = trialBalanceRes.data?.data?.accounts?.find(a => a.account === 'Cash on Hand');
       const cashBalance = cashAcct ? (cashAcct.debit - cashAcct.credit) : 0;
@@ -197,7 +198,7 @@ const FinanceDashboard = () => {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Failed to load accounting data. Make sure backend is running."
+        description: "Failed to load accounting data."
       });
     } finally {
       setLoading(false);
@@ -208,6 +209,23 @@ const FinanceDashboard = () => {
     loadDashboardData();
   }, []);
 
+  // Seed all demo data helper
+  const handleSeedAllData = async () => {
+    setSeedingLoading(true);
+    try {
+      const res = await api.post('/finance/accounts/seed-all-data');
+      toast({ title: "Demo Data Seeded", description: res.data.message });
+      await loadDashboardData();
+      if (activeTab === 'reports') {
+        fetchSelectedReport();
+      }
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error", description: err.response?.data?.error || err.message });
+    } finally {
+      setSeedingLoading(false);
+    }
+  };
+
   // Load report data when selectedReport changes
   const fetchSelectedReport = async () => {
     setReportLoading(true);
@@ -217,11 +235,7 @@ const FinanceDashboard = () => {
       setReportData(res.data?.data);
     } catch (err) {
       console.error(err);
-      toast({
-        variant: "destructive",
-        title: "Report Error",
-        description: "Failed to generate the selected report."
-      });
+      toast({ variant: "destructive", title: "Report Error", description: "Failed to generate report." });
     } finally {
       setReportLoading(false);
     }
@@ -256,10 +270,8 @@ const FinanceDashboard = () => {
       }
 
       await api.post(endpoint, body);
-      toast({ title: "Success", description: "Transaction recorded and double-entry ledger updated." });
+      toast({ title: "Success", description: "Transaction recorded successfully." });
       setIsTxModalOpen(false);
-      
-      // Reset Form
       setTxForm({
         amount: '',
         category: '',
@@ -287,7 +299,7 @@ const FinanceDashboard = () => {
         useful_life_years: Number(assetForm.useful_life_years),
         vendor: assetForm.vendor || undefined
       });
-      toast({ title: "Success", description: "Asset registered and capital ledger updated." });
+      toast({ title: "Success", description: "Asset registered successfully." });
       setIsAssetModalOpen(false);
       setAssetForm({
         name: '',
@@ -314,7 +326,7 @@ const FinanceDashboard = () => {
         installments: Number(liabilityForm.installments),
         vendor: liabilityForm.vendor || undefined
       });
-      toast({ title: "Success", description: "Liability registered and repayment schedule generated." });
+      toast({ title: "Success", description: "Liability registered successfully." });
       setIsLiabilityModalOpen(false);
       setLiabilityForm({
         name: '',
@@ -334,10 +346,7 @@ const FinanceDashboard = () => {
   const runDepreciation = async (assetId) => {
     try {
       const res = await api.post(`/finance/assets/${assetId}/depreciate`);
-      toast({
-        title: "Depreciation Calculated",
-        description: `Depreciation amount of $${res.data.depreciationPosted} has been posted to ledger.`
-      });
+      toast({ title: "Depreciation Calculated", description: `Asset depreciated by $${res.data.depreciationPosted}.` });
       loadDashboardData();
     } catch (err) {
       toast({ variant: "destructive", title: "Error", description: err.response?.data?.error || err.message });
@@ -350,10 +359,7 @@ const FinanceDashboard = () => {
       const res = await api.post(`/finance/assets/${selectedAssetForDisposal}/dispose`, {
         salvageValue: Number(salvageValue)
       });
-      toast({
-        title: "Asset Disposed",
-        description: `Disposal recorded. Realized gain/loss: $${res.data.gainOrLoss}.`
-      });
+      toast({ title: "Asset Disposed", description: `Disposal recorded successfully.` });
       setIsDisposalModalOpen(false);
       setSalvageValue('');
       loadDashboardData();
@@ -365,25 +371,199 @@ const FinanceDashboard = () => {
   const payInstallment = async (liabilityId, installmentId) => {
     try {
       await api.post(`/finance/liabilities/${liabilityId}/repay/${installmentId}`);
-      toast({ title: "Installment Paid", description: "Ledger updated (repayment and interest splits recorded)." });
+      toast({ title: "Installment Paid", description: "Installment payment recorded." });
       loadDashboardData();
     } catch (err) {
       toast({ variant: "destructive", title: "Error", description: err.response?.data?.error || err.message });
     }
   };
 
+  // PDF Download Logic
+  const handleDownloadPDF = () => {
+    if (!reportData) return;
+    const doc = new jsPDF();
+
+    // Typography & Branding Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(30, 41, 59); // slate-800
+    doc.text("NETBOTS CRM & ERP FINANCIALS", 14, 20);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // slate-500
+    doc.text(`Report: ${selectedReport.toUpperCase()} STATEMENT`, 14, 27);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 32);
+
+    doc.setDrawColor(226, 232, 240); // border-slate-200
+    doc.line(14, 36, 196, 36);
+
+    let y = 46;
+
+    const drawRow = (label, col2 = '', col3 = '', col4 = '', isBold = false) => {
+      if (isBold) {
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(15, 23, 42); // slate-900
+      } else {
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(71, 85, 105); // slate-600
+      }
+      doc.text(String(label), 14, y);
+      doc.text(String(col2), 95, y);
+      if (col3) doc.text(String(col3), 135, y);
+      if (col4) doc.text(String(col4), 170, y);
+      y += 8;
+    };
+
+    if (selectedReport === 'pnl') {
+      drawRow("Account Category / Name", "Balance / Net Value ($)", "", "", true);
+      doc.line(14, y - 4, 196, y - 4);
+      y += 4;
+      
+      drawRow("REVENUE (INCOME)", "", "", "", true);
+      reportData.incomeDetails?.forEach(d => {
+        drawRow("  " + d.account, `$${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+      });
+      drawRow("Total Income / Revenue", `$${reportData.totalIncome?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      y += 4;
+
+      drawRow("COST & OPERATING EXPENSES", "", "", "", true);
+      reportData.expenseDetails?.forEach(d => {
+        drawRow("  " + d.account, `$${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+      });
+      drawRow("Total Operating Expenses", `$${reportData.totalExpense?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      y += 6;
+      doc.line(14, y - 4, 196, y - 4);
+
+      drawRow("NET OPERATING PROFIT / (LOSS)", `$${reportData.netProfit?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+    } 
+    else if (selectedReport === 'balance-sheet') {
+      drawRow("Account Type / Name", "Net Value ($)", "", "", true);
+      doc.line(14, y - 4, 196, y - 4);
+      y += 4;
+
+      drawRow("ASSETS", "", "", "", true);
+      reportData.assetDetails?.forEach(d => {
+        drawRow("  " + d.account, `$${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+      });
+      drawRow("Total Assets Balance", `$${reportData.totalAssets?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      y += 4;
+
+      drawRow("LIABILITIES", "", "", "", true);
+      reportData.liabilityDetails?.forEach(d => {
+        drawRow("  " + d.account, `$${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+      });
+      drawRow("Total Liabilities Balance", `$${reportData.totalLiabilities?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      y += 4;
+
+      drawRow("OWNER'S EQUITY", "", "", "", true);
+      reportData.equityDetails?.forEach(d => {
+        drawRow("  " + d.account, `$${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+      });
+      drawRow("Total Owner Equity", `$${reportData.totalEquity?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+    }
+    else if (selectedReport === 'cash-flow') {
+      drawRow("Cash Inflow", `$${reportData.cashIn?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("Cash Outflow", `$${reportData.cashOut?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("Net Cash Flow", `$${reportData.netCashFlow?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      y += 6;
+      doc.line(14, y - 4, 196, y - 4);
+
+      drawRow("Date", "Description", "Flow Value ($)", "", true);
+      reportData.flows?.forEach(f => {
+        drawRow(new Date(f.date).toLocaleDateString(), f.description.substring(0, 40), `$${f.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+      });
+    }
+    else if (selectedReport === 'trial-balance') {
+      drawRow("Account Name", "Account Type", "Debits ($)", "Credits ($)", true);
+      doc.line(14, y - 4, 196, y - 4);
+      y += 4;
+
+      reportData.accounts?.forEach(a => {
+        drawRow(a.account, a.type, a.debit > 0 ? `$${a.debit.toLocaleString()}` : '-', a.credit > 0 ? `$${a.credit.toLocaleString()}` : '-');
+      });
+      y += 4;
+      doc.line(14, y - 4, 196, y - 4);
+      drawRow("Grand Balance Totals", "", `$${reportData.grandTotalDebit?.toLocaleString()}`, `$${reportData.grandTotalCredit?.toLocaleString()}`, true);
+    }
+    else if (selectedReport === 'expense-breakdown' || selectedReport === 'income-breakdown') {
+      drawRow("Classification Category / Group", "Accumulated Value ($)", "", "", true);
+      doc.line(14, y - 4, 196, y - 4);
+      y += 4;
+
+      drawRow("BY CATEGORY:", "", "", "", true);
+      reportData.byCategory?.forEach(item => {
+        drawRow("  " + item.label, `$${item.amount.toLocaleString()}`);
+      });
+      y += 4;
+
+      drawRow("BY RELATED ENTITY:", "", "", "", true);
+      const entityList = selectedReport === 'income-breakdown' ? reportData.byClient : reportData.byVendor;
+      entityList?.forEach(item => {
+        drawRow("  " + item.label, `$${item.amount.toLocaleString()}`);
+      });
+    }
+    else if (selectedReport === 'ar-aging') {
+      drawRow("Aging Bracket", "Outstanding Balance ($)", "", "", true);
+      doc.line(14, y - 4, 196, y - 4);
+      y += 4;
+
+      reportData.brackets?.forEach(br => {
+        drawRow(br.bracket, `$${br.amount?.toLocaleString()}`, `${br.invoices?.length || 0} invoice(s)`);
+      });
+    }
+    else if (selectedReport === 'ap-aging') {
+      drawRow("Aging Bracket", "Outstanding Balance ($)", "", "", true);
+      doc.line(14, y - 4, 196, y - 4);
+      y += 4;
+
+      reportData.brackets?.forEach(br => {
+        drawRow(br.bracket, `$${br.amount?.toLocaleString()}`, `${br.bills?.length || 0} bill(s)`);
+      });
+    }
+    else if (selectedReport === 'asset-register') {
+      drawRow("Asset Item Name", "Purchase ($)", "Current Book ($)", "Accum. Depr. ($)", true);
+      doc.line(14, y - 4, 196, y - 4);
+      y += 4;
+
+      reportData.forEach(asset => {
+        drawRow(asset.name, `$${asset.purchaseValue?.toLocaleString()}`, `$${asset.currentBookValue?.toLocaleString()}`, `$${asset.accumulatedDepreciation?.toLocaleString()}`);
+      });
+    }
+    else if (selectedReport === 'liabilities-loans') {
+      drawRow("Liability Description", "Type", "Principal ($)", "Outstanding ($)", true);
+      doc.line(14, y - 4, 196, y - 4);
+      y += 4;
+
+      reportData.forEach(lib => {
+        drawRow(lib.name, lib.type, `$${lib.principal_amount?.toLocaleString()}`, `$${lib.outstanding_balance?.toLocaleString()}`);
+      });
+    }
+    else if (selectedReport === 'project-profitability') {
+      drawRow("Project / Client", "Income ($)", "Expenses ($)", "Project Profit ($)", true);
+      doc.line(14, y - 4, 196, y - 4);
+      y += 4;
+
+      reportData.forEach(p => {
+        drawRow(p.projectName, `$${p.income?.toLocaleString()}`, `$${p.expense?.toLocaleString()}`, `$${p.profit?.toLocaleString()}`);
+      });
+    }
+
+    doc.save(`netbots_financial_report_${selectedReport}.pdf`);
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[500px] gap-3">
-        <RefreshCw className="animate-spin text-indigo-600" size={32} />
-        <p className="text-slate-500 font-semibold">Syncing general ledger, double-entry engine...</p>
+        <RefreshCw className="animate-spin text-indigo-650" size={32} />
+        <p className="text-slate-500 font-semibold">Loading ERP Ledger engine...</p>
       </div>
     );
   }
 
   // Setup Overview charts data
   const monthlyTrendsData = {
-    labels: ['Total income', 'Total expense'],
+    labels: ['Total Income', 'Total Expense'],
     datasets: [{
       label: 'Financial Flow ($)',
       data: [
@@ -422,6 +602,16 @@ const FinanceDashboard = () => {
 
         {/* Global Action buttons */}
         <div className="flex flex-wrap items-center gap-3">
+          <Button
+            onClick={handleSeedAllData}
+            disabled={seedingLoading}
+            variant="outline"
+            className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 font-bold text-xs h-9 gap-1.5"
+          >
+            <RefreshCw size={14} className={seedingLoading ? "animate-spin" : ""} />
+            {seedingLoading ? "Seeding..." : "Seed Demo Data"}
+          </Button>
+
           <Button
             onClick={() => { setTxType('Income'); setIsTxModalOpen(true); }}
             className="bg-green-600 hover:bg-green-700 text-white font-semibold text-xs gap-1.5 h-9"
@@ -561,7 +751,6 @@ const FinanceDashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-150">
-                {/* List Incomes */}
                 {incomes.map(item => (
                   <tr key={item._id} className="hover:bg-slate-50/50">
                     <td className="p-3 whitespace-nowrap text-slate-600">{new Date(item.date).toLocaleDateString()}</td>
@@ -576,7 +765,6 @@ const FinanceDashboard = () => {
                     <td className="p-3 text-right font-bold text-green-700 whitespace-nowrap">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   </tr>
                 ))}
-                {/* List Expenses */}
                 {expenses.map(item => (
                   <tr key={item._id} className="hover:bg-slate-50/50">
                     <td className="p-3 whitespace-nowrap text-slate-600">{new Date(item.date).toLocaleDateString()}</td>
@@ -607,7 +795,7 @@ const FinanceDashboard = () => {
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
             <h3 className="text-sm font-bold text-slate-800">Fixed Asset Register</h3>
-            <span className="text-xs text-slate-500 font-medium">CalculateStraight-line depreciation and capital write-offs</span>
+            <span className="text-xs text-slate-500 font-medium">Calculate Straight-line depreciation and capital write-offs</span>
           </div>
 
           <div className="overflow-x-auto">
@@ -692,7 +880,7 @@ const FinanceDashboard = () => {
                     <th className="p-3">Type</th>
                     <th className="p-3 text-right">Principal Amount</th>
                     <th className="p-3 text-right">Outstanding Balance</th>
-                    <th className="p-3">Interest Rate</th>
+                    <th className="p-3 text-center">Interest Rate</th>
                     <th className="p-3">Amortization Progress</th>
                   </tr>
                 </thead>
@@ -783,8 +971,8 @@ const FinanceDashboard = () => {
               { id: 'income-breakdown', label: '6. Income Breakdown', icon: FileText },
               { id: 'ar-aging', label: '7. AR Aging Report', icon: FileText },
               { id: 'ap-aging', label: '8. AP Aging Report', icon: FileText },
-              { id: 'asset-register', label: '9. Asset register report', icon: FileText },
-              { id: 'liabilities-loans', label: '10. Liability schedule', icon: FileText },
+              { id: 'asset-register', label: '9. Asset Register Report', icon: FileText },
+              { id: 'liabilities-loans', label: '10. Liability Schedule', icon: FileText },
               { id: 'project-profitability', label: '11. Project Profitability', icon: FileText }
             ].map(rep => (
               <button
@@ -818,14 +1006,23 @@ const FinanceDashboard = () => {
                     <h3 className="text-sm font-bold text-slate-500 mt-0.5 capitalize">{selectedReport.replace('-', ' ')}</h3>
                     <p className="text-[10px] text-slate-400 mt-1">Generated: {new Date().toLocaleString()}</p>
                   </div>
-                  <Button
-                    onClick={() => window.print()}
-                    size="sm"
-                    variant="outline"
-                    className="gap-1.5 font-bold text-xs h-8 print:hidden"
-                  >
-                    <Printer size={12} /> Print PDF
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={handleDownloadPDF}
+                      size="sm"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 font-bold text-xs h-8 print:hidden"
+                    >
+                      <Download size={12} /> Download PDF
+                    </Button>
+                    <Button
+                      onClick={() => window.print()}
+                      size="sm"
+                      variant="outline"
+                      className="gap-1.5 font-bold text-xs h-8 print:hidden"
+                    >
+                      <Printer size={12} /> Print Report
+                    </Button>
+                  </div>
                 </div>
 
                 {/* Profit & Loss report content */}
@@ -1059,8 +1256,8 @@ const FinanceDashboard = () => {
                         <div className="divide-y divide-slate-150">
                           {reportData.byCategory?.map((item, idx) => (
                             <div key={idx} className="flex justify-between p-3">
-                              <span className="text-slate-600">{item.label}</span>
-                              <span className="font-semibold text-slate-800">${item.amount.toLocaleString()}</span>
+                              <span className="text-slate-650">{item.label}</span>
+                              <span className="font-semibold text-slate-805">${item.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -1072,8 +1269,8 @@ const FinanceDashboard = () => {
                         <div className="divide-y divide-slate-150">
                           {reportData.byClient?.map((item, idx) => (
                             <div key={idx} className="flex justify-between p-3">
-                              <span className="text-slate-600">{item.label}</span>
-                              <span className="font-semibold text-slate-800">${item.amount.toLocaleString()}</span>
+                              <span className="text-slate-650">{item.label}</span>
+                              <span className="font-semibold text-slate-805">${item.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -1122,7 +1319,7 @@ const FinanceDashboard = () => {
                             <div className="text-lg font-black text-slate-850 mt-1">${br.amount?.toLocaleString()}</div>
                           </div>
                           <div className="mt-3 text-[10px] text-slate-500">
-                            {br.bills?.length || 0} payable(s)
+                            {br.bills?.length || 0} bill(s)
                           </div>
                         </div>
                       ))}
@@ -1140,13 +1337,13 @@ const FinanceDashboard = () => {
                           <th className="p-3">Category</th>
                           <th className="p-3 text-right">Purchase Value</th>
                           <th className="p-3 text-right">Current Book Value</th>
-                          <th className="p-3 text-right">Accumulated Depr.</th>
+                          <th className="p-3 text-right">Accum. Depr.</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-150">
                         {reportData.map((asset, i) => (
                           <tr key={i} className="hover:bg-slate-50/30">
-                            <td className="p-3 font-medium text-slate-800">{asset.name}</td>
+                            <td className="p-3 font-medium text-slate-850">{asset.name}</td>
                             <td className="p-3 text-slate-500">{asset.category}</td>
                             <td className="p-3 text-right font-mono">${asset.purchaseValue?.toLocaleString()}</td>
                             <td className="p-3 text-right font-mono text-blue-650 font-bold">${asset.currentBookValue?.toLocaleString()}</td>
@@ -1232,7 +1429,7 @@ const FinanceDashboard = () => {
 
       {/* Transaction Modal */}
       <Dialog open={isTxModalOpen} onOpenChange={setIsTxModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Record Transaction</DialogTitle>
             <DialogDescription>Add income or expense to automatically post balanced journal entries to ledger.</DialogDescription>
@@ -1256,36 +1453,37 @@ const FinanceDashboard = () => {
               </button>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Amount ($)</label>
-              <Input
-                type="number"
-                value={txForm.amount}
-                onChange={e => setTxForm(prev => ({ ...prev, amount: e.target.value }))}
-                required
-                placeholder="0.00"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Category</label>
-              <select
-                value={txForm.category}
-                onChange={e => setTxForm(prev => ({ ...prev, category: e.target.value }))}
-                className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
-                required
-              >
-                <option value="">Select Category</option>
-                {accounts
-                  .filter(a => a.type === txType)
-                  .map(a => (
-                    <option key={a._id} value={a.name}>{a.name}</option>
-                  ))
-                }
-              </select>
-            </div>
-
+            {/* Compact Grid Layout for Forms */}
             <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Amount ($)</label>
+                <Input
+                  type="number"
+                  value={txForm.amount}
+                  onChange={e => setTxForm(prev => ({ ...prev, amount: e.target.value }))}
+                  required
+                  placeholder="0.00"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Category</label>
+                <select
+                  value={txForm.category}
+                  onChange={e => setTxForm(prev => ({ ...prev, category: e.target.value }))}
+                  className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
+                  required
+                >
+                  <option value="">Select Category</option>
+                  {accounts
+                    .filter(a => a.type === txType)
+                    .map(a => (
+                      <option key={a._id} value={a.name}>{a.name}</option>
+                    ))
+                  }
+                </select>
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Date</label>
                 <Input
@@ -1309,55 +1507,55 @@ const FinanceDashboard = () => {
                   {txType === 'Expense' && <option value="On Credit">On Credit</option>}
                 </select>
               </div>
-            </div>
 
-            {txType === 'Income' ? (
+              {txType === 'Income' ? (
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Client Link (CRM)</label>
+                  <select
+                    value={txForm.client}
+                    onChange={e => setTxForm(prev => ({ ...prev, client: e.target.value }))}
+                    className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
+                  >
+                    <option value="">None / Other</option>
+                    {crmData.clients.map(c => (
+                      <option key={c._id} value={c._id}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Vendor Link (CRM)</label>
+                  <select
+                    value={txForm.vendor}
+                    onChange={e => setTxForm(prev => ({ ...prev, vendor: e.target.value }))}
+                    className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
+                  >
+                    <option value="">None / Other</option>
+                    {crmData.vendors.map(v => (
+                      <option key={v._id} value={v._id}>{v.name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Client Link (CRM)</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Project Link (CRM)</label>
                 <select
-                  value={txForm.client}
-                  onChange={e => setTxForm(prev => ({ ...prev, client: e.target.value }))}
+                  value={txForm.project}
+                  onChange={e => setTxForm(prev => ({ ...prev, project: e.target.value }))}
                   className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
                 >
-                  <option value="">None / Other</option>
-                  {crmData.clients.map(c => (
-                    <option key={c._id} value={c._id}>{c.name}</option>
+                  <option value="">None</option>
+                  {crmData.projects.map(p => (
+                    <option key={p._id} value={p._id}>{p.name}</option>
                   ))}
                 </select>
               </div>
-            ) : (
-              <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Vendor Link (CRM)</label>
-                <select
-                  value={txForm.vendor}
-                  onChange={e => setTxForm(prev => ({ ...prev, vendor: e.target.value }))}
-                  className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
-                >
-                  <option value="">None / Other</option>
-                  {crmData.vendors.map(v => (
-                    <option key={v._id} value={v._id}>{v.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Project Link (CRM)</label>
-              <select
-                value={txForm.project}
-                onChange={e => setTxForm(prev => ({ ...prev, project: e.target.value }))}
-                className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
-              >
-                <option value="">None</option>
-                {crmData.projects.map(p => (
-                  <option key={p._id} value={p._id}>{p.name}</option>
-                ))}
-              </select>
             </div>
 
             {txType === 'Expense' && (
-              <div className="flex items-center gap-4 text-xs font-semibold">
-                <label className="flex items-center gap-1.5">
+              <div className="flex items-center gap-4 text-xs font-semibold py-1 bg-slate-50 px-2 rounded border border-slate-200/60">
+                <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={txForm.is_billable}
@@ -1365,7 +1563,7 @@ const FinanceDashboard = () => {
                   />
                   Billable to client
                 </label>
-                <label className="flex items-center gap-1.5">
+                <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={txForm.is_recurring}
@@ -1377,7 +1575,7 @@ const FinanceDashboard = () => {
             )}
 
             <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Notes</label>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Notes / Description</label>
               <Input
                 value={txForm.notes}
                 onChange={e => setTxForm(prev => ({ ...prev, notes: e.target.value }))}
@@ -1394,24 +1592,24 @@ const FinanceDashboard = () => {
 
       {/* Asset Modal */}
       <Dialog open={isAssetModalOpen} onOpenChange={setIsAssetModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Register Capital Asset</DialogTitle>
             <DialogDescription>Track property, furniture, or equipment and compute depreciation.</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleAddAsset} className="space-y-4 text-slate-850">
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Asset Name</label>
-              <Input
-                value={assetForm.name}
-                onChange={e => setAssetForm(prev => ({ ...prev, name: e.target.value }))}
-                required
-                placeholder="MacBook Pro, Office Desk..."
-              />
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Asset Name</label>
+                <Input
+                  value={assetForm.name}
+                  onChange={e => setAssetForm(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                  placeholder="MacBook Pro, Office Desk..."
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Asset Category</label>
                 <select
@@ -1437,9 +1635,7 @@ const FinanceDashboard = () => {
                   min="1"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Purchase Date</label>
                 <Input
@@ -1484,24 +1680,24 @@ const FinanceDashboard = () => {
 
       {/* Liability Modal */}
       <Dialog open={isLiabilityModalOpen} onOpenChange={setIsLiabilityModalOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-xl">
           <DialogHeader>
             <DialogTitle>Register Liability / Loan</DialogTitle>
             <DialogDescription>Acquire loans or payables and auto-generate installment schedules.</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleAddLiability} className="space-y-4 text-slate-850">
-            <div>
-              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Liability / Creditor Name</label>
-              <Input
-                value={liabilityForm.name}
-                onChange={e => setLiabilityForm(prev => ({ ...prev, name: e.target.value }))}
-                required
-                placeholder="Bank Loan, Vendor Credit..."
-              />
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
+              <div className="col-span-2">
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Liability / Creditor Name</label>
+                <Input
+                  value={liabilityForm.name}
+                  onChange={e => setLiabilityForm(prev => ({ ...prev, name: e.target.value }))}
+                  required
+                  placeholder="Bank Loan, Vendor Credit..."
+                />
+              </div>
+
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Type</label>
                 <select
@@ -1524,9 +1720,7 @@ const FinanceDashboard = () => {
                   placeholder="0"
                 />
               </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Principal Amount ($)</label>
                 <Input
