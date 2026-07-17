@@ -1603,6 +1603,15 @@ const FinanceDashboard = () => {
                 </Button>
               </div>
 
+              {/* Form columns header label */}
+              <div className="grid grid-cols-12 gap-2 mb-1.5 text-[9px] uppercase font-extrabold text-slate-400 px-2 tracking-wider">
+                <div className="col-span-5">Service / Item Name</div>
+                <div className="col-span-2 text-center">Qty</div>
+                <div className="col-span-2 text-right">Rate (PKR)</div>
+                <div className="col-span-2 text-right">Discount (PKR)</div>
+                <div className="col-span-1"></div>
+              </div>
+
               <div className="space-y-2">
                 {invoiceForm.items.map((item, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded border border-slate-200">
@@ -1690,12 +1699,35 @@ const FinanceDashboard = () => {
             {/* Thermal Receipt Container */}
             <div
               id="thermal-receipt-preview"
-              className="w-[300px] bg-white p-5 border border-slate-300 shadow-lg text-slate-900 font-mono text-[11px] leading-tight select-none print:shadow-none"
+              className="relative overflow-hidden w-[340px] bg-white p-5 border border-slate-300 shadow-lg text-slate-900 font-mono text-[11px] leading-tight select-none print:shadow-none"
               style={{ fontFamily: "'Courier New', Courier, monospace" }}
             >
+              {/* Dynamic stamp based on payment status */}
+              {(() => {
+                let stampText = '';
+                let stampColor = '';
+                if (invoiceBalancePending <= 0) {
+                  stampText = 'PAID';
+                  stampColor = 'border-green-600/35 text-green-600/35';
+                } else if (invoiceForm.advancePaid > 0 && invoiceBalancePending > 0) {
+                  stampText = 'PARTIAL';
+                  stampColor = 'border-blue-600/35 text-blue-600/35';
+                } else {
+                  stampText = 'UNPAID';
+                  stampColor = 'border-red-650/35 text-red-650/35';
+                }
+                return (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 select-none">
+                    <div className={`border-4 rounded-xl px-5 py-1.5 text-2xl font-black tracking-widest uppercase rotate-[-22deg] scale-110 ${stampColor}`}>
+                      {stampText}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Header */}
               <div className="text-center space-y-1">
-                <div className="text-sm font-black tracking-widest uppercase">*** {invoiceForm.issuerName} ***</div>
+                <div className="text-xs font-black tracking-normal whitespace-nowrap uppercase">*** {invoiceForm.issuerName} ***</div>
                 <div className="whitespace-pre-line text-[10px] text-slate-600">{invoiceForm.issuerDetails}</div>
                 <div>--------------------------------</div>
               </div>
