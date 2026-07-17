@@ -449,7 +449,7 @@ const FinanceDashboard = () => {
   const runDepreciation = async (assetId) => {
     try {
       const res = await api.post(`/finance/assets/${assetId}/depreciate`);
-      toast({ title: "Depreciation Calculated", description: `Asset depreciated by $${res.data.depreciationPosted}.` });
+      toast({ title: "Depreciation Calculated", description: `Asset depreciated by PKR ${res.data.depreciationPosted}.` });
       loadDashboardData();
     } catch (err) {
       toast({ variant: "destructive", title: "Error", description: err.response?.data?.error || err.message });
@@ -756,136 +756,136 @@ const FinanceDashboard = () => {
     };
 
     if (selectedReport === 'pnl') {
-      drawRow("Account Category / Name", "Balance / Net Value ($)", "", "", true);
+      drawRow("Account Category / Name", "Balance / Net Value (PKR)", "", "", true);
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
       
       drawRow("REVENUE (INCOME)", "", "", "", true);
       reportData.incomeDetails?.forEach(d => {
-        drawRow("  " + d.account, `$${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+        drawRow("  " + d.account, `PKR ${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
       });
-      drawRow("Total Income / Revenue", `$${reportData.totalIncome?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("Total Income / Revenue", `PKR ${reportData.totalIncome?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
       y += 4;
 
       drawRow("COST & OPERATING EXPENSES", "", "", "", true);
       reportData.expenseDetails?.forEach(d => {
-        drawRow("  " + d.account, `$${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+        drawRow("  " + d.account, `PKR ${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
       });
-      drawRow("Total Operating Expenses", `$${reportData.totalExpense?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("Total Operating Expenses", `PKR ${reportData.totalExpense?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
       y += 6;
       doc.line(14, y - 4, 196, y - 4);
 
-      drawRow("NET OPERATING PROFIT / (LOSS)", `$${reportData.netProfit?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("NET OPERATING PROFIT / (LOSS)", `PKR ${reportData.netProfit?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
     } 
     else if (selectedReport === 'balance-sheet') {
-      drawRow("Account Type / Name", "Net Value ($)", "", "", true);
+      drawRow("Account Type / Name", "Net Value (PKR)", "", "", true);
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
       drawRow("ASSETS", "", "", "", true);
       reportData.assetDetails?.forEach(d => {
-        drawRow("  " + d.account, `$${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+        drawRow("  " + d.account, `PKR ${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
       });
-      drawRow("Total Assets Balance", `$${reportData.totalAssets?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("Total Assets Balance", `PKR ${reportData.totalAssets?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
       y += 4;
 
       drawRow("LIABILITIES", "", "", "", true);
       reportData.liabilityDetails?.forEach(d => {
-        drawRow("  " + d.account, `$${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+        drawRow("  " + d.account, `PKR ${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
       });
-      drawRow("Total Liabilities Balance", `$${reportData.totalLiabilities?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("Total Liabilities Balance", `PKR ${reportData.totalLiabilities?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
       y += 4;
 
       drawRow("OWNER'S EQUITY", "", "", "", true);
       reportData.equityDetails?.forEach(d => {
-        drawRow("  " + d.account, `$${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+        drawRow("  " + d.account, `PKR ${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
       });
-      drawRow("Total Owner Equity", `$${reportData.totalEquity?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("Total Owner Equity", `PKR ${reportData.totalEquity?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
     }
     else if (selectedReport === 'cash-flow') {
-      drawRow("Cash Inflow", `$${reportData.cashIn?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
-      drawRow("Cash Outflow", `$${reportData.cashOut?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
-      drawRow("Net Cash Flow", `$${reportData.netCashFlow?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("Cash Inflow", `PKR ${reportData.cashIn?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("Cash Outflow", `PKR ${reportData.cashOut?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
+      drawRow("Net Cash Flow", `PKR ${reportData.netCashFlow?.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, "", "", true);
       y += 6;
       doc.line(14, y - 4, 196, y - 4);
 
-      drawRow("Date", "Description", "Flow Value ($)", "", true);
+      drawRow("Date", "Description", "Flow Value (PKR)", "", true);
       reportData.flows?.forEach(f => {
-        drawRow(new Date(f.date).toLocaleDateString(), f.description.substring(0, 40), `$${f.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
+        drawRow(new Date(f.date).toLocaleDateString(), f.description.substring(0, 40), `PKR ${f.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}`);
       });
     }
     else if (selectedReport === 'trial-balance') {
-      drawRow("Account Name", "Account Type", "Debits ($)", "Credits ($)", true);
+      drawRow("Account Name", "Account Type", "Debits (PKR)", "Credits (PKR)", true);
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
       reportData.accounts?.forEach(a => {
-        drawRow(a.account, a.type, a.debit > 0 ? `$${a.debit.toLocaleString()}` : '-', a.credit > 0 ? `$${a.credit.toLocaleString()}` : '-');
+        drawRow(a.account, a.type, a.debit > 0 ? `PKR ${a.debit.toLocaleString()}` : '-', a.credit > 0 ? `PKR ${a.credit.toLocaleString()}` : '-');
       });
       y += 4;
       doc.line(14, y - 4, 196, y - 4);
-      drawRow("Grand Balance Totals", "", `$${reportData.grandTotalDebit?.toLocaleString()}`, `$${reportData.grandTotalCredit?.toLocaleString()}`, true);
+      drawRow("Grand Balance Totals", "", `PKR ${reportData.grandTotalDebit?.toLocaleString()}`, `PKR ${reportData.grandTotalCredit?.toLocaleString()}`, true);
     }
     else if (selectedReport === 'expense-breakdown' || selectedReport === 'income-breakdown') {
-      drawRow("Classification Category / Group", "Accumulated Value ($)", "", "", true);
+      drawRow("Classification Category / Group", "Accumulated Value (PKR)", "", "", true);
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
       drawRow("BY CATEGORY:", "", "", "", true);
       reportData.byCategory?.forEach(item => {
-        drawRow("  " + item.label, `$${item.amount.toLocaleString()}`);
+        drawRow("  " + item.label, `PKR ${item.amount.toLocaleString()}`);
       });
       y += 4;
 
       drawRow("BY RELATED ENTITY:", "", "", "", true);
       const entityList = selectedReport === 'income-breakdown' ? reportData.byClient : reportData.byVendor;
       entityList?.forEach(item => {
-        drawRow("  " + item.label, `$${item.amount.toLocaleString()}`);
+        drawRow("  " + item.label, `PKR ${item.amount.toLocaleString()}`);
       });
     }
     else if (selectedReport === 'ar-aging') {
-      drawRow("Aging Bracket", "Outstanding Balance ($)", "", "", true);
+      drawRow("Aging Bracket", "Outstanding Balance (PKR)", "", "", true);
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
       reportData.brackets?.forEach(br => {
-        drawRow(br.bracket, `$${br.amount?.toLocaleString()}`, `${br.invoices?.length || 0} invoice(s)`);
+        drawRow(br.bracket, `PKR ${br.amount?.toLocaleString()}`, `${br.invoices?.length || 0} invoice(s)`);
       });
     }
     else if (selectedReport === 'ap-aging') {
-      drawRow("Aging Bracket", "Outstanding Balance ($)", "", "", true);
+      drawRow("Aging Bracket", "Outstanding Balance (PKR)", "", "", true);
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
       reportData.brackets?.forEach(br => {
-        drawRow(br.bracket, `$${br.amount?.toLocaleString()}`, `${br.bills?.length || 0} bill(s)`);
+        drawRow(br.bracket, `PKR ${br.amount?.toLocaleString()}`, `${br.bills?.length || 0} bill(s)`);
       });
     }
     else if (selectedReport === 'asset-register') {
-      drawRow("Asset Item Name", "Purchase ($)", "Current Book ($)", "Accum. Depr. ($)", true);
+      drawRow("Asset Item Name", "Purchase (PKR)", "Current Book (PKR)", "Accum. Depr. (PKR)", true);
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
       (Array.isArray(reportData) ? reportData : []).forEach(asset => {
-        drawRow(asset.name, `$${asset.purchaseValue?.toLocaleString()}`, `$${asset.currentBookValue?.toLocaleString()}`, `$${asset.accumulatedDepreciation?.toLocaleString()}`);
+        drawRow(asset.name, `PKR ${asset.purchaseValue?.toLocaleString()}`, `PKR ${asset.currentBookValue?.toLocaleString()}`, `PKR ${asset.accumulatedDepreciation?.toLocaleString()}`);
       });
     }
     else if (selectedReport === 'liabilities-loans') {
-      drawRow("Liability Description", "Type", "Principal ($)", "Outstanding ($)", true);
+      drawRow("Liability Description", "Type", "Principal (PKR)", "Outstanding (PKR)", true);
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
       (Array.isArray(reportData) ? reportData : []).forEach(lib => {
-        drawRow(lib.name, lib.type, `$${lib.principal_amount?.toLocaleString()}`, `$${lib.outstanding_balance?.toLocaleString()}`);
+        drawRow(lib.name, lib.type, `PKR ${lib.principal_amount?.toLocaleString()}`, `PKR ${lib.outstanding_balance?.toLocaleString()}`);
       });
     }
     else if (selectedReport === 'project-profitability') {
-      drawRow("Project / Client", "Income ($)", "Expenses ($)", "Project Profit ($)", true);
+      drawRow("Project / Client", "Income (PKR)", "Expenses (PKR)", "Project Profit (PKR)", true);
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
       (Array.isArray(reportData) ? reportData : []).forEach(p => {
-        drawRow(p.projectName, `$${p.income?.toLocaleString()}`, `$${p.expense?.toLocaleString()}`, `$${p.profit?.toLocaleString()}`);
+        drawRow(p.projectName, `PKR ${p.income?.toLocaleString()}`, `PKR ${p.expense?.toLocaleString()}`, `PKR ${p.profit?.toLocaleString()}`);
       });
     }
 
@@ -905,7 +905,7 @@ const FinanceDashboard = () => {
   const monthlyTrendsData = {
     labels: ['Total Income', 'Total Expense'],
     datasets: [{
-      label: 'Financial Flow ($)',
+      label: 'Financial Flow (PKR)',
       data: [
         incomes.reduce((sum, i) => sum + i.amount, 0),
         expenses.reduce((sum, e) => sum + e.amount, 0)
@@ -1137,7 +1137,7 @@ const FinanceDashboard = () => {
                     <td className="p-3 whitespace-nowrap text-slate-600 hidden md:table-cell">{item.payment_method}</td>
                     <td className="p-3 text-slate-500 truncate max-w-[200px] hidden xl:table-cell">{item.notes || '-'}</td>
                     <td className={`p-3 text-right font-bold whitespace-nowrap ${item._type === 'Income' ? 'text-green-700' : 'text-red-700'}`}>
-                      ${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      PKR {item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 ))}
