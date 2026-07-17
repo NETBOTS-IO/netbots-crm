@@ -207,11 +207,91 @@ const sendFollowUpReminderEmail = async (email, memberName, lead) => {
     return sendMail(email, `⏰ Follow-Up Reminder: ${lead.companyName}`, html);
 };
 
+const sendDailyFinanceClosingSummary = async (adminEmail, data) => {
+    const todayStr = new Date().toLocaleDateString();
+    
+    const incomesHtml = data.incomes.length > 0 
+        ? data.incomes.map(i => `
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: left;">${i.category}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: left; color: #4b5563;">${i.client ? (i.client.companyName || i.client.contactName) : 'Other'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #16a34a;">PKR ${i.amount.toLocaleString()}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="3" style="padding: 10px; color: #9ca3af; text-align: center;">No incomes recorded today</td></tr>';
+
+    const expensesHtml = data.expenses.length > 0 
+        ? data.expenses.map(e => `
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: left;">${e.category}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: left; color: #4b5563;">${e.vendor ? e.vendor.name : 'Payee'}</td>
+                <td style="padding: 8px; border-bottom: 1px solid #e2e8f0; text-align: right; font-weight: bold; color: #dc2626;">PKR ${e.amount.toLocaleString()}</td>
+            </tr>
+          `).join('')
+        : '<tr><td colspan="3" style="padding: 10px; color: #9ca3af; text-align: center;">No expenses recorded today</td></tr>';
+
+    const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
+        <h2 style="color: #4f46e5; border-bottom: 2px solid #6366f1; padding-bottom: 10px; margin-top: 0;">Daily Finance Closing Summary</h2>
+        <p style="font-size: 14px; color: #4b5563;">Closing Summary report for <strong>${todayStr}</strong>:</p>
+        
+        <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 20px;">
+            <div style="margin-bottom: 8px;">
+                <span style="font-weight: bold; color: #374151;">Total Income:</span>
+                <span style="font-weight: bold; color: #16a34a; float: right;">PKR ${data.totalIncome.toLocaleString()}</span>
+            </div>
+            <div style="margin-bottom: 8px;">
+                <span style="font-weight: bold; color: #374151;">Total Expenses:</span>
+                <span style="font-weight: bold; color: #dc2626; float: right;">PKR ${data.totalExpense.toLocaleString()}</span>
+            </div>
+            <div style="border-top: 1px dashed #cbd5e1; padding-top: 8px; font-size: 16px;">
+                <span style="font-weight: bold; color: #1e293b;">Net Change:</span>
+                <span style="font-weight: bold; color: ${data.netProfit >= 0 ? '#16a34a' : '#dc2626'}; float: right;">PKR ${data.netProfit.toLocaleString()}</span>
+            </div>
+        </div>
+
+        <h3 style="color: #16a34a; border-bottom: 1px solid #bbf7d0; padding-bottom: 5px;">Today's Income Ledger</h3>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 13px;">
+            <thead>
+                <tr style="background-color: #f0fdf4; color: #15803d; font-weight: bold;">
+                    <th style="padding: 8px; text-align: left;">Category</th>
+                    <th style="padding: 8px; text-align: left;">Client</th>
+                    <th style="padding: 8px; text-align: right;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${incomesHtml}
+            </tbody>
+        </table>
+
+        <h3 style="color: #dc2626; border-bottom: 1px solid #fecaca; padding-bottom: 5px;">Today's Expense Ledger</h3>
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+                <tr style="background-color: #fef2f2; color: #991b1b; font-weight: bold;">
+                    <th style="padding: 8px; text-align: left;">Category</th>
+                    <th style="padding: 8px; text-align: left;">Vendor / Payee</th>
+                    <th style="padding: 8px; text-align: right;">Amount</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${expensesHtml}
+            </tbody>
+        </table>
+        
+        <div style="margin-top: 30px; font-size: 11px; color: #9ca3af; text-align: center; border-top: 1px solid #e2e8f0; padding-top: 15px;">
+            <p>Property of NetBots (SMC-Private) Limited</p>
+        </div>
+    </div>
+    `;
+    return sendMail(adminEmail, `Daily Finance Closing Summary - ${todayStr}`, html);
+};
+
 module.exports = {
     sendMail,
     sendMailWithAttachment,
     sendDailySummary,
     sendLeadConversionEmail,
     sendMonthlyProgressEmail,
-    sendFollowUpReminderEmail
+    sendFollowUpReminderEmail,
+    sendDailyFinanceClosingSummary
 };

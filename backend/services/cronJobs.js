@@ -2,7 +2,9 @@ const cron = require('node-cron');
 const Lead = require('../models/Lead');
 const Activity = require('../models/Activity');
 const User = require('../models/User');
-const { sendDailySummary, sendMonthlyProgressEmail, sendFollowUpReminderEmail } = require('../utils/mailer');
+const Income = require('../models/Income');
+const Expense = require('../models/Expense');
+const { sendDailySummary, sendMonthlyProgressEmail, sendFollowUpReminderEmail, sendDailyFinanceClosingSummary } = require('../utils/mailer');
 
 const initCronJobs = () => {
     // 1. Daily Summary at 6:00 AM
@@ -117,6 +119,43 @@ const initCronJobs = () => {
             await processWarmup();
         } catch (error) {
             console.error('Failed to run Warmup Engine Cron:', error);
+        }
+    });
+
+    // 7. Daily Finance Closing Summary at 11:59 PM
+    cron.schedule('59 23 * * *', async () => {
+        console.log('Running Daily Finance Closing Summary Cron Job...');
+        try {
+            const startOfDay = new Date();
+            startOfDay.setHours(0, 0, 0, 0);
+
+            const endOfDay = new Date();
+            endOfDay.setHours(23, 59, 59, 999);
+
+            const incomes = await Income.find({
+                createdAt: { $gte: startOfDay, $lte: endOfDay }
+            }).populate('client');
+
+            const expenses = await Expense.find({
+                createdAt: { $gte: startOfDay, $lte: endOfDay }
+            }).populate('vendor');
+
+            const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0);
+            const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
+            const netProfit = totalIncome - totalExpense;
+
+            const adminEmail = process.env.ADMIN_EMAIL || 'saqlainshahbaltee@gmail.com';
+
+            await sendDailyFinanceClosingSummary(adminEmail, {
+                incomes,
+                expenses,
+                totalIncome,
+                totalExpense,
+                netProfit
+            });
+            console.log('Daily Finance Closing Summary sent successfully.');
+        } catch (error) {
+            console.error('Failed to run Daily Finance Closing Summary Cron:', error);
         }
     });
 };

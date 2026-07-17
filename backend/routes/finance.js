@@ -98,7 +98,7 @@ router.post('/accounts', auth, async (req, res) => {
 router.get('/income', auth, async (req, res) => {
   try {
     const incomes = await Income.find()
-      .populate('client', 'name email')
+      .populate('client', 'companyName contactName email')
       .populate('project', 'name')
       .sort('-date');
     res.json({ success: true, data: incomes });
@@ -517,7 +517,24 @@ router.get('/clients', auth, async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 });
-
+router.post('/clients', auth, async (req, res) => {
+  try {
+    const { companyName, contactName, email, phone } = req.body;
+    const client = new Client({
+      companyName,
+      contactName: contactName || '',
+      email: email || '',
+      phone: phone || '',
+      dealType: 'one_time',
+      startDate: new Date(),
+      submittedBy: req.user.id
+    });
+    await client.save();
+    res.status(201).json({ success: true, data: client });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 router.get('/vendors', auth, async (req, res) => {
   try {
     const vendors = await Vendor.find({});
@@ -540,7 +557,7 @@ router.post('/vendors', auth, async (req, res) => {
 
 router.get('/projects', auth, async (req, res) => {
   try {
-    const projects = await Project.find({}).populate('client', 'name');
+    const projects = await Project.find({}).populate('client', 'companyName contactName');
     res.json({ success: true, data: projects });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

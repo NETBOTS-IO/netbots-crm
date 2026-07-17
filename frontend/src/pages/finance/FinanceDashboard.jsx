@@ -30,10 +30,25 @@ import {
   Calculator,
   ShieldCheck,
   FileText,
-  Receipt
+  Receipt,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Filter
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -104,6 +119,27 @@ const FinanceDashboard = () => {
   const [selectedReport, setSelectedReport] = useState('pnl');
   const [reportData, setReportData] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
+  const [reportPage, setReportPage] = useState(1);
+  const REPORT_PER_PAGE = 50;
+
+  // Table filter, pagination, and sorting state
+  const [txSearch, setTxSearch] = useState('');
+  const [txPage, setTxPage] = useState(1);
+  const [txSort, setTxSort] = useState({ key: 'date', dir: 'desc' });
+  const [txTypeFilter, setTxTypeFilter] = useState('all');
+  const TX_PER_PAGE = 20;
+
+  const [assetSearch, setAssetSearch] = useState('');
+  const [assetPage, setAssetPage] = useState(1);
+  const [assetSort, setAssetSort] = useState({ key: 'name', dir: 'asc' });
+  const ASSET_PER_PAGE = 15;
+
+  const [liabSearch, setLiabSearch] = useState('');
+  const [liabPage, setLiabPage] = useState(1);
+  const LIAB_PER_PAGE = 10;
+
+  const [acctSearch, setAcctSearch] = useState('');
+  const [acctTypeFilter, setAcctTypeFilter] = useState('all');
 
   // Modals state
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
@@ -128,6 +164,16 @@ const FinanceDashboard = () => {
     notes: '',
     attachment: null
   });
+
+  const [showCustomCategory, setShowCustomCategory] = useState(false);
+  const [showCustomClient, setShowCustomClient] = useState(false);
+  const [showCustomVendor, setShowCustomVendor] = useState(false);
+  const [showCustomProject, setShowCustomProject] = useState(false);
+
+  const [customCategoryName, setCustomCategoryName] = useState('');
+  const [customClientName, setCustomClientName] = useState('');
+  const [customVendorName, setCustomVendorName] = useState('');
+  const [customProjectName, setCustomProjectName] = useState('');
 
   const [assetForm, setAssetForm] = useState({
     name: '',
@@ -236,6 +282,8 @@ const FinanceDashboard = () => {
 
   // Load report data when selectedReport changes
   const fetchSelectedReport = async () => {
+    setReportData(null); // Reset before switching to prevent stale type mismatch
+    setReportPage(1);
     setReportLoading(true);
     try {
       const endpoint = `/finance/reports/${selectedReport}`;
@@ -259,20 +307,48 @@ const FinanceDashboard = () => {
   const handleAddTransaction = async (e) => {
     e.preventDefault();
     try {
+      let finalCategory = txForm.category;
+      if (showCustomCategory && customCategoryName.trim()) {
+        await api.post('/finance/accounts', { name: customCategoryName.trim(), type: txType, description: 'Created inline' });
+        finalCategory = customCategoryName.trim();
+      }
+
+      let finalClient = txForm.client;
+      if (txType === 'Income' && showCustomClient && customClientName.trim()) {
+        const clientRes = await api.post('/finance/clients', { companyName: customClientName.trim() });
+        finalClient = clientRes.data?._id || clientRes._id || clientRes.data?.data?._id;
+      }
+
+      let finalVendor = txForm.vendor;
+      if (txType === 'Expense' && showCustomVendor && customVendorName.trim()) {
+        const vendorRes = await api.post('/finance/vendors', { name: customVendorName.trim(), category: 'Misc' });
+        finalVendor = vendorRes.data?._id || vendorRes._id || vendorRes.data?.data?._id;
+      }
+
+      let finalProject = txForm.project;
+      if (showCustomProject && customProjectName.trim()) {
+        // Link to client if selected
+        const projRes = await api.post('/finance/projects', {
+          name: customProjectName.trim(),
+          client: finalClient || undefined
+        });
+        finalProject = projRes.data?._id || projRes._id || projRes.data?.data?._id;
+      }
+
       const endpoint = txType === 'Income' ? '/finance/income' : '/finance/expense';
       const formData = new FormData();
       
       formData.append('amount', Number(txForm.amount));
       formData.append('date', txForm.date);
-      formData.append('category', txForm.category || (txType === 'Income' ? 'Service Revenue' : 'Rent Expense'));
+      formData.append('category', finalCategory || (txType === 'Income' ? 'Service Revenue' : 'Rent Expense'));
       formData.append('payment_method', txForm.payment_method);
       if (txForm.notes) formData.append('notes', txForm.notes);
-      if (txForm.project) formData.append('project', txForm.project);
+      if (finalProject) formData.append('project', finalProject);
 
       if (txType === 'Income') {
-        if (txForm.client) formData.append('client', txForm.client);
+        if (finalClient) formData.append('client', finalClient);
       } else {
-        if (txForm.vendor) formData.append('vendor', txForm.vendor);
+        if (finalVendor) formData.append('vendor', finalVendor);
         formData.append('is_billable', txForm.is_billable);
         formData.append('is_recurring', txForm.is_recurring);
       }
@@ -287,6 +363,17 @@ const FinanceDashboard = () => {
       
       toast({ title: "Success", description: "Transaction recorded successfully." });
       setIsTxModalOpen(false);
+      
+      // Reset form & custom states
+      setShowCustomCategory(false);
+      setShowCustomClient(false);
+      setShowCustomVendor(false);
+      setShowCustomProject(false);
+      setCustomCategoryName('');
+      setCustomClientName('');
+      setCustomVendorName('');
+      setCustomProjectName('');
+
       setTxForm({
         amount: '',
         category: '',
@@ -488,26 +575,170 @@ const FinanceDashboard = () => {
     }
   };
 
-  // PDF Download Logic
+  // ── Table data computation helpers ──────────────────────────────────
+  // Transactions: merge incomes + expenses, filter, sort, paginate
+  const allTransactions = [
+    ...incomes.map(i => ({ ...i, _type: 'Income' })),
+    ...expenses.map(e => ({ ...e, _type: 'Expense' }))
+  ];
+
+  const filteredTransactions = allTransactions.filter(tx => {
+    const q = txSearch.toLowerCase();
+    const matchSearch = !q || tx.category?.toLowerCase().includes(q) ||
+      tx.notes?.toLowerCase().includes(q) ||
+      tx.payment_method?.toLowerCase().includes(q) ||
+      (tx.client?.name || tx.client?.companyName || '').toLowerCase().includes(q) ||
+      (tx.vendor?.name || '').toLowerCase().includes(q);
+    const matchType = txTypeFilter === 'all' || tx._type.toLowerCase() === txTypeFilter;
+    return matchSearch && matchType;
+  });
+
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
+    const dir = txSort.dir === 'asc' ? 1 : -1;
+    if (txSort.key === 'date') return dir * (new Date(a.date) - new Date(b.date));
+    if (txSort.key === 'amount') return dir * (a.amount - b.amount);
+    if (txSort.key === 'category') return dir * (a.category || '').localeCompare(b.category || '');
+    return 0;
+  });
+
+  const txTotalPages = Math.max(1, Math.ceil(sortedTransactions.length / TX_PER_PAGE));
+  const paginatedTransactions = sortedTransactions.slice((txPage - 1) * TX_PER_PAGE, txPage * TX_PER_PAGE);
+
+  const handleTxSort = (key) => {
+    setTxSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
+    setTxPage(1);
+  };
+
+  const TxSortIcon = ({ col }) => {
+    if (txSort.key !== col) return <ArrowUpDown size={12} className="text-slate-300" />;
+    return txSort.dir === 'asc' ? <ArrowUp size={12} className="text-indigo-600" /> : <ArrowDown size={12} className="text-indigo-600" />;
+  };
+
+  // Assets: filter, sort, paginate
+  const filteredAssets = assets.filter(a => {
+    const q = assetSearch.toLowerCase();
+    return !q || a.name?.toLowerCase().includes(q) || a.category?.toLowerCase().includes(q) || a.status?.toLowerCase().includes(q);
+  });
+
+  const sortedAssets = [...filteredAssets].sort((a, b) => {
+    const dir = assetSort.dir === 'asc' ? 1 : -1;
+    if (assetSort.key === 'name') return dir * (a.name || '').localeCompare(b.name || '');
+    if (assetSort.key === 'purchase_value') return dir * (a.purchase_value - b.purchase_value);
+    if (assetSort.key === 'current_book_value') return dir * (a.current_book_value - b.current_book_value);
+    if (assetSort.key === 'purchase_date') return dir * (new Date(a.purchase_date) - new Date(b.purchase_date));
+    return 0;
+  });
+
+  const assetTotalPages = Math.max(1, Math.ceil(sortedAssets.length / ASSET_PER_PAGE));
+  const paginatedAssets = sortedAssets.slice((assetPage - 1) * ASSET_PER_PAGE, assetPage * ASSET_PER_PAGE);
+
+  const handleAssetSort = (key) => {
+    setAssetSort(prev => ({ key, dir: prev.key === key && prev.dir === 'asc' ? 'desc' : 'asc' }));
+    setAssetPage(1);
+  };
+
+  const AssetSortIcon = ({ col }) => {
+    if (assetSort.key !== col) return <ArrowUpDown size={12} className="text-slate-300" />;
+    return assetSort.dir === 'asc' ? <ArrowUp size={12} className="text-indigo-600" /> : <ArrowDown size={12} className="text-indigo-600" />;
+  };
+
+  // Liabilities: filter, paginate
+  const filteredLiabilities = liabilities.filter(l => {
+    const q = liabSearch.toLowerCase();
+    return !q || l.name?.toLowerCase().includes(q) || l.type?.toLowerCase().includes(q);
+  });
+  const liabTotalPages = Math.max(1, Math.ceil(filteredLiabilities.length / LIAB_PER_PAGE));
+  const paginatedLiabilities = filteredLiabilities.slice((liabPage - 1) * LIAB_PER_PAGE, liabPage * LIAB_PER_PAGE);
+
+  // Accounts (Chart of Accounts): filter
+  const filteredAccounts = accounts.filter(acc => {
+    const q = acctSearch.toLowerCase();
+    const matchSearch = !q || acc.name?.toLowerCase().includes(q) || acc.description?.toLowerCase().includes(q);
+    const matchType = acctTypeFilter === 'all' || acc.type === acctTypeFilter;
+    return matchSearch && matchType;
+  });
+
+  // ── Reusable Pagination Component ──────────────────────────────────
+  const PaginationBar = ({ page, totalPages, setPage, totalItems, label }) => (
+    <div className="flex flex-col sm:flex-row items-center justify-between gap-2 px-4 py-3 bg-slate-50/50 border-t border-slate-100">
+      <span className="text-xs text-slate-500 font-medium">
+        Showing {Math.min((page - 1) * (totalItems > 0 ? Math.ceil(totalItems / totalPages) : 1) + 1, totalItems)}–{Math.min(page * Math.ceil(totalItems / totalPages), totalItems)} of {totalItems} {label}
+      </span>
+      <div className="flex items-center gap-1">
+        <Button
+          size="sm" variant="outline" disabled={page <= 1}
+          onClick={() => setPage(page - 1)}
+          className="h-7 w-7 p-0"
+        >
+          <ChevronLeft size={14} />
+        </Button>
+        {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+          let p;
+          if (totalPages <= 7) { p = i + 1; }
+          else if (page <= 4) { p = i + 1; }
+          else if (page >= totalPages - 3) { p = totalPages - 6 + i; }
+          else { p = page - 3 + i; }
+          return (
+            <Button
+              key={p} size="sm" variant={page === p ? 'default' : 'outline'}
+              onClick={() => setPage(p)}
+              className={`h-7 w-7 p-0 text-xs font-bold ${page === p ? 'bg-indigo-600 text-white' : ''}`}
+            >
+              {p}
+            </Button>
+          );
+        })}
+        <Button
+          size="sm" variant="outline" disabled={page >= totalPages}
+          onClick={() => setPage(page + 1)}
+          className="h-7 w-7 p-0"
+        >
+          <ChevronRight size={14} />
+        </Button>
+      </div>
+    </div>
+  );
+
+  // PDF Download Logic - with branded header & logo matching Lead PDF design
   const handleDownloadPDF = () => {
     if (!reportData) return;
     const doc = new jsPDF();
 
+    // ── Branded Header (matching lead PDF style) ──────────────────
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(20);
-    doc.setTextColor(30, 41, 59);
-    doc.text("NETBOTS CRM & ERP FINANCIALS", 14, 20);
+    doc.setFontSize(14);
+    doc.setTextColor(15, 23, 42);
+    doc.text("Net Bots  (SMC-PRIVATE) LIMITED", 14, 15);
 
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);
-    doc.text(`Report: ${selectedReport.toUpperCase()} STATEMENT`, 14, 27);
-    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 32);
+    doc.text("Intellectual property of Net Bots  (SMC-PRIVATE) LIMITED", 14, 19);
+
+    // Try adding the company logo
+    try {
+      doc.addImage('/logo.png', 'PNG', 155, 6, 42, 14);
+    } catch (imgErr) {
+      console.warn("Logo failed to load in PDF export, proceeding with text only.", imgErr);
+    }
 
     doc.setDrawColor(226, 232, 240);
-    doc.line(14, 36, 196, 36);
+    doc.line(14, 23, 196, 23);
 
-    let y = 46;
+    // ── Report Metadata ──────────────────────────────────────────
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(30, 41, 59);
+    const reportLabel = selectedReport.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+    doc.text(`${reportLabel} Statement`, 14, 30);
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 34);
+
+    doc.line(14, 37, 196, 37);
+
+    let y = 44;
 
     const drawRow = (label, col2 = '', col3 = '', col4 = '', isBold = false) => {
       if (isBold) {
@@ -635,7 +866,7 @@ const FinanceDashboard = () => {
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
-      reportData.forEach(asset => {
+      (Array.isArray(reportData) ? reportData : []).forEach(asset => {
         drawRow(asset.name, `$${asset.purchaseValue?.toLocaleString()}`, `$${asset.currentBookValue?.toLocaleString()}`, `$${asset.accumulatedDepreciation?.toLocaleString()}`);
       });
     }
@@ -644,7 +875,7 @@ const FinanceDashboard = () => {
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
-      reportData.forEach(lib => {
+      (Array.isArray(reportData) ? reportData : []).forEach(lib => {
         drawRow(lib.name, lib.type, `$${lib.principal_amount?.toLocaleString()}`, `$${lib.outstanding_balance?.toLocaleString()}`);
       });
     }
@@ -653,7 +884,7 @@ const FinanceDashboard = () => {
       doc.line(14, y - 4, 196, y - 4);
       y += 4;
 
-      reportData.forEach(p => {
+      (Array.isArray(reportData) ? reportData : []).forEach(p => {
         drawRow(p.projectName, `$${p.income?.toLocaleString()}`, `$${p.expense?.toLocaleString()}`, `$${p.profit?.toLocaleString()}`);
       });
     }
@@ -778,7 +1009,7 @@ const FinanceDashboard = () => {
               <div>
                 <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Net Profit</span>
                 <h3 className={`text-2xl font-bold mt-1 ${summaryData.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ${summaryData.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  PKR {summaryData.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
               </div>
               <div className={`p-3 rounded-lg ${summaryData.netProfit >= 0 ? 'bg-green-50 text-green-655' : 'bg-red-50 text-red-655'}`}>
@@ -790,7 +1021,7 @@ const FinanceDashboard = () => {
               <div>
                 <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Total Assets</span>
                 <h3 className="text-2xl font-bold mt-1 text-blue-655">
-                  ${summaryData.totalAssets.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  PKR {summaryData.totalAssets.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
               </div>
               <div className="p-3 bg-blue-50 text-blue-655 rounded-lg">
@@ -802,7 +1033,7 @@ const FinanceDashboard = () => {
               <div>
                 <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Total Liabilities</span>
                 <h3 className="text-2xl font-bold mt-1 text-orange-655">
-                  ${summaryData.totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  PKR {summaryData.totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
               </div>
               <div className="p-3 bg-orange-50 text-orange-655 rounded-lg">
@@ -814,7 +1045,7 @@ const FinanceDashboard = () => {
               <div>
                 <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Cash on Hand</span>
                 <h3 className="text-2xl font-bold mt-1 text-indigo-655">
-                  ${summaryData.cashOnHand.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  PKR {summaryData.cashOnHand.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
               </div>
               <div className="p-3 bg-indigo-50 text-indigo-655 rounded-lg">
@@ -844,109 +1075,147 @@ const FinanceDashboard = () => {
       {/* Transactions Tab */}
       {activeTab === 'transactions' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50">
             <h3 className="text-sm font-bold text-slate-800">Incomes & Expenses Ledger</h3>
-            <span className="text-xs text-slate-500 font-medium">Auto-synced with double-entry general ledger</span>
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-none sm:min-w-[200px]">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text" placeholder="Search transactions..."
+                  value={txSearch} onChange={e => { setTxSearch(e.target.value); setTxPage(1); }}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                />
+              </div>
+              <select
+                value={txTypeFilter} onChange={e => { setTxTypeFilter(e.target.value); setTxPage(1); }}
+                className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold"
+              >
+                <option value="all">All Types</option>
+                <option value="income">Income</option>
+                <option value="expense">Expense</option>
+              </select>
+              <span className="text-xs text-slate-500 font-medium hidden sm:inline">{filteredTransactions.length} records</span>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-slate-655 text-xs uppercase font-bold border-b border-slate-200">
-                  <th className="p-3">Date</th>
+                  <th className="p-3 cursor-pointer select-none" onClick={() => handleTxSort('date')}>
+                    <span className="flex items-center gap-1">Date <TxSortIcon col="date" /></span>
+                  </th>
                   <th className="p-3">Type</th>
-                  <th className="p-3">Category</th>
+                  <th className="p-3 cursor-pointer select-none" onClick={() => handleTxSort('category')}>
+                    <span className="flex items-center gap-1">Category <TxSortIcon col="category" /></span>
+                  </th>
                   <th className="p-3">Client/Vendor</th>
-                  <th className="p-3">Project</th>
-                  <th className="p-3">Payment Method</th>
-                  <th className="p-3">Notes</th>
-                  <th className="p-3 text-right">Amount</th>
+                  <th className="p-3 hidden lg:table-cell">Project</th>
+                  <th className="p-3 hidden md:table-cell">Payment Method</th>
+                  <th className="p-3 hidden xl:table-cell">Notes</th>
+                  <th className="p-3 text-right cursor-pointer select-none" onClick={() => handleTxSort('amount')}>
+                    <span className="flex items-center justify-end gap-1">Amount <TxSortIcon col="amount" /></span>
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-150">
-                {incomes.map(item => (
+                {paginatedTransactions.map(item => (
                   <tr key={item._id} className="hover:bg-slate-50/50">
                     <td className="p-3 whitespace-nowrap text-slate-600">{new Date(item.date).toLocaleDateString()}</td>
                     <td className="p-3 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-green-50 text-green-700 uppercase tracking-wider">Income</span>
+                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider ${
+                        item._type === 'Income' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
+                      }`}>{item._type}</span>
                     </td>
                     <td className="p-3 whitespace-nowrap font-medium text-slate-700">{item.category}</td>
-                    <td className="p-3 whitespace-nowrap text-slate-600">{item.client?.companyName || item.client?.name || 'Other'}</td>
-                    <td className="p-3 whitespace-nowrap text-slate-500">{item.project?.name || '-'}</td>
-                    <td className="p-3 whitespace-nowrap text-slate-600">{item.payment_method}</td>
-                    <td className="p-3 text-slate-500 truncate max-w-[200px]">{item.notes || '-'}</td>
-                    <td className="p-3 text-right font-bold text-green-700 whitespace-nowrap">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                  </tr>
-                ))}
-                {expenses.map(item => (
-                  <tr key={item._id} className="hover:bg-slate-50/50">
-                    <td className="p-3 whitespace-nowrap text-slate-600">{new Date(item.date).toLocaleDateString()}</td>
-                    <td className="p-3 whitespace-nowrap">
-                      <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-red-50 text-red-700 uppercase tracking-wider">Expense</span>
+                    <td className="p-3 whitespace-nowrap text-slate-600">
+                      {item._type === 'Income'
+                        ? (item.client?.companyName || item.client?.name || 'Other')
+                        : (item.vendor?.name || 'Payee')}
                     </td>
-                    <td className="p-3 whitespace-nowrap font-medium text-slate-700">{item.category}</td>
-                    <td className="p-3 whitespace-nowrap text-slate-600">{item.vendor?.name || 'Payee'}</td>
-                    <td className="p-3 whitespace-nowrap text-slate-500">{item.project?.name || '-'}</td>
-                    <td className="p-3 whitespace-nowrap text-slate-600">{item.payment_method}</td>
-                    <td className="p-3 text-slate-500 truncate max-w-[200px]">{item.notes || '-'}</td>
-                    <td className="p-3 text-right font-bold text-red-700 whitespace-nowrap">${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="p-3 whitespace-nowrap text-slate-500 hidden lg:table-cell">{item.project?.name || '-'}</td>
+                    <td className="p-3 whitespace-nowrap text-slate-600 hidden md:table-cell">{item.payment_method}</td>
+                    <td className="p-3 text-slate-500 truncate max-w-[200px] hidden xl:table-cell">{item.notes || '-'}</td>
+                    <td className={`p-3 text-right font-bold whitespace-nowrap ${item._type === 'Income' ? 'text-green-700' : 'text-red-700'}`}>
+                      ${item.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                    </td>
                   </tr>
                 ))}
-                {incomes.length === 0 && expenses.length === 0 && (
+                {filteredTransactions.length === 0 && (
                   <tr>
-                    <td colSpan="8" className="p-8 text-center text-slate-400 font-medium">No ledger transactions found. Click Add buttons above to record.</td>
+                    <td colSpan="8" className="p-8 text-center text-slate-400 font-medium">No transactions found matching your filter.</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+          {filteredTransactions.length > 0 && (
+            <PaginationBar page={txPage} totalPages={txTotalPages} setPage={setTxPage} totalItems={filteredTransactions.length} label="transactions" />
+          )}
         </div>
       )}
 
       {/* Asset Register Tab */}
       {activeTab === 'assets' && (
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-            <h3 className="text-sm font-bold text-slate-800">Fixed Asset Register</h3>
-            <span className="text-xs text-slate-500 font-medium">Calculate Straight-line depreciation and capital write-offs</span>
+          <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50">
+            <div>
+              <h3 className="text-sm font-bold text-slate-800">Fixed Asset Register</h3>
+              <p className="text-[11px] text-slate-400">Calculate Straight-line depreciation and capital write-offs</p>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:flex-none sm:min-w-[220px]">
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text" placeholder="Search assets..."
+                  value={assetSearch} onChange={e => { setAssetSearch(e.target.value); setAssetPage(1); }}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                />
+              </div>
+              <span className="text-xs text-slate-500 font-medium hidden sm:inline">{filteredAssets.length} assets</span>
+            </div>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-slate-655 text-xs uppercase font-bold border-b border-slate-200">
-                  <th className="p-3">Asset Name</th>
+                  <th className="p-3 cursor-pointer select-none" onClick={() => handleAssetSort('name')}>
+                    <span className="flex items-center gap-1">Asset Name <AssetSortIcon col="name" /></span>
+                  </th>
                   <th className="p-3">Category</th>
-                  <th className="p-3">Acquisition Date</th>
-                  <th className="p-3 text-right">Purchase Value</th>
-                  <th className="p-3 text-right">Current Book Value</th>
-                  <th className="p-3">Useful Life (Yrs)</th>
+                  <th className="p-3 cursor-pointer select-none" onClick={() => handleAssetSort('purchase_date')}>
+                    <span className="flex items-center gap-1">Acquisition Date <AssetSortIcon col="purchase_date" /></span>
+                  </th>
+                  <th className="p-3 text-right cursor-pointer select-none" onClick={() => handleAssetSort('purchase_value')}>
+                    <span className="flex items-center justify-end gap-1">Purchase Value <AssetSortIcon col="purchase_value" /></span>
+                  </th>
+                  <th className="p-3 text-right cursor-pointer select-none" onClick={() => handleAssetSort('current_book_value')}>
+                    <span className="flex items-center justify-end gap-1">Current Book Value <AssetSortIcon col="current_book_value" /></span>
+                  </th>
+                  <th className="p-3 text-center">Useful Life (Yrs)</th>
                   <th className="p-3 text-center">Status</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-150">
-                {assets.map(asset => (
+                {paginatedAssets.map(asset => (
                   <tr key={asset._id} className="hover:bg-slate-50/50">
                     <td className="p-3 whitespace-nowrap font-medium text-slate-700">{asset.name}</td>
                     <td className="p-3 whitespace-nowrap text-slate-600">{asset.category}</td>
                     <td className="p-3 whitespace-nowrap text-slate-600">{new Date(asset.purchase_date).toLocaleDateString()}</td>
-                    <td className="p-3 text-right font-semibold text-slate-700">${asset.purchase_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    <td className="p-3 text-right font-bold text-blue-655">${asset.current_book_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="p-3 text-right font-semibold text-slate-700">PKR {asset.purchase_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="p-3 text-right font-bold text-blue-655">PKR {asset.current_book_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="p-3 text-center text-slate-600">{asset.useful_life_years}</td>
                     <td className="p-3 text-center whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
                         asset.status === 'Active' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {asset.status}
-                      </span>
+                      }`}>{asset.status}</span>
                     </td>
                     <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
                       {asset.status === 'Active' && asset.current_book_value > 0 && (
                         <Button
-                          size="xs"
-                          variant="outline"
-                          onClick={() => runDepreciation(asset._id)}
+                          size="xs" variant="outline" onClick={() => runDepreciation(asset._id)}
                           className="text-xs h-7 gap-1 border-blue-200 hover:bg-blue-50 text-blue-700"
                         >
                           <Calculator size={12} /> Depreciate
@@ -954,8 +1223,7 @@ const FinanceDashboard = () => {
                       )}
                       {asset.status === 'Active' && (
                         <Button
-                          size="xs"
-                          variant="outline"
+                          size="xs" variant="outline"
                           onClick={() => { setSelectedAssetForDisposal(asset._id); setIsDisposalModalOpen(true); }}
                           className="text-xs h-7 gap-1 border-red-200 hover:bg-red-50 text-red-700"
                         >
@@ -965,14 +1233,17 @@ const FinanceDashboard = () => {
                     </td>
                   </tr>
                 ))}
-                {assets.length === 0 && (
+                {filteredAssets.length === 0 && (
                   <tr>
-                    <td colSpan="8" className="p-8 text-center text-slate-400 font-medium">No assets registered yet. Click "Add Asset" to start tracking capital assets.</td>
+                    <td colSpan="8" className="p-8 text-center text-slate-400 font-medium">No assets registered yet matching your criteria.</td>
                   </tr>
                 )}
               </tbody>
             </table>
           </div>
+          {filteredAssets.length > 0 && (
+            <PaginationBar page={assetPage} totalPages={assetTotalPages} setPage={setAssetPage} totalItems={filteredAssets.length} label="assets" />
+          )}
         </div>
       )}
 
@@ -980,9 +1251,22 @@ const FinanceDashboard = () => {
       {activeTab === 'liabilities' && (
         <div className="space-y-6">
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-              <h3 className="text-sm font-bold text-slate-800">Outstanding Liabilities & Repayment Schedules</h3>
-              <span className="text-xs text-slate-500 font-medium">Generate amortization principal + interest schedules</span>
+            <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800">Outstanding Liabilities & Repayment Schedules</h3>
+                <p className="text-[11px] text-slate-400">Generate amortization principal + interest schedules</p>
+              </div>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-none sm:min-w-[220px]">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text" placeholder="Search loans/liabilities..."
+                    value={liabSearch} onChange={e => { setLiabSearch(e.target.value); setLiabPage(1); }}
+                    className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                  />
+                </div>
+                <span className="text-xs text-slate-500 font-medium hidden sm:inline">{filteredLiabilities.length} records</span>
+              </div>
             </div>
 
             <div className="overflow-x-auto">
@@ -998,7 +1282,7 @@ const FinanceDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-150">
-                  {liabilities.map(l => {
+                  {paginatedLiabilities.map(l => {
                     const paidAmt = l.principal_amount - l.outstanding_balance;
                     const pct = l.principal_amount > 0 ? (paidAmt / l.principal_amount) * 100 : 0;
                     return (
@@ -1006,8 +1290,8 @@ const FinanceDashboard = () => {
                         <tr className="hover:bg-slate-50/50 font-medium">
                           <td className="p-3 whitespace-nowrap text-slate-800">{l.name}</td>
                           <td className="p-3 whitespace-nowrap text-slate-600">{l.type}</td>
-                          <td className="p-3 text-right text-slate-650">${l.principal_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                          <td className="p-3 text-right text-orange-600 font-bold">${l.outstanding_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          <td className="p-3 text-right text-slate-650">PKR {l.principal_amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                          <td className="p-3 text-right text-orange-650 font-bold">PKR {l.outstanding_balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                           <td className="p-3 text-center">{l.interest_rate}%</td>
                           <td className="p-3 min-w-[150px]">
                             <div className="flex items-center gap-2">
@@ -1029,20 +1313,17 @@ const FinanceDashboard = () => {
                                     <span>Inst. #{idx + 1}</span>
                                     <span>{new Date(installment.dueDate).toLocaleDateString()}</span>
                                   </div>
-                                  <div className="text-sm font-bold text-slate-855 mt-1">${installment.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                  <div className="text-sm font-bold text-slate-855 mt-1">PKR {installment.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                                   <div className="text-[10px] text-slate-500">
-                                    Principal: ${installment.principal} | Interest: ${installment.interest}
+                                    Principal: PKR {installment.principal} | Interest: PKR {installment.interest}
                                   </div>
                                   <div className="mt-2 flex items-center justify-between">
                                     <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${
                                       installment.status === 'Paid' ? 'bg-green-50 text-green-700' : 'bg-amber-50 text-amber-700'
-                                    }`}>
-                                      {installment.status}
-                                    </span>
+                                    }`}>{installment.status}</span>
                                     {installment.status === 'Pending' && (
                                       <Button
-                                        size="xs"
-                                        onClick={() => payInstallment(l._id, installment._id)}
+                                        size="xs" onClick={() => payInstallment(l._id, installment._id)}
                                         className="h-6 text-[9px] bg-indigo-600 hover:bg-indigo-700 font-semibold text-white px-2 py-0"
                                       >
                                         Mark Paid
@@ -1057,14 +1338,17 @@ const FinanceDashboard = () => {
                       </React.Fragment>
                     );
                   })}
-                  {liabilities.length === 0 && (
+                  {filteredLiabilities.length === 0 && (
                     <tr>
-                      <td colSpan="6" className="p-8 text-center text-slate-400 font-medium">No liabilities registered. Click "Add Loan/Liability" to generate repayable liability schedules.</td>
+                      <td colSpan="6" className="p-8 text-center text-slate-400 font-medium">No liabilities found matching your criteria.</td>
                     </tr>
                   )}
                 </tbody>
               </table>
             </div>
+            {filteredLiabilities.length > 0 && (
+              <PaginationBar page={liabPage} totalPages={liabTotalPages} setPage={setLiabPage} totalItems={filteredLiabilities.length} label="liabilities" />
+            )}
           </div>
         </div>
       )}
@@ -1130,15 +1414,7 @@ const FinanceDashboard = () => {
                     <Button
                       onClick={() => window.print()}
                       size="sm"
-                      variant="outline"
-                      className="gap-1.5 font-bold text-xs h-8 print:hidden"
-                    >
-                      <Printer size={12} /> Print Report
-                    </Button>
-                  </div>
-                </div>
-
-                {/* Profit & Loss report content */}
+                 {/* Profit & Loss report content */}
                 {selectedReport === 'pnl' && (
                   <div className="space-y-4 text-sm">
                     <div className="border border-slate-200 rounded-lg overflow-hidden">
@@ -1147,12 +1423,12 @@ const FinanceDashboard = () => {
                         {reportData.incomeDetails?.map((d, i) => (
                           <div key={i} className="flex justify-between p-3">
                             <span className="text-slate-655">{d.account}</span>
-                            <span className="font-semibold text-slate-808">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            <span className="font-semibold text-slate-808">PKR {d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                           </div>
                         ))}
                         <div className="flex justify-between p-3 bg-green-50/50 font-bold text-green-700">
                           <span>Total Revenue</span>
-                          <span>${reportData.totalIncome?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span>PKR {reportData.totalIncome?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                       </div>
                     </div>
@@ -1163,19 +1439,19 @@ const FinanceDashboard = () => {
                         {reportData.expenseDetails?.map((d, i) => (
                           <div key={i} className="flex justify-between p-3">
                             <span className="text-slate-655">{d.account}</span>
-                            <span className="font-semibold text-slate-805">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            <span className="font-semibold text-slate-805">PKR {d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                           </div>
                         ))}
                         <div className="flex justify-between p-3 bg-red-50/50 font-bold text-red-700">
                           <span>Total Operating Expenses</span>
-                          <span>${reportData.totalExpense?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                          <span>PKR {reportData.totalExpense?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                         </div>
                       </div>
                     </div>
 
                     <div className="flex justify-between p-4 bg-slate-900 text-white rounded-lg font-black text-base">
                       <span>Net Operating Income (Net Profit)</span>
-                      <span>${reportData.netProfit?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                      <span>PKR {reportData.netProfit?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                     </div>
                   </div>
                 )}
@@ -1191,12 +1467,12 @@ const FinanceDashboard = () => {
                           {reportData.assetDetails?.map((d, i) => (
                             <div key={i} className="flex justify-between p-3">
                               <span className="text-slate-655">{d.account}</span>
-                              <span className="font-semibold text-slate-808">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              <span className="font-semibold text-slate-808">PKR {d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                           ))}
                           <div className="flex justify-between p-3 bg-blue-100/50 font-bold text-blue-900">
                             <span>Total Assets</span>
-                            <span>${reportData.totalAssets?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            <span>PKR {reportData.totalAssets?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                           </div>
                         </div>
                       </div>
@@ -1209,12 +1485,12 @@ const FinanceDashboard = () => {
                             {reportData.liabilityDetails?.map((d, i) => (
                               <div key={i} className="flex justify-between p-3">
                                 <span className="text-slate-655">{d.account}</span>
-                                <span className="font-semibold text-slate-808">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="font-semibold text-slate-808">PKR {d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               </div>
                             ))}
                             <div className="flex justify-between p-3 bg-orange-100/50 font-bold text-orange-900">
                               <span>Total Liabilities</span>
-                              <span>${reportData.totalLiabilities?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              <span>PKR {reportData.totalLiabilities?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                           </div>
                         </div>
@@ -1225,12 +1501,12 @@ const FinanceDashboard = () => {
                             {reportData.equityDetails?.map((d, i) => (
                               <div key={i} className="flex justify-between p-3">
                                 <span className="text-slate-655">{d.account}</span>
-                                <span className="font-semibold text-slate-808">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="font-semibold text-slate-808">PKR {d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               </div>
                             ))}
                             <div className="flex justify-between p-3 bg-indigo-100/50 font-bold text-indigo-900">
                               <span>Total Equity</span>
-                              <span>${reportData.totalEquity?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              <span>PKR {reportData.totalEquity?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                           </div>
                         </div>
@@ -1246,7 +1522,7 @@ const FinanceDashboard = () => {
                           <span className="text-xs bg-red-500 text-white px-2 py-0.5 rounded font-bold">Unbalanced Ledger</span>
                         )}
                       </div>
-                      <span>Assets ({reportData.totalAssets}) = L+E ({reportData.totalLiabilities + reportData.totalEquity})</span>
+                      <span>Assets (PKR {reportData.totalAssets?.toLocaleString()}) = L+E (PKR {(reportData.totalLiabilities + reportData.totalEquity)?.toLocaleString()})</span>
                     </div>
                   </div>
                 )}
@@ -1257,15 +1533,15 @@ const FinanceDashboard = () => {
                     <div className="grid grid-cols-3 gap-4">
                       <div className="border border-slate-200 rounded-lg p-4 bg-green-50/20">
                         <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Cash In</span>
-                        <div className="text-xl font-bold text-green-700 mt-1">${reportData.cashIn?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div className="text-xl font-bold text-green-700 mt-1">PKR {reportData.cashIn?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                       </div>
                       <div className="border border-slate-200 rounded-lg p-4 bg-red-50/20">
                         <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Total Cash Out</span>
-                        <div className="text-xl font-bold text-red-700 mt-1">${reportData.cashOut?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div className="text-xl font-bold text-red-700 mt-1">PKR {reportData.cashOut?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                       </div>
                       <div className="border border-slate-200 rounded-lg p-4 bg-slate-50">
                         <span className="text-slate-500 text-xs font-bold uppercase tracking-wider">Net Cash Flow</span>
-                        <div className="text-xl font-bold text-slate-800 mt-1">${reportData.netCashFlow?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                        <div className="text-xl font-bold text-slate-800 mt-1">PKR {reportData.netCashFlow?.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                       </div>
                     </div>
 
@@ -1280,17 +1556,26 @@ const FinanceDashboard = () => {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-150 text-xs">
-                          {reportData.flows?.map((f, i) => (
+                          {(reportData.flows || []).slice((reportPage - 1) * REPORT_PER_PAGE, reportPage * REPORT_PER_PAGE).map((f, i) => (
                             <tr key={i} className="hover:bg-slate-50/50">
                               <td className="p-3">{new Date(f.date).toLocaleDateString()}</td>
                               <td className="p-3 font-medium text-slate-700">{f.description}</td>
                               <td className={`p-3 text-right font-bold ${f.amount >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                                {f.amount >= 0 ? '+' : ''}${f.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                                {f.amount >= 0 ? '+' : ''}PKR {f.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                               </td>
                             </tr>
                           ))}
                         </tbody>
                       </table>
+                      {(reportData.flows || []).length > REPORT_PER_PAGE && (
+                        <PaginationBar
+                          page={reportPage}
+                          totalPages={Math.ceil((reportData.flows || []).length / REPORT_PER_PAGE)}
+                          setPage={setReportPage}
+                          totalItems={(reportData.flows || []).length}
+                          label="logs"
+                        />
+                      )}
                     </div>
                   </div>
                 )}
@@ -1308,21 +1593,30 @@ const FinanceDashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-200">
-                        {reportData.accounts?.map((acc, i) => (
+                        {(reportData.accounts || []).slice((reportPage - 1) * REPORT_PER_PAGE, reportPage * REPORT_PER_PAGE).map((acc, i) => (
                           <tr key={i} className="hover:bg-slate-50/30">
                             <td className="p-3 font-medium text-slate-800">{acc.account}</td>
                             <td className="p-3 text-slate-500">{acc.type}</td>
-                            <td className="p-3 text-right text-slate-700 font-mono">{acc.debit > 0 ? `$${acc.debit.toLocaleString()}` : '-'}</td>
-                            <td className="p-3 text-right text-slate-700 font-mono">{acc.credit > 0 ? `$${acc.credit.toLocaleString()}` : '-'}</td>
+                            <td className="p-3 text-right text-slate-700 font-mono">{acc.debit > 0 ? `PKR ${acc.debit.toLocaleString()}` : '-'}</td>
+                            <td className="p-3 text-right text-slate-700 font-mono">{acc.credit > 0 ? `PKR ${acc.credit.toLocaleString()}` : '-'}</td>
                           </tr>
                         ))}
                         <tr className="bg-slate-100 font-bold text-slate-900 border-t-2 border-slate-350">
                           <td colSpan="2" className="p-3">Grand Balance Totals</td>
-                          <td className="p-3 text-right font-mono">${reportData.grandTotalDebit?.toLocaleString()}</td>
-                          <td className="p-3 text-right font-mono">${reportData.grandTotalCredit?.toLocaleString()}</td>
+                          <td className="p-3 text-right font-mono">PKR {reportData.grandTotalDebit?.toLocaleString()}</td>
+                          <td className="p-3 text-right font-mono">PKR {reportData.grandTotalCredit?.toLocaleString()}</td>
                         </tr>
                       </tbody>
                     </table>
+                    {(reportData.accounts || []).length > REPORT_PER_PAGE && (
+                      <PaginationBar
+                        page={reportPage}
+                        totalPages={Math.ceil((reportData.accounts || []).length / REPORT_PER_PAGE)}
+                        setPage={setReportPage}
+                        totalItems={(reportData.accounts || []).length}
+                        label="accounts"
+                      />
+                    )}
                   </div>
                 )}
 
@@ -1337,7 +1631,7 @@ const FinanceDashboard = () => {
                           {reportData.byCategory?.map((item, idx) => (
                             <div key={idx} className="flex justify-between p-3">
                               <span className="text-slate-655">{item.label}</span>
-                              <span className="font-semibold text-slate-808">${item.amount.toLocaleString()}</span>
+                              <span className="font-semibold text-slate-808">PKR {item.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -1350,7 +1644,7 @@ const FinanceDashboard = () => {
                           {reportData.byVendor?.map((item, idx) => (
                             <div key={idx} className="flex justify-between p-3">
                               <span className="text-slate-655">{item.label}</span>
-                              <span className="font-semibold text-slate-808">${item.amount.toLocaleString()}</span>
+                              <span className="font-semibold text-slate-808">PKR {item.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -1370,7 +1664,7 @@ const FinanceDashboard = () => {
                           {reportData.byCategory?.map((item, idx) => (
                             <div key={idx} className="flex justify-between p-3">
                               <span className="text-slate-655">{item.label}</span>
-                              <span className="font-semibold text-slate-808">${item.amount.toLocaleString()}</span>
+                              <span className="font-semibold text-slate-808">PKR {item.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -1383,7 +1677,7 @@ const FinanceDashboard = () => {
                           {reportData.byClient?.map((item, idx) => (
                             <div key={idx} className="flex justify-between p-3">
                               <span className="text-slate-655">{item.label}</span>
-                              <span className="font-semibold text-slate-808">${item.amount.toLocaleString()}</span>
+                              <span className="font-semibold text-slate-808">PKR {item.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -1397,7 +1691,7 @@ const FinanceDashboard = () => {
                   <div className="space-y-4 text-sm">
                     <div className="bg-slate-50 p-4 border border-slate-200 rounded-lg flex justify-between items-center font-bold">
                       <span className="text-slate-500 uppercase tracking-wider text-xs">Total Outstanding Accounts Receivable:</span>
-                      <span className="text-lg text-blue-655">${reportData.totalOutstanding?.toLocaleString()}</span>
+                      <span className="text-lg text-blue-655">PKR {reportData.totalOutstanding?.toLocaleString()}</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1405,7 +1699,7 @@ const FinanceDashboard = () => {
                         <div key={idx} className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm flex flex-col justify-between">
                           <div>
                             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{br.bracket}</div>
-                            <div className="text-lg font-black text-slate-855 mt-1">${br.amount?.toLocaleString()}</div>
+                            <div className="text-lg font-black text-slate-855 mt-1">PKR {br.amount?.toLocaleString()}</div>
                           </div>
                           <div className="mt-3 text-[10px] text-slate-500">
                             {br.invoices?.length || 0} invoice(s)
@@ -1421,7 +1715,7 @@ const FinanceDashboard = () => {
                   <div className="space-y-4 text-sm">
                     <div className="bg-slate-50 p-4 border border-slate-200 rounded-lg flex justify-between items-center font-bold">
                       <span className="text-slate-500 uppercase tracking-wider text-xs">Total Outstanding Accounts Payable:</span>
-                      <span className="text-lg text-orange-655">${reportData.totalOutstanding?.toLocaleString()}</span>
+                      <span className="text-lg text-orange-655">PKR {reportData.totalOutstanding?.toLocaleString()}</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1429,7 +1723,7 @@ const FinanceDashboard = () => {
                         <div key={idx} className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm flex flex-col justify-between">
                           <div>
                             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{br.bracket}</div>
-                            <div className="text-lg font-black text-slate-855 mt-1">${br.amount?.toLocaleString()}</div>
+                            <div className="text-lg font-black text-slate-855 mt-1">PKR {br.amount?.toLocaleString()}</div>
                           </div>
                           <div className="mt-3 text-[10px] text-slate-500">
                             {br.bills?.length || 0} bill(s)
@@ -1454,24 +1748,33 @@ const FinanceDashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-150">
-                        {reportData.map((asset, i) => (
+                        {(Array.isArray(reportData) ? reportData : []).slice((reportPage - 1) * REPORT_PER_PAGE, reportPage * REPORT_PER_PAGE).map((asset, i) => (
                           <tr key={i} className="hover:bg-slate-50/30">
                             <td className="p-3 font-medium text-slate-855">{asset.name}</td>
                             <td className="p-3 text-slate-500">{asset.category}</td>
-                            <td className="p-3 text-right font-mono">${asset.purchaseValue?.toLocaleString()}</td>
-                            <td className="p-3 text-right font-mono text-blue-655 font-bold">${asset.currentBookValue?.toLocaleString()}</td>
-                            <td className="p-3 text-right font-mono text-slate-600">${asset.accumulatedDepreciation?.toLocaleString()}</td>
+                            <td className="p-3 text-right font-mono">PKR {asset.purchaseValue?.toLocaleString()}</td>
+                            <td className="p-3 text-right font-mono text-blue-655 font-bold">PKR {asset.currentBookValue?.toLocaleString()}</td>
+                            <td className="p-3 text-right font-mono text-slate-600">PKR {asset.accumulatedDepreciation?.toLocaleString()}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
+                    {(Array.isArray(reportData) ? reportData : []).length > REPORT_PER_PAGE && (
+                      <PaginationBar
+                        page={reportPage}
+                        totalPages={Math.ceil((Array.isArray(reportData) ? reportData : []).length / REPORT_PER_PAGE)}
+                        setPage={setReportPage}
+                        totalItems={(Array.isArray(reportData) ? reportData : []).length}
+                        label="assets"
+                      />
+                    )}
                   </div>
                 )}
 
                 {/* Liability Schedule report */}
                 {selectedReport === 'liabilities-loans' && (
                   <div className="space-y-4 text-sm">
-                    {reportData.map((lib, i) => (
+                    {(Array.isArray(reportData) ? reportData : []).slice((reportPage - 1) * REPORT_PER_PAGE, reportPage * REPORT_PER_PAGE).map((lib, i) => (
                       <div key={i} className="border border-slate-200 rounded-lg overflow-hidden">
                         <div className="bg-slate-100 p-3 font-bold text-slate-755 border-b border-slate-200 flex justify-between">
                           <span>{lib.name} ({lib.type})</span>
@@ -1480,11 +1783,11 @@ const FinanceDashboard = () => {
                         <div className="p-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
                           <div>
                             <span className="text-slate-500 font-medium">Principal:</span>
-                            <div className="font-bold text-slate-700">${lib.principal_amount?.toLocaleString()}</div>
+                            <div className="font-bold text-slate-700">PKR {lib.principal_amount?.toLocaleString()}</div>
                           </div>
                           <div>
                             <span className="text-slate-500 font-medium">Outstanding Balance:</span>
-                            <div className="font-bold text-orange-600">${lib.outstanding_balance?.toLocaleString()}</div>
+                            <div className="font-bold text-orange-600">PKR {lib.outstanding_balance?.toLocaleString()}</div>
                           </div>
                           <div>
                             <span className="text-slate-500 font-medium">Installments count:</span>
@@ -1497,6 +1800,15 @@ const FinanceDashboard = () => {
                         </div>
                       </div>
                     ))}
+                    {(Array.isArray(reportData) ? reportData : []).length > REPORT_PER_PAGE && (
+                      <PaginationBar
+                        page={reportPage}
+                        totalPages={Math.ceil((Array.isArray(reportData) ? reportData : []).length / REPORT_PER_PAGE)}
+                        setPage={setReportPage}
+                        totalItems={(Array.isArray(reportData) ? reportData : []).length}
+                        label="liabilities"
+                      />
+                    )}
                   </div>
                 )}
 
@@ -1513,23 +1825,32 @@ const FinanceDashboard = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-150">
-                        {reportData.map((p, i) => (
+                        {(Array.isArray(reportData) ? reportData : []).slice((reportPage - 1) * REPORT_PER_PAGE, reportPage * REPORT_PER_PAGE).map((p, i) => (
                           <tr key={i} className="hover:bg-slate-50/30">
                             <td className="p-3 font-semibold text-slate-855">{p.projectName}</td>
-                            <td className="p-3 text-right text-green-700 font-bold">${p.income?.toLocaleString()}</td>
-                            <td className="p-3 text-right text-red-700 font-bold">${p.expense?.toLocaleString()}</td>
+                            <td className="p-3 text-right text-green-700 font-bold">PKR {p.income?.toLocaleString()}</td>
+                            <td className="p-3 text-right text-red-700 font-bold">PKR {p.expense?.toLocaleString()}</td>
                             <td className={`p-3 text-right font-bold ${p.profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                              ${p.profit?.toLocaleString()}
+                              PKR {p.profit?.toLocaleString()}
                             </td>
                           </tr>
                         ))}
-                        {reportData.length === 0 && (
+                        {(Array.isArray(reportData) ? reportData : []).length === 0 && (
                           <tr>
                             <td colSpan="4" className="p-8 text-center text-slate-400">No project-linked incomes or expenses registered yet.</td>
                           </tr>
                         )}
                       </tbody>
                     </table>
+                    {(Array.isArray(reportData) ? reportData : []).length > REPORT_PER_PAGE && (
+                      <PaginationBar
+                        page={reportPage}
+                        totalPages={Math.ceil((Array.isArray(reportData) ? reportData : []).length / REPORT_PER_PAGE)}
+                        setPage={setReportPage}
+                        totalItems={(Array.isArray(reportData) ? reportData : []).length}
+                        label="projects"
+                      />
+                    )}
                   </div>
                 )}
               </div>
@@ -1545,8 +1866,29 @@ const FinanceDashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* List of Accounts */}
           <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+            <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-slate-50/50">
               <h3 className="text-sm font-bold text-slate-800">Chart of Accounts Categories</h3>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <div className="relative flex-1 sm:flex-none sm:min-w-[180px]">
+                  <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text" placeholder="Search categories..."
+                    value={acctSearch} onChange={e => setAcctSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 text-xs border border-slate-200 rounded-lg bg-white focus:ring-2 focus:ring-indigo-200 focus:border-indigo-400 outline-none"
+                  />
+                </div>
+                <select
+                  value={acctTypeFilter} onChange={e => setAcctTypeFilter(e.target.value)}
+                  className="text-xs border border-slate-200 rounded-lg px-2 py-1.5 bg-white font-semibold"
+                >
+                  <option value="all">All Types</option>
+                  <option value="Income">Income</option>
+                  <option value="Expense">Expense</option>
+                  <option value="Asset">Asset</option>
+                  <option value="Liability">Liability</option>
+                  <option value="Equity">Equity</option>
+                </select>
+              </div>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse">
@@ -1559,7 +1901,7 @@ const FinanceDashboard = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-150">
-                  {accounts.map(acc => (
+                  {filteredAccounts.map(acc => (
                     <tr key={acc._id} className="hover:bg-slate-50/50">
                       <td className="p-3 font-semibold text-slate-800">{acc.name}</td>
                       <td className="p-3 text-slate-600">{acc.type}</td>
@@ -1567,12 +1909,15 @@ const FinanceDashboard = () => {
                       <td className="p-3">
                         <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                           acc.isSystem ? 'bg-slate-100 text-slate-500' : 'bg-green-50 text-green-700'
-                        }`}>
-                          {acc.isSystem ? 'System' : 'Custom'}
-                        </span>
+                        }`}>{acc.isSystem ? 'System' : 'Custom'}</span>
                       </td>
                     </tr>
                   ))}
+                  {filteredAccounts.length === 0 && (
+                    <tr>
+                      <td colSpan="4" className="p-8 text-center text-slate-400 font-medium">No account categories found matching your criteria.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -2010,34 +2355,34 @@ const FinanceDashboard = () => {
 
       {/* Transaction Modal */}
       <Dialog open={isTxModalOpen} onOpenChange={setIsTxModalOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Record Transaction</DialogTitle>
             <DialogDescription>Add income or expense to automatically post balanced journal entries to ledger.</DialogDescription>
           </DialogHeader>
-
-          <form onSubmit={handleAddTransaction} className="space-y-4 text-slate-855">
+ 
+          <form onSubmit={handleAddTransaction} className="space-y-4 text-slate-855 pr-1">
             <div className="grid grid-cols-2 gap-2 bg-slate-50 p-1 border rounded-lg">
               <button
                 type="button"
-                onClick={() => setTxType('Income')}
+                onClick={() => { setTxType('Income'); setShowCustomCategory(false); }}
                 className={`py-1.5 text-xs font-bold rounded-md ${txType === 'Income' ? 'bg-white text-green-650 shadow-sm' : 'text-slate-500'}`}
               >
                 Income
               </button>
               <button
                 type="button"
-                onClick={() => setTxType('Expense')}
+                onClick={() => { setTxType('Expense'); setShowCustomCategory(false); }}
                 className={`py-1.5 text-xs font-bold rounded-md ${txType === 'Expense' ? 'bg-white text-red-655 shadow-sm' : 'text-slate-500'}`}
               >
                 Expense
               </button>
             </div>
-
+ 
             {/* Compact Grid Layout for Forms */}
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Amount ($)</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Amount (PKR)</label>
                 <Input
                   type="number"
                   value={txForm.amount}
@@ -2046,25 +2391,47 @@ const FinanceDashboard = () => {
                   placeholder="0.00"
                 />
               </div>
-
+ 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Category</label>
-                <select
-                  value={txForm.category}
-                  onChange={e => setTxForm(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
-                  required
-                >
-                  <option value="">Select Category</option>
-                  {accounts
-                    .filter(a => a.type === txType)
-                    .map(a => (
-                      <option key={a._id} value={a.name}>{a.name}</option>
-                    ))
-                  }
-                </select>
+                <div className="flex gap-1.5">
+                  {!showCustomCategory ? (
+                    <>
+                      <select
+                        value={txForm.category}
+                        onChange={e => setTxForm(prev => ({ ...prev, category: e.target.value }))}
+                        className="flex-1 border border-slate-200 bg-white rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-100"
+                        required={!showCustomCategory}
+                      >
+                        <option value="">Select Category</option>
+                        {accounts
+                          .filter(a => a.type === txType)
+                          .map(a => (
+                            <option key={a._id} value={a.name}>{a.name}</option>
+                          ))
+                        }
+                      </select>
+                      <Button type="button" size="xs" variant="outline" className="h-9 px-2 text-indigo-600 hover:text-indigo-800" onClick={() => setShowCustomCategory(true)}>
+                        <Plus size={16} />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Input
+                        value={customCategoryName}
+                        onChange={e => setCustomCategoryName(e.target.value)}
+                        placeholder="New category name"
+                        className="flex-1"
+                        required={showCustomCategory}
+                      />
+                      <Button type="button" size="xs" variant="outline" className="h-9 px-2 text-red-600 hover:text-red-800 font-bold" onClick={() => { setShowCustomCategory(false); setCustomCategoryName(''); }}>
+                        Cancel
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
-
+ 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Date</label>
                 <Input
@@ -2073,13 +2440,13 @@ const FinanceDashboard = () => {
                   onChange={e => setTxForm(prev => ({ ...prev, date: e.target.value }))}
                 />
               </div>
-
+ 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Method</label>
                 <select
                   value={txForm.payment_method}
                   onChange={e => setTxForm(prev => ({ ...prev, payment_method: e.target.value }))}
-                  className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
+                  className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-100"
                 >
                   <option value="Cash">Cash</option>
                   <option value="Bank Transfer">Bank Transfer</option>
@@ -2088,54 +2455,120 @@ const FinanceDashboard = () => {
                   {txType === 'Expense' && <option value="On Credit">On Credit</option>}
                 </select>
               </div>
-
+ 
               {txType === 'Income' ? (
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Client Link (CRM)</label>
-                  <select
-                    value={txForm.client}
-                    onChange={e => setTxForm(prev => ({ ...prev, client: e.target.value }))}
-                    className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
-                  >
-                    <option value="">None / Other</option>
-                    {crmData.clients.map(c => (
-                      <option key={c._id} value={c._id}>{c.companyName || c.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-1.5">
+                    {!showCustomClient ? (
+                      <>
+                        <select
+                          value={txForm.client}
+                          onChange={e => setTxForm(prev => ({ ...prev, client: e.target.value }))}
+                          className="flex-1 border border-slate-200 bg-white rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-100"
+                        >
+                          <option value="">None / Other</option>
+                          {crmData.clients.map(c => (
+                            <option key={c._id} value={c._id}>{c.companyName || c.name}</option>
+                          ))}
+                        </select>
+                        <Button type="button" size="xs" variant="outline" className="h-9 px-2 text-indigo-600 hover:text-indigo-800" onClick={() => setShowCustomClient(true)}>
+                          <Plus size={16} />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Input
+                          value={customClientName}
+                          onChange={e => setCustomClientName(e.target.value)}
+                          placeholder="New client company name"
+                          className="flex-1"
+                          required={showCustomClient}
+                        />
+                        <Button type="button" size="xs" variant="outline" className="h-9 px-2 text-red-600 hover:text-red-800 font-bold" onClick={() => { setShowCustomClient(false); setCustomClientName(''); }}>
+                          Cancel
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div>
                   <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Vendor Link (CRM)</label>
-                  <select
-                    value={txForm.vendor}
-                    onChange={e => setTxForm(prev => ({ ...prev, vendor: e.target.value }))}
-                    className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
-                  >
-                    <option value="">None / Other</option>
-                    {crmData.vendors.map(v => (
-                      <option key={v._id} value={v._id}>{v.name}</option>
-                    ))}
-                  </select>
+                  <div className="flex gap-1.5">
+                    {!showCustomVendor ? (
+                      <>
+                        <select
+                          value={txForm.vendor}
+                          onChange={e => setTxForm(prev => ({ ...prev, vendor: e.target.value }))}
+                          className="flex-1 border border-slate-200 bg-white rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-100"
+                        >
+                          <option value="">None / Other</option>
+                          {crmData.vendors.map(v => (
+                            <option key={v._id} value={v._id}>{v.name}</option>
+                          ))}
+                        </select>
+                        <Button type="button" size="xs" variant="outline" className="h-9 px-2 text-indigo-600 hover:text-indigo-800" onClick={() => setShowCustomVendor(true)}>
+                          <Plus size={16} />
+                        </Button>
+                      </>
+                    ) : (
+                      <>
+                        <Input
+                          value={customVendorName}
+                          onChange={e => setCustomVendorName(e.target.value)}
+                          placeholder="New vendor name"
+                          className="flex-1"
+                          required={showCustomVendor}
+                        />
+                        <Button type="button" size="xs" variant="outline" className="h-9 px-2 text-red-600 hover:text-red-800 font-bold" onClick={() => { setShowCustomVendor(false); setCustomVendorName(''); }}>
+                          Cancel
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               )}
-
+ 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Project Link (CRM)</label>
-                <select
-                  value={txForm.project}
-                  onChange={e => setTxForm(prev => ({ ...prev, project: e.target.value }))}
-                  className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
-                >
-                  <option value="">None</option>
-                  {crmData.projects.map(p => (
-                    <option key={p._id} value={p._id}>{p.name}</option>
-                  ))}
-                </select>
+                <div className="flex gap-1.5">
+                  {!showCustomProject ? (
+                    <>
+                      <select
+                        value={txForm.project}
+                        onChange={e => setTxForm(prev => ({ ...prev, project: e.target.value }))}
+                        className="flex-1 border border-slate-200 bg-white rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-100"
+                      >
+                        <option value="">None</option>
+                        {crmData.projects.map(p => (
+                          <option key={p._id} value={p._id}>{p.name}</option>
+                        ))}
+                      </select>
+                      <Button type="button" size="xs" variant="outline" className="h-9 px-2 text-indigo-600 hover:text-indigo-800" onClick={() => setShowCustomProject(true)}>
+                        <Plus size={16} />
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Input
+                        value={customProjectName}
+                        onChange={e => setCustomProjectName(e.target.value)}
+                        placeholder="New project name"
+                        className="flex-1"
+                        required={showCustomProject}
+                      />
+                      <Button type="button" size="xs" variant="outline" className="h-9 px-2 text-red-600 hover:text-red-800 font-bold" onClick={() => { setShowCustomProject(false); setCustomProjectName(''); }}>
+                        Cancel
+                      </Button>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
-
+ 
             {txType === 'Expense' && (
-              <div className="flex items-center gap-4 text-xs font-semibold py-1 bg-slate-50 px-2 rounded border border-slate-200/60">
+              <div className="flex items-center gap-4 text-xs font-semibold py-1.5 bg-slate-50 px-2 rounded border border-slate-200/60">
                 <label className="flex items-center gap-1.5 cursor-pointer">
                   <input
                     type="checkbox"
@@ -2154,7 +2587,7 @@ const FinanceDashboard = () => {
                 </label>
               </div>
             )}
-
+ 
             <div>
               <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Notes / Description</label>
               <Input
@@ -2163,7 +2596,7 @@ const FinanceDashboard = () => {
                 placeholder="Details of the payment..."
               />
             </div>
-
+ 
             <div>
               <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Attachment (Receipt/Proof)</label>
               <Input
@@ -2172,9 +2605,9 @@ const FinanceDashboard = () => {
                 className="file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100"
               />
             </div>
-
-            <DialogFooter>
-              <Button type="submit" className="w-full bg-slate-900 text-white font-bold h-10 mt-2">Record Transaction</Button>
+ 
+            <DialogFooter className="pt-2">
+              <Button type="submit" className="w-full bg-slate-900 text-white font-bold h-10">Record Transaction</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -2182,15 +2615,15 @@ const FinanceDashboard = () => {
 
       {/* Asset Modal */}
       <Dialog open={isAssetModalOpen} onOpenChange={setIsAssetModalOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Register Capital Asset</DialogTitle>
             <DialogDescription>Track property, furniture, or equipment and compute depreciation.</DialogDescription>
           </DialogHeader>
-
-          <form onSubmit={handleAddAsset} className="space-y-4 text-slate-855">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+ 
+          <form onSubmit={handleAddAsset} className="space-y-4 text-slate-855 pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="col-span-1 sm:col-span-2">
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Asset Name</label>
                 <Input
                   value={assetForm.name}
@@ -2199,13 +2632,13 @@ const FinanceDashboard = () => {
                   placeholder="MacBook Pro, Office Desk..."
                 />
               </div>
-
+ 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Asset Category / Head</label>
                 <select
                   value={assetForm.category}
                   onChange={e => setAssetForm(prev => ({ ...prev, category: e.target.value }))}
-                  className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
+                  className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-100"
                   required
                 >
                   <option value="">Select Asset Head</option>
@@ -2217,7 +2650,7 @@ const FinanceDashboard = () => {
                   }
                 </select>
               </div>
-
+ 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Useful Life (Years)</label>
                 <Input
@@ -2228,7 +2661,7 @@ const FinanceDashboard = () => {
                   min="1"
                 />
               </div>
-
+ 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Purchase Date</label>
                 <Input
@@ -2237,9 +2670,9 @@ const FinanceDashboard = () => {
                   onChange={e => setAssetForm(prev => ({ ...prev, purchase_date: e.target.value }))}
                 />
               </div>
-
+ 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Purchase Value ($)</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Purchase Value (PKR)</label>
                 <Input
                   type="number"
                   value={assetForm.purchase_value}
@@ -2249,13 +2682,13 @@ const FinanceDashboard = () => {
                 />
               </div>
             </div>
-
+ 
             <div>
               <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Purchased From (Vendor)</label>
               <select
                 value={assetForm.vendor}
                 onChange={e => setAssetForm(prev => ({ ...prev, vendor: e.target.value }))}
-                className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
+                className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-100"
               >
                 <option value="">None / Other</option>
                 {crmData.vendors.map(v => (
@@ -2263,25 +2696,25 @@ const FinanceDashboard = () => {
                 ))}
               </select>
             </div>
-
-            <DialogFooter>
-              <Button type="submit" className="w-full bg-slate-900 text-white font-bold h-10 mt-2">Capitalize Asset</Button>
+ 
+            <DialogFooter className="pt-2">
+              <Button type="submit" className="w-full bg-slate-900 text-white font-bold h-10">Capitalize Asset</Button>
             </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
-
+ 
       {/* Liability Modal */}
       <Dialog open={isLiabilityModalOpen} onOpenChange={setIsLiabilityModalOpen}>
-        <DialogContent className="max-w-xl">
+        <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Register Liability / Loan</DialogTitle>
             <DialogDescription>Acquire loans or payables and auto-generate installment schedules.</DialogDescription>
           </DialogHeader>
-
-          <form onSubmit={handleAddLiability} className="space-y-4 text-slate-855">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="col-span-2">
+ 
+          <form onSubmit={handleAddLiability} className="space-y-4 text-slate-855 pr-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="col-span-1 sm:col-span-2">
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Liability / Creditor Name</label>
                 <Input
                   value={liabilityForm.name}
@@ -2290,13 +2723,13 @@ const FinanceDashboard = () => {
                   placeholder="Bank Loan, Vendor Credit..."
                 />
               </div>
-
+ 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Liability Category / Head</label>
                 <select
                   value={liabilityForm.type}
                   onChange={e => setLiabilityForm(prev => ({ ...prev, type: e.target.value }))}
-                  className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
+                  className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm focus:ring-2 focus:ring-indigo-100"
                   required
                 >
                   <option value="">Select Liability Head</option>
@@ -2308,7 +2741,7 @@ const FinanceDashboard = () => {
                   }
                 </select>
               </div>
-
+ 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Interest Rate (%)</label>
                 <Input
@@ -2318,9 +2751,9 @@ const FinanceDashboard = () => {
                   placeholder="0"
                 />
               </div>
-
+ 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Principal Amount ($)</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Principal Amount (PKR)</label>
                 <Input
                   type="number"
                   value={liabilityForm.principal_amount}
@@ -2329,7 +2762,7 @@ const FinanceDashboard = () => {
                   placeholder="0.00"
                 />
               </div>
-
+ 
               <div>
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Installments count</label>
                 <Input
@@ -2341,7 +2774,7 @@ const FinanceDashboard = () => {
                 />
               </div>
             </div>
-
+ 
             <div>
               <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Start Date</label>
               <Input
@@ -2350,9 +2783,9 @@ const FinanceDashboard = () => {
                 onChange={e => setLiabilityForm(prev => ({ ...prev, start_date: e.target.value }))}
               />
             </div>
-
-            <DialogFooter>
-              <Button type="submit" className="w-full bg-slate-900 text-white font-bold h-10 mt-2">Create Loan</Button>
+ 
+            <DialogFooter className="pt-2">
+              <Button type="submit" className="w-full bg-slate-900 text-white font-bold h-10">Create Loan</Button>
             </DialogFooter>
           </form>
         </DialogContent>

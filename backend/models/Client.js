@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const ClientSchema = new mongoose.Schema({
-  leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', required: true },
+  leadId: { type: mongoose.Schema.Types.ObjectId, ref: 'Lead', required: false },
   companyName: { type: String, required: true },
   contactName: { type: String },
   email: { type: String },
