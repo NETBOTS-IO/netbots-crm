@@ -391,9 +391,9 @@ const FinanceDashboard = () => {
     
     html2canvas(element, { scale: 3, useCORS: true }).then((canvas) => {
       const link = document.createElement('a');
-      const clientSafe = (invoiceForm.clientName || 'client').trim().replace(/[^a-z0-9]/gi, '_');
+      const companySafe = (invoiceForm.issuerName || 'Company').trim().replace(/[^a-z0-9]/gi, '_');
       const invSafe = (invoiceForm.invoiceNo || 'pos').trim().replace(/[^a-z0-9]/gi, '_');
-      link.download = `${clientSafe}_${invSafe}.jpg`;
+      link.download = `${companySafe}_${invSafe}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 1.0);
       link.click();
       toast({ title: "JPG Downloaded", description: "Thermal receipt exported successfully." });
@@ -1633,18 +1633,19 @@ const FinanceDashboard = () => {
               </div>
 
               {/* Form columns header label */}
-              <div className="grid grid-cols-12 gap-2 mb-1.5 text-[9px] uppercase font-extrabold text-slate-400 px-2 tracking-wider">
-                <div className="col-span-5">Service / Item Name</div>
-                <div className="col-span-2 text-center">Qty</div>
-                <div className="col-span-2 text-right">Rate (PKR)</div>
-                <div className="col-span-2 text-right">Discount (PKR)</div>
+              <div className="grid grid-cols-12 gap-2 mb-1.5 text-[9px] uppercase font-extrabold text-slate-400 px-2 tracking-wider text-center items-center">
+                <div className="col-span-4 text-left">Service / Item Name</div>
+                <div className="col-span-2">Rate (PKR)</div>
+                <div className="col-span-2">Qty</div>
+                <div className="col-span-2">Disc (PKR)</div>
+                <div className="col-span-1">Total</div>
                 <div className="col-span-1"></div>
               </div>
 
               <div className="space-y-2">
                 {invoiceForm.items.map((item, idx) => (
                   <div key={idx} className="grid grid-cols-12 gap-2 items-center bg-slate-50 p-2 rounded border border-slate-200">
-                    <div className="col-span-5">
+                    <div className="col-span-4">
                       <input
                         type="text"
                         className="w-full border border-slate-200 bg-white rounded p-1 text-xs"
@@ -1653,6 +1654,19 @@ const FinanceDashboard = () => {
                         onChange={e => {
                           const newItems = [...invoiceForm.items];
                           newItems[idx].description = e.target.value;
+                          setInvoiceForm(prev => ({ ...prev, items: newItems }));
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-2">
+                      <input
+                        type="number"
+                        className="w-full border border-slate-200 bg-white rounded p-1 text-xs text-center"
+                        placeholder="Rate"
+                        value={item.rate}
+                        onChange={e => {
+                          const newItems = [...invoiceForm.items];
+                          newItems[idx].rate = Number(e.target.value || 0);
                           setInvoiceForm(prev => ({ ...prev, items: newItems }));
                         }}
                       />
@@ -1674,20 +1688,7 @@ const FinanceDashboard = () => {
                     <div className="col-span-2">
                       <input
                         type="number"
-                        className="w-full border border-slate-200 bg-white rounded p-1 text-xs text-right"
-                        placeholder="Rate"
-                        value={item.rate}
-                        onChange={e => {
-                          const newItems = [...invoiceForm.items];
-                          newItems[idx].rate = Number(e.target.value || 0);
-                          setInvoiceForm(prev => ({ ...prev, items: newItems }));
-                        }}
-                      />
-                    </div>
-                    <div className="col-span-2">
-                      <input
-                        type="number"
-                        className="w-full border border-slate-200 bg-white rounded p-1 text-xs text-right"
+                        className="w-full border border-slate-200 bg-white rounded p-1 text-xs text-center"
                         placeholder="Disc"
                         value={item.discount}
                         onChange={e => {
@@ -1696,6 +1697,9 @@ const FinanceDashboard = () => {
                           setInvoiceForm(prev => ({ ...prev, items: newItems }));
                         }}
                       />
+                    </div>
+                    <div className="col-span-1 font-bold text-xs text-slate-700 text-center">
+                      {(item.quantity * item.rate) - Number(item.discount || 0)}
                     </div>
                     <div className="col-span-1 text-center">
                       <button
@@ -1756,7 +1760,7 @@ const FinanceDashboard = () => {
 
               {/* Header */}
               <div className="text-center space-y-1">
-                <div className="text-xs font-black tracking-normal whitespace-nowrap uppercase">*** {invoiceForm.issuerName} ***</div>
+                <div className="text-[10px] font-black tracking-normal whitespace-nowrap uppercase overflow-hidden text-ellipsis">*** {invoiceForm.issuerName} ***</div>
                 <div className="whitespace-pre-line text-[10px] text-slate-600">{invoiceForm.issuerDetails}</div>
                 <div>--------------------------------</div>
               </div>
