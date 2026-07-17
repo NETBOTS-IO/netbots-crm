@@ -77,6 +77,12 @@ const FinanceDashboard = () => {
   const initialTab = location.pathname.endsWith('/transactions') ? 'transactions' : 'overview';
   const [activeTab, setActiveTab] = useState(initialTab);
 
+  // Sync activeTab with route path updates (e.g. clicking subheader links Dashboard / Transactions)
+  useEffect(() => {
+    const tab = location.pathname.endsWith('/transactions') ? 'transactions' : 'overview';
+    setActiveTab(tab);
+  }, [location.pathname]);
+
   // States
   const [loading, setLoading] = useState(true);
   const [crmData, setCrmData] = useState({ clients: [], vendors: [], projects: [] });
@@ -122,7 +128,7 @@ const FinanceDashboard = () => {
 
   const [assetForm, setAssetForm] = useState({
     name: '',
-    category: 'Equipment',
+    category: '',
     purchase_date: new Date().toISOString().substring(0, 10),
     purchase_value: '',
     useful_life_years: 3,
@@ -132,7 +138,7 @@ const FinanceDashboard = () => {
 
   const [liabilityForm, setLiabilityForm] = useState({
     name: '',
-    type: 'Loan',
+    type: '',
     principal_amount: '',
     interest_rate: '',
     start_date: new Date().toISOString().substring(0, 10),
@@ -285,7 +291,7 @@ const FinanceDashboard = () => {
       setIsAssetModalOpen(false);
       setAssetForm({
         name: '',
-        category: 'Equipment',
+        category: '',
         purchase_date: new Date().toISOString().substring(0, 10),
         purchase_value: '',
         useful_life_years: 3,
@@ -312,7 +318,7 @@ const FinanceDashboard = () => {
       setIsLiabilityModalOpen(false);
       setLiabilityForm({
         name: '',
-        type: 'Loan',
+        type: '',
         principal_amount: '',
         interest_rate: '',
         start_date: new Date().toISOString().substring(0, 10),
@@ -639,7 +645,7 @@ const FinanceDashboard = () => {
                   ${summaryData.netProfit.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
               </div>
-              <div className={`p-3 rounded-lg ${summaryData.netProfit >= 0 ? 'bg-green-50 text-green-650' : 'bg-red-50 text-red-650'}`}>
+              <div className={`p-3 rounded-lg ${summaryData.netProfit >= 0 ? 'bg-green-50 text-green-655' : 'bg-red-50 text-red-655'}`}>
                 {summaryData.netProfit >= 0 ? <ArrowUpRight size={22} /> : <ArrowDownRight size={22} />}
               </div>
             </div>
@@ -647,11 +653,11 @@ const FinanceDashboard = () => {
             <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Total Assets</span>
-                <h3 className="text-2xl font-bold mt-1 text-blue-650">
+                <h3 className="text-2xl font-bold mt-1 text-blue-655">
                   ${summaryData.totalAssets.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
               </div>
-              <div className="p-3 bg-blue-50 text-blue-650 rounded-lg">
+              <div className="p-3 bg-blue-50 text-blue-655 rounded-lg">
                 <Layers size={22} />
               </div>
             </div>
@@ -659,11 +665,11 @@ const FinanceDashboard = () => {
             <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Total Liabilities</span>
-                <h3 className="text-2xl font-bold mt-1 text-orange-650">
+                <h3 className="text-2xl font-bold mt-1 text-orange-655">
                   ${summaryData.totalLiabilities.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
               </div>
-              <div className="p-3 bg-orange-50 text-orange-650 rounded-lg">
+              <div className="p-3 bg-orange-50 text-orange-655 rounded-lg">
                 <Wallet size={22} />
               </div>
             </div>
@@ -671,11 +677,11 @@ const FinanceDashboard = () => {
             <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center justify-between">
               <div>
                 <span className="text-slate-500 text-xs font-semibold uppercase tracking-wider">Cash on Hand</span>
-                <h3 className="text-2xl font-bold mt-1 text-indigo-650">
+                <h3 className="text-2xl font-bold mt-1 text-indigo-655">
                   ${summaryData.cashOnHand.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </h3>
               </div>
-              <div className="p-3 bg-indigo-50 text-indigo-650 rounded-lg">
+              <div className="p-3 bg-indigo-50 text-indigo-655 rounded-lg">
                 <IndianRupee size={22} />
               </div>
             </div>
@@ -710,7 +716,7 @@ const FinanceDashboard = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="bg-slate-100 text-slate-650 text-xs uppercase font-bold border-b border-slate-200">
+                <tr className="bg-slate-100 text-slate-655 text-xs uppercase font-bold border-b border-slate-200">
                   <th className="p-3">Date</th>
                   <th className="p-3">Type</th>
                   <th className="p-3">Category</th>
@@ -772,7 +778,7 @@ const FinanceDashboard = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left text-sm border-collapse">
               <thead>
-                <tr className="bg-slate-100 text-slate-650 text-xs uppercase font-bold border-b border-slate-200">
+                <tr className="bg-slate-100 text-slate-655 text-xs uppercase font-bold border-b border-slate-200">
                   <th className="p-3">Asset Name</th>
                   <th className="p-3">Category</th>
                   <th className="p-3">Acquisition Date</th>
@@ -790,7 +796,7 @@ const FinanceDashboard = () => {
                     <td className="p-3 whitespace-nowrap text-slate-600">{asset.category}</td>
                     <td className="p-3 whitespace-nowrap text-slate-600">{new Date(asset.purchase_date).toLocaleDateString()}</td>
                     <td className="p-3 text-right font-semibold text-slate-700">${asset.purchase_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                    <td className="p-3 text-right font-bold text-blue-650">${asset.current_book_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                    <td className="p-3 text-right font-bold text-blue-655">${asset.current_book_value.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                     <td className="p-3 text-center text-slate-600">{asset.useful_life_years}</td>
                     <td className="p-3 text-center whitespace-nowrap">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
@@ -846,7 +852,7 @@ const FinanceDashboard = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse">
                 <thead>
-                  <tr className="bg-slate-100 text-slate-650 text-xs uppercase font-bold border-b border-slate-200">
+                  <tr className="bg-slate-100 text-slate-655 text-xs uppercase font-bold border-b border-slate-200">
                     <th className="p-3">Lending Entity / Loan</th>
                     <th className="p-3">Type</th>
                     <th className="p-3 text-right">Principal Amount</th>
@@ -887,7 +893,7 @@ const FinanceDashboard = () => {
                                     <span>Inst. #{idx + 1}</span>
                                     <span>{new Date(installment.dueDate).toLocaleDateString()}</span>
                                   </div>
-                                  <div className="text-sm font-bold text-slate-850 mt-1">${installment.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
+                                  <div className="text-sm font-bold text-slate-855 mt-1">${installment.total.toLocaleString(undefined, { minimumFractionDigits: 2 })}</div>
                                   <div className="text-[10px] text-slate-500">
                                     Principal: ${installment.principal} | Interest: ${installment.interest}
                                   </div>
@@ -1004,7 +1010,7 @@ const FinanceDashboard = () => {
                       <div className="divide-y divide-slate-150">
                         {reportData.incomeDetails?.map((d, i) => (
                           <div key={i} className="flex justify-between p-3">
-                            <span className="text-slate-650">{d.account}</span>
+                            <span className="text-slate-655">{d.account}</span>
                             <span className="font-semibold text-slate-800">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                           </div>
                         ))}
@@ -1020,8 +1026,8 @@ const FinanceDashboard = () => {
                       <div className="divide-y divide-slate-150">
                         {reportData.expenseDetails?.map((d, i) => (
                           <div key={i} className="flex justify-between p-3">
-                            <span className="text-slate-650">{d.account}</span>
-                            <span className="font-semibold text-slate-800">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                            <span className="text-slate-655">{d.account}</span>
+                            <span className="font-semibold text-slate-805">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                           </div>
                         ))}
                         <div className="flex justify-between p-3 bg-red-50/50 font-bold text-red-700">
@@ -1048,8 +1054,8 @@ const FinanceDashboard = () => {
                         <div className="divide-y divide-slate-150">
                           {reportData.assetDetails?.map((d, i) => (
                             <div key={i} className="flex justify-between p-3">
-                              <span className="text-slate-650">{d.account}</span>
-                              <span className="font-semibold text-slate-800">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                              <span className="text-slate-655">{d.account}</span>
+                              <span className="font-semibold text-slate-808">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                             </div>
                           ))}
                           <div className="flex justify-between p-3 bg-blue-100/50 font-bold text-blue-900">
@@ -1066,8 +1072,8 @@ const FinanceDashboard = () => {
                           <div className="divide-y divide-slate-150">
                             {reportData.liabilityDetails?.map((d, i) => (
                               <div key={i} className="flex justify-between p-3">
-                                <span className="text-slate-650">{d.account}</span>
-                                <span className="font-semibold text-slate-800">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="text-slate-655">{d.account}</span>
+                                <span className="font-semibold text-slate-808">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               </div>
                             ))}
                             <div className="flex justify-between p-3 bg-orange-100/50 font-bold text-orange-900">
@@ -1078,12 +1084,12 @@ const FinanceDashboard = () => {
                         </div>
 
                         <div className="border border-slate-200 rounded-lg overflow-hidden h-fit">
-                          <div className="bg-indigo-50 p-3 font-bold text-indigo-850 border-b border-slate-200">Equity</div>
+                          <div className="bg-indigo-50 p-3 font-bold text-indigo-855 border-b border-slate-200">Equity</div>
                           <div className="divide-y divide-slate-150">
                             {reportData.equityDetails?.map((d, i) => (
                               <div key={i} className="flex justify-between p-3">
-                                <span className="text-slate-650">{d.account}</span>
-                                <span className="font-semibold text-slate-800">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
+                                <span className="text-slate-655">{d.account}</span>
+                                <span className="font-semibold text-slate-808">${d.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}</span>
                               </div>
                             ))}
                             <div className="flex justify-between p-3 bg-indigo-100/50 font-bold text-indigo-900">
@@ -1131,7 +1137,7 @@ const FinanceDashboard = () => {
                       <div className="bg-slate-100 p-3 font-bold text-slate-700 border-b border-slate-200">Cash Flow Logs</div>
                       <table className="w-full text-left">
                         <thead>
-                          <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-bold text-slate-650">
+                          <tr className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-bold text-slate-655">
                             <th className="p-3">Date</th>
                             <th className="p-3">Description</th>
                             <th className="p-3 text-right">Flow Amount</th>
@@ -1195,7 +1201,7 @@ const FinanceDashboard = () => {
                           {reportData.byCategory?.map((item, idx) => (
                             <div key={idx} className="flex justify-between p-3">
                               <span className="text-slate-655">{item.label}</span>
-                              <span className="font-semibold text-slate-805">${item.amount.toLocaleString()}</span>
+                              <span className="font-semibold text-slate-808">${item.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -1208,7 +1214,7 @@ const FinanceDashboard = () => {
                           {reportData.byVendor?.map((item, idx) => (
                             <div key={idx} className="flex justify-between p-3">
                               <span className="text-slate-655">{item.label}</span>
-                              <span className="font-semibold text-slate-805">${item.amount.toLocaleString()}</span>
+                              <span className="font-semibold text-slate-808">${item.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -1228,7 +1234,7 @@ const FinanceDashboard = () => {
                           {reportData.byCategory?.map((item, idx) => (
                             <div key={idx} className="flex justify-between p-3">
                               <span className="text-slate-655">{item.label}</span>
-                              <span className="font-semibold text-slate-805">${item.amount.toLocaleString()}</span>
+                              <span className="font-semibold text-slate-808">${item.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -1241,7 +1247,7 @@ const FinanceDashboard = () => {
                           {reportData.byClient?.map((item, idx) => (
                             <div key={idx} className="flex justify-between p-3">
                               <span className="text-slate-655">{item.label}</span>
-                              <span className="font-semibold text-slate-805">${item.amount.toLocaleString()}</span>
+                              <span className="font-semibold text-slate-808">${item.amount.toLocaleString()}</span>
                             </div>
                           ))}
                         </div>
@@ -1255,7 +1261,7 @@ const FinanceDashboard = () => {
                   <div className="space-y-4 text-sm">
                     <div className="bg-slate-50 p-4 border border-slate-200 rounded-lg flex justify-between items-center font-bold">
                       <span className="text-slate-500 uppercase tracking-wider text-xs">Total Outstanding Accounts Receivable:</span>
-                      <span className="text-lg text-blue-650">${reportData.totalOutstanding?.toLocaleString()}</span>
+                      <span className="text-lg text-blue-655">${reportData.totalOutstanding?.toLocaleString()}</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1263,7 +1269,7 @@ const FinanceDashboard = () => {
                         <div key={idx} className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm flex flex-col justify-between">
                           <div>
                             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{br.bracket}</div>
-                            <div className="text-lg font-black text-slate-850 mt-1">${br.amount?.toLocaleString()}</div>
+                            <div className="text-lg font-black text-slate-855 mt-1">${br.amount?.toLocaleString()}</div>
                           </div>
                           <div className="mt-3 text-[10px] text-slate-500">
                             {br.invoices?.length || 0} invoice(s)
@@ -1279,7 +1285,7 @@ const FinanceDashboard = () => {
                   <div className="space-y-4 text-sm">
                     <div className="bg-slate-50 p-4 border border-slate-200 rounded-lg flex justify-between items-center font-bold">
                       <span className="text-slate-500 uppercase tracking-wider text-xs">Total Outstanding Accounts Payable:</span>
-                      <span className="text-lg text-orange-650">${reportData.totalOutstanding?.toLocaleString()}</span>
+                      <span className="text-lg text-orange-655">${reportData.totalOutstanding?.toLocaleString()}</span>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -1287,7 +1293,7 @@ const FinanceDashboard = () => {
                         <div key={idx} className="border border-slate-200 rounded-lg p-4 bg-white shadow-sm flex flex-col justify-between">
                           <div>
                             <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">{br.bracket}</div>
-                            <div className="text-lg font-black text-slate-850 mt-1">${br.amount?.toLocaleString()}</div>
+                            <div className="text-lg font-black text-slate-855 mt-1">${br.amount?.toLocaleString()}</div>
                           </div>
                           <div className="mt-3 text-[10px] text-slate-500">
                             {br.bills?.length || 0} bill(s)
@@ -1314,10 +1320,10 @@ const FinanceDashboard = () => {
                       <tbody className="divide-y divide-slate-150">
                         {reportData.map((asset, i) => (
                           <tr key={i} className="hover:bg-slate-50/30">
-                            <td className="p-3 font-medium text-slate-850">{asset.name}</td>
+                            <td className="p-3 font-medium text-slate-855">{asset.name}</td>
                             <td className="p-3 text-slate-500">{asset.category}</td>
                             <td className="p-3 text-right font-mono">${asset.purchaseValue?.toLocaleString()}</td>
-                            <td className="p-3 text-right font-mono text-blue-650 font-bold">${asset.currentBookValue?.toLocaleString()}</td>
+                            <td className="p-3 text-right font-mono text-blue-655 font-bold">${asset.currentBookValue?.toLocaleString()}</td>
                             <td className="p-3 text-right font-mono text-slate-600">${asset.accumulatedDepreciation?.toLocaleString()}</td>
                           </tr>
                         ))}
@@ -1485,7 +1491,7 @@ const FinanceDashboard = () => {
             <DialogDescription>Add income or expense to automatically post balanced journal entries to ledger.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAddTransaction} className="space-y-4 text-slate-850">
+          <form onSubmit={handleAddTransaction} className="space-y-4 text-slate-855">
             <div className="grid grid-cols-2 gap-2 bg-slate-50 p-1 border rounded-lg">
               <button
                 type="button"
@@ -1497,7 +1503,7 @@ const FinanceDashboard = () => {
               <button
                 type="button"
                 onClick={() => setTxType('Expense')}
-                className={`py-1.5 text-xs font-bold rounded-md ${txType === 'Expense' ? 'bg-white text-red-650 shadow-sm' : 'text-slate-500'}`}
+                className={`py-1.5 text-xs font-bold rounded-md ${txType === 'Expense' ? 'bg-white text-red-655 shadow-sm' : 'text-slate-500'}`}
               >
                 Expense
               </button>
@@ -1648,7 +1654,7 @@ const FinanceDashboard = () => {
             <DialogDescription>Track property, furniture, or equipment and compute depreciation.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAddAsset} className="space-y-4 text-slate-850">
+          <form onSubmit={handleAddAsset} className="space-y-4 text-slate-855">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Asset Name</label>
@@ -1661,17 +1667,20 @@ const FinanceDashboard = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Asset Category</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Asset Category / Head</label>
                 <select
                   value={assetForm.category}
                   onChange={e => setAssetForm(prev => ({ ...prev, category: e.target.value }))}
                   className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
+                  required
                 >
-                  <option value="Equipment">Equipment</option>
-                  <option value="Software/Digital">Software/Digital</option>
-                  <option value="Furniture">Furniture</option>
-                  <option value="Vehicles">Vehicles</option>
-                  <option value="Other">Other</option>
+                  <option value="">Select Asset Head</option>
+                  {accounts
+                    .filter(a => a.type === 'Asset')
+                    .map(a => (
+                      <option key={a._id} value={a.name}>{a.name}</option>
+                    ))
+                  }
                 </select>
               </div>
 
@@ -1736,7 +1745,7 @@ const FinanceDashboard = () => {
             <DialogDescription>Acquire loans or payables and auto-generate installment schedules.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAddLiability} className="space-y-4 text-slate-850">
+          <form onSubmit={handleAddLiability} className="space-y-4 text-slate-855">
             <div className="grid grid-cols-2 gap-4">
               <div className="col-span-2">
                 <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Liability / Creditor Name</label>
@@ -1749,15 +1758,20 @@ const FinanceDashboard = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Type</label>
+                <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Liability Category / Head</label>
                 <select
                   value={liabilityForm.type}
                   onChange={e => setLiabilityForm(prev => ({ ...prev, type: e.target.value }))}
                   className="w-full border border-slate-200 bg-white rounded-md p-2 text-sm"
+                  required
                 >
-                  <option value="Loan">Loan</option>
-                  <option value="Payable">Payable</option>
-                  <option value="Credit Card">Credit Card</option>
+                  <option value="">Select Liability Head</option>
+                  {accounts
+                    .filter(a => a.type === 'Liability')
+                    .map(a => (
+                      <option key={a._id} value={a.name}>{a.name}</option>
+                    ))
+                  }
                 </select>
               </div>
 
@@ -1818,7 +1832,7 @@ const FinanceDashboard = () => {
             <DialogDescription>Record asset disposal and book gain/loss values.</DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAssetDisposal} className="space-y-4 text-slate-850">
+          <form onSubmit={handleAssetDisposal} className="space-y-4 text-slate-855">
             <div>
               <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Salvage Value Received ($)</label>
               <Input
