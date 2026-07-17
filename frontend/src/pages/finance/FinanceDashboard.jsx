@@ -390,7 +390,9 @@ const FinanceDashboard = () => {
     
     html2canvas(element, { scale: 3, useCORS: true }).then((canvas) => {
       const link = document.createElement('a');
-      link.download = `receipt-${invoiceForm.invoiceNo || 'pos'}.jpg`;
+      const clientSafe = (invoiceForm.clientName || 'client').trim().replace(/[^a-z0-9]/gi, '_');
+      const invSafe = (invoiceForm.invoiceNo || 'pos').trim().replace(/[^a-z0-9]/gi, '_');
+      link.download = `${clientSafe}_${invSafe}.jpg`;
       link.href = canvas.toDataURL('image/jpeg', 1.0);
       link.click();
       toast({ title: "JPG Downloaded", description: "Thermal receipt exported successfully." });
@@ -1716,8 +1718,8 @@ const FinanceDashboard = () => {
             {/* Thermal Receipt Container */}
             <div
               id="thermal-receipt-preview"
-              className="relative overflow-hidden w-[340px] bg-white p-5 border border-slate-300 shadow-lg text-slate-900 font-mono text-[11px] leading-tight select-none print:shadow-none"
-              style={{ fontFamily: "'Courier New', Courier, monospace" }}
+              className="relative overflow-hidden w-[350px] bg-white p-6 border border-slate-350 shadow-lg text-slate-900 font-mono text-[11px] select-none print:shadow-none"
+              style={{ fontFamily: "monospace", lineHeight: '1.5' }}
             >
               {/* Dynamic stamp based on payment status */}
               {(() => {
@@ -1750,19 +1752,19 @@ const FinanceDashboard = () => {
               </div>
 
               {/* Invoice Meta */}
-              <div className="space-y-0.5 my-3">
-                <div className="flex justify-between">
+              <div className="space-y-1.5 my-3">
+                <div className="flex justify-between py-0.5">
                   <span>DATE: {new Date(invoiceForm.date).toLocaleDateString()}</span>
                   <span>TIME: {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                 </div>
-                <div>INV NO: {invoiceForm.invoiceNo}</div>
+                <div className="py-0.5">INV NO: {invoiceForm.invoiceNo}</div>
                 {invoiceForm.clientName && (
-                  <div className="truncate">CLIENT: {invoiceForm.clientName}</div>
+                  <div className="truncate py-0.5">CLIENT: {invoiceForm.clientName}</div>
                 )}
                 {invoiceForm.clientAddress && (
-                  <div className="truncate">ADDR: {invoiceForm.clientAddress}</div>
+                  <div className="truncate py-0.5">ADDR: {invoiceForm.clientAddress}</div>
                 )}
-                <div>--------------------------------</div>
+                <div className="pt-0.5">--------------------------------</div>
               </div>
 
               {/* Items grid */}
