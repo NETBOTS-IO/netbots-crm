@@ -154,8 +154,8 @@ const FinanceDashboard = () => {
     date: new Date().toISOString().substring(0, 10),
     clientName: '',
     clientAddress: '',
-    issuerName: 'NetBots Group',
-    issuerDetails: 'Plot 4, Sector I-9, Islamabad\ninfo@thenetbots.com\n+92 300 0000000',
+    issuerName: 'Net Bots (SMC-PRIVATE) LIMITED',
+    issuerDetails: '2nd Floor, Shah Plaza, Opp Pakeeza Bakers,\nKarasmathang Chowk, Skardu\ninfo@netbots.io\n+92 343 3757372',
     advancePaid: 0,
     items: [
       { description: 'Consulting & Implementation', quantity: 1, rate: 1500, discount: 150 }
@@ -1570,7 +1570,7 @@ const FinanceDashboard = () => {
                 />
               </div>
               <div>
-                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Advance Paid ($)</label>
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Advance Paid (PKR)</label>
                 <Input
                   type="number"
                   value={invoiceForm.advancePaid}
@@ -1717,10 +1717,11 @@ const FinanceDashboard = () => {
               </div>
 
               {/* Items grid */}
-              <div className="space-y-1 my-3">
+              <div className="space-y-1 my-3 text-[10px]">
                 <div className="grid grid-cols-12 font-bold border-b border-dashed pb-1">
-                  <span className="col-span-6">ITEM / UNIT</span>
-                  <span className="col-span-2 text-center">QTY</span>
+                  <span className="col-span-5">ITEM / UNIT</span>
+                  <span className="col-span-2 text-right">RATE</span>
+                  <span className="col-span-1 text-center">QTY</span>
                   <span className="col-span-2 text-right">DISC</span>
                   <span className="col-span-2 text-right">TOTAL</span>
                 </div>
@@ -1729,10 +1730,11 @@ const FinanceDashboard = () => {
                   const finalTotal = subTotal - Number(item.discount || 0);
                   return (
                     <div key={idx} className="grid grid-cols-12 py-0.5 border-b border-slate-100/50">
-                      <span className="col-span-6 truncate font-semibold">{item.description}</span>
-                      <span className="col-span-2 text-center">{item.quantity}</span>
-                      <span className="col-span-2 text-right text-slate-500">-${item.discount}</span>
-                      <span className="col-span-2 text-right font-bold">${finalTotal}</span>
+                      <span className="col-span-5 truncate font-semibold">{item.description}</span>
+                      <span className="col-span-2 text-right">{item.rate}</span>
+                      <span className="col-span-1 text-center">{item.quantity}</span>
+                      <span className="col-span-2 text-right text-slate-500">-{item.discount}</span>
+                      <span className="col-span-2 text-right font-bold">{finalTotal}</span>
                     </div>
                   );
                 })}
@@ -1744,23 +1746,23 @@ const FinanceDashboard = () => {
               <div className="space-y-1 my-3 font-semibold text-right">
                 <div className="flex justify-between">
                   <span>GROSS SUBTOTAL:</span>
-                  <span>${invoiceGrossTotal.toFixed(2)}</span>
+                  <span>PKR {invoiceGrossTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-slate-600">
                   <span>TOTAL DISCOUNT:</span>
-                  <span>-${invoiceTotalDiscount.toFixed(2)}</span>
+                  <span>-PKR {invoiceTotalDiscount.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-green-700 font-bold border-t pt-1">
                   <span>NET TOTAL:</span>
-                  <span>${invoiceNetTotal.toFixed(2)}</span>
+                  <span>PKR {invoiceNetTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-indigo-700">
                   <span>ADVANCE RECEIVED:</span>
-                  <span>-${Number(invoiceForm.advancePaid || 0).toFixed(2)}</span>
+                  <span>-PKR {Number(invoiceForm.advancePaid || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-red-700 font-black border-t border-double pt-1 text-[12px]">
                   <span>BALANCE DUE:</span>
-                  <span>${invoiceBalancePending.toFixed(2)}</span>
+                  <span>PKR {invoiceBalancePending.toFixed(2)}</span>
                 </div>
               </div>
 
