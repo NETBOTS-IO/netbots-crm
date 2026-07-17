@@ -10,6 +10,8 @@ const expenseSchema = new mongoose.Schema({
   is_recurring: { type: Boolean, default: false },
   is_billable: { type: Boolean, default: false },
   notes: { type: String },
+  attachment: { type: String },
+  billed_on_invoice: { type: mongoose.Schema.Types.ObjectId, ref: 'Invoice' },
   receiptUrl: { type: String },
   journalEntry: { type: mongoose.Schema.Types.ObjectId, ref: 'JournalEntry' }, // Link to ledger
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }

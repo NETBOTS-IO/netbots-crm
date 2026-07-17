@@ -10,6 +10,18 @@ const Liability = require('../models/Liability');
 const Client = require('../models/Client');
 const Vendor = require('../models/Vendor');
 const Project = require('../models/Project');
+const multer = require('multer');
+const path = require('path');
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
 
 const DEFAULT_ACCOUNTS = [
   { name: 'Cash on Hand', type: 'Asset', isSystem: true },
@@ -96,18 +108,19 @@ router.get('/income', auth, async (req, res) => {
 });
 
 // Add Income
-router.post('/income', auth, async (req, res) => {
+router.post('/income', auth, upload.single('attachment'), async (req, res) => {
   try {
     const { amount, date, client, project, category, payment_method, notes } = req.body;
     
     const income = new Income({
-      amount,
+      amount: Number(amount),
       date: date || new Date(),
       client: client || null,
       project: project || null,
       category,
       payment_method,
       notes,
+      attachment: req.file ? `/uploads/${req.file.filename}` : null,
       createdBy: req.user.id
     });
 
@@ -155,20 +168,21 @@ router.get('/expense', auth, async (req, res) => {
 });
 
 // Add Expense
-router.post('/expense', auth, async (req, res) => {
+router.post('/expense', auth, upload.single('attachment'), async (req, res) => {
   try {
     const { amount, date, vendor, project, category, payment_method, notes, is_billable, is_recurring } = req.body;
     
     const expense = new Expense({
-      amount,
+      amount: Number(amount),
       date: date || new Date(),
       vendor: vendor || null,
       project: project || null,
       category,
       payment_method,
-      is_billable: !!is_billable,
-      is_recurring: !!is_recurring,
+      is_billable: is_billable === 'true' || is_billable === true,
+      is_recurring: is_recurring === 'true' || is_recurring === true,
       notes,
+      attachment: req.file ? `/uploads/${req.file.filename}` : null,
       createdBy: req.user.id
     });
 
@@ -201,6 +215,26 @@ router.post('/expense', auth, async (req, res) => {
     await expense.save();
 
     res.status(201).json({ success: true, data: expense });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET unbilled billable expenses for a specific client
+router.get('/expense/billable/:clientId', auth, async (req, res) => {
+  try {
+    // A billable expense for a client could be via the project or directly to client if we had it,
+    // but in Expense model we have `project`. So we find projects for this client, then expenses for those projects.
+    const projects = await Project.find({ client: req.params.clientId });
+    const projectIds = projects.map(p => p._id);
+    
+    const expenses = await Expense.find({
+      is_billable: true,
+      billed_on_invoice: { $exists: false },
+      project: { $in: projectIds }
+    }).populate('project', 'name').populate('vendor', 'name');
+    
+    res.json({ success: true, data: expenses });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -588,18 +622,40 @@ router.post('/accounts/seed-all-data', auth, async (req, res) => {
       items: [{ description: 'Milestone 1 Deliverables', quantity: 1, rate: 15000, total: 15000 }],
       createdBy: creatorId
     }).save();
+    await new JournalEntry({
+      date: inv1.issueDate,
+      description: `Invoice Issued #${inv1.invoiceNumber}`,
+      source_type: 'Invoice',
+      source_id: inv1._id,
+      createdBy: creatorId,
+      lines: [
+        { account: arAcc._id, debit: 15000, credit: 0 },
+        { account: serviceRevenueAcc._id, debit: 0, credit: 15000 }
+      ]
+    }).save();
 
     const inv2 = await new Invoice({
       invoiceNumber: 'INV-2026-002',
       client: client2._id,
       project: project2._id,
       amount: 8500,
-      paidAmount: 0,
-      status: 'Sent',
+      paidAmount: 4000,
+      status: 'Partial',
       issueDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
       dueDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
       items: [{ description: 'Project Setup & Design', quantity: 1, rate: 8500, total: 8500 }],
       createdBy: creatorId
+    }).save();
+    await new JournalEntry({
+      date: inv2.issueDate,
+      description: `Invoice Issued #${inv2.invoiceNumber}`,
+      source_type: 'Invoice',
+      source_id: inv2._id,
+      createdBy: creatorId,
+      lines: [
+        { account: arAcc._id, debit: 8500, credit: 0 },
+        { account: serviceRevenueAcc._id, debit: 0, credit: 8500 }
+      ]
     }).save();
 
     const inv3 = await new Invoice({
@@ -612,6 +668,17 @@ router.post('/accounts/seed-all-data', auth, async (req, res) => {
       dueDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
       items: [{ description: 'Standard Consultations', quantity: 8, rate: 400, total: 3200 }],
       createdBy: creatorId
+    }).save();
+    await new JournalEntry({
+      date: inv3.issueDate,
+      description: `Invoice Issued #${inv3.invoiceNumber}`,
+      source_type: 'Invoice',
+      source_id: inv3._id,
+      createdBy: creatorId,
+      lines: [
+        { account: arAcc._id, debit: 3200, credit: 0 },
+        { account: serviceRevenueAcc._id, debit: 0, credit: 3200 }
+      ]
     }).save();
 
     // 7. Create Incomes
@@ -628,12 +695,14 @@ router.post('/accounts/seed-all-data', auth, async (req, res) => {
     });
     
     const inc2 = new Income({
-      amount: 4500,
+      amount: 4000,
       date: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      client: client3._id,
-      category: 'Other Income',
+      client: client2._id,
+      project: project2._id,
+      invoice: inv2._id,
+      category: 'Service Revenue',
       payment_method: 'Online',
-      notes: 'Setup consultation fee',
+      notes: 'Partial advance payment for INV-2026-002',
       createdBy: creatorId
     });
 
@@ -646,7 +715,7 @@ router.post('/accounts/seed-all-data', auth, async (req, res) => {
       createdBy: creatorId,
       lines: [
         { account: cashAcc._id, debit: 15000, credit: 0 },
-        { account: serviceRevenueAcc._id, debit: 0, credit: 15000 }
+        { account: arAcc._id, debit: 0, credit: 15000 }
       ]
     }).save();
     inc1.journalEntry = jeInc1._id;
@@ -654,13 +723,13 @@ router.post('/accounts/seed-all-data', auth, async (req, res) => {
 
     const jeInc2 = await new JournalEntry({
       date: inc2.date,
-      description: `Income: Other Income - Setup fee`,
+      description: `Income: Service Revenue - Partial Payment for INV-2026-002`,
       source_type: 'Income',
       source_id: inc2._id,
       createdBy: creatorId,
       lines: [
-        { account: cashAcc._id, debit: 4500, credit: 0 },
-        { account: otherIncomeAcc._id, debit: 0, credit: 4500 }
+        { account: cashAcc._id, debit: 4000, credit: 0 },
+        { account: arAcc._id, debit: 0, credit: 4000 }
       ]
     }).save();
     inc2.journalEntry = jeInc2._id;

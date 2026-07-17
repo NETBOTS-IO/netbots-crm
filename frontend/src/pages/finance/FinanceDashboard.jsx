@@ -125,7 +125,8 @@ const FinanceDashboard = () => {
     payment_method: 'Cash',
     is_billable: false,
     is_recurring: false,
-    notes: ''
+    notes: '',
+    attachment: null
   });
 
   const [assetForm, setAssetForm] = useState({
@@ -152,6 +153,7 @@ const FinanceDashboard = () => {
   const [invoiceForm, setInvoiceForm] = useState({
     invoiceNo: 'INV-' + Math.floor(1000 + Math.random() * 9000),
     date: new Date().toISOString().substring(0, 10),
+    clientId: '',
     clientName: '',
     clientAddress: '',
     issuerName: 'Net Bots (SMC-PRIVATE) LIMITED',
@@ -258,24 +260,31 @@ const FinanceDashboard = () => {
     e.preventDefault();
     try {
       const endpoint = txType === 'Income' ? '/finance/income' : '/finance/expense';
-      const body = {
-        amount: Number(txForm.amount),
-        date: txForm.date,
-        category: txForm.category || (txType === 'Income' ? 'Service Revenue' : 'Rent Expense'),
-        payment_method: txForm.payment_method,
-        notes: txForm.notes,
-        project: txForm.project || undefined
-      };
+      const formData = new FormData();
+      
+      formData.append('amount', Number(txForm.amount));
+      formData.append('date', txForm.date);
+      formData.append('category', txForm.category || (txType === 'Income' ? 'Service Revenue' : 'Rent Expense'));
+      formData.append('payment_method', txForm.payment_method);
+      if (txForm.notes) formData.append('notes', txForm.notes);
+      if (txForm.project) formData.append('project', txForm.project);
 
       if (txType === 'Income') {
-        body.client = txForm.client || undefined;
+        if (txForm.client) formData.append('client', txForm.client);
       } else {
-        body.vendor = txForm.vendor || undefined;
-        body.is_billable = txForm.is_billable;
-        body.is_recurring = txForm.is_recurring;
+        if (txForm.vendor) formData.append('vendor', txForm.vendor);
+        formData.append('is_billable', txForm.is_billable);
+        formData.append('is_recurring', txForm.is_recurring);
+      }
+      
+      if (txForm.attachment) {
+        formData.append('attachment', txForm.attachment);
       }
 
-      await api.post(endpoint, body);
+      await api.post(endpoint, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      
       toast({ title: "Success", description: "Transaction recorded successfully." });
       setIsTxModalOpen(false);
       setTxForm({
@@ -288,7 +297,8 @@ const FinanceDashboard = () => {
         payment_method: 'Cash',
         is_billable: false,
         is_recurring: false,
-        notes: ''
+        notes: '',
+        attachment: null
       });
       loadDashboardData();
     } catch (err) {
@@ -398,6 +408,84 @@ const FinanceDashboard = () => {
       link.click();
       toast({ title: "JPG Downloaded", description: "Thermal receipt exported successfully." });
     });
+  };
+
+  const handleFetchBillableExpenses = async () => {
+    if (!invoiceForm.clientId) {
+      toast({ variant: "destructive", title: "Error", description: "Select a CRM Client first to fetch billable expenses." });
+      return;
+    }
+    try {
+      const res = await api.get(`/finance/expense/billable/${invoiceForm.clientId}`);
+      const unbilled = res.data?.data || [];
+      if (unbilled.length === 0) {
+        toast({ title: "No Expenses", description: "No unbilled expenses found for this client." });
+        return;
+      }
+      
+      const newItems = unbilled.map(exp => ({
+        description: `Billable Expense: ${exp.category} - ${exp.notes || exp.vendor?.name || 'Misc'}`,
+        quantity: 1,
+        rate: exp.amount,
+        discount: 0
+      }));
+      
+      setInvoiceForm(prev => ({
+        ...prev,
+        items: [...prev.items, ...newItems]
+      }));
+      toast({ title: "Imported", description: `Added ${newItems.length} billable expenses to invoice.` });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to fetch billable expenses." });
+    }
+  };
+
+  const handleSaveInvoiceToLedger = async () => {
+    if (!invoiceForm.clientId) {
+      toast({ variant: "destructive", title: "Error", description: "A CRM Client must be selected to save this invoice to the ledger." });
+      return;
+    }
+    try {
+      // 1. Calculate totals
+      const grossTotal = invoiceForm.items.reduce((sum, item) => sum + (item.quantity * item.rate), 0);
+      const itemDiscounts = invoiceForm.items.reduce((sum, item) => sum + Number(item.discount || 0), 0);
+      const netAfterItem = grossTotal - itemDiscounts;
+      const percentAmount = Number(((netAfterItem * (invoiceForm.discountPercent || 0)) / 100).toFixed(2));
+      const netTotal = grossTotal - itemDiscounts - percentAmount;
+      
+      // 2. Save Invoice
+      const invBody = {
+        invoiceNumber: invoiceForm.invoiceNo,
+        client: invoiceForm.clientId,
+        amount: netTotal,
+        issueDate: invoiceForm.date,
+        dueDate: invoiceForm.date,
+        items: invoiceForm.items.map(i => ({
+          description: i.description,
+          quantity: i.quantity,
+          rate: i.rate,
+          total: (i.quantity * i.rate) - Number(i.discount || 0)
+        })),
+        status: 'Sent'
+      };
+      
+      const invRes = await api.post('/invoices', invBody);
+      const newInvId = invRes.data.data._id;
+      
+      // 3. Post Payment if Advance was given
+      if (invoiceForm.advancePaid > 0) {
+        await api.post(`/invoices/${newInvId}/pay`, {
+          paymentAmount: invoiceForm.advancePaid,
+          payment_method: 'Cash', // Defaulting to Cash for POS
+          notes: invoiceForm.note || 'Advance payment at POS'
+        });
+      }
+      
+      toast({ title: "Invoice Saved", description: "Invoice and Ledger Entries successfully recorded." });
+      loadDashboardData();
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error", description: err.response?.data?.error || err.message });
+    }
   };
 
   // PDF Download Logic
@@ -1557,7 +1645,40 @@ const FinanceDashboard = () => {
                 />
               </div>
               <div className="col-span-2">
-                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Client / Person Name</label>
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Link CRM Client (Optional)</label>
+                <div className="flex gap-2">
+                  <select
+                    value={invoiceForm.clientId}
+                    onChange={e => {
+                      const cid = e.target.value;
+                      const client = crmData.clients.find(c => c._id === cid);
+                      setInvoiceForm(prev => ({
+                        ...prev,
+                        clientId: cid,
+                        clientName: client ? (client.companyName || client.name) : prev.clientName,
+                        clientAddress: client ? client.address : prev.clientAddress
+                      }));
+                    }}
+                    className="w-1/2 border border-slate-200 bg-white rounded-md p-1.5 text-xs font-semibold"
+                  >
+                    <option value="">None / Custom</option>
+                    {crmData.clients.map(c => (
+                      <option key={c._id} value={c._id}>{c.companyName || c.name}</option>
+                    ))}
+                  </select>
+                  <Button
+                    size="xs"
+                    onClick={handleFetchBillableExpenses}
+                    disabled={!invoiceForm.clientId}
+                    className="w-1/2 h-8 text-[10px] bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold"
+                  >
+                    Import Billable Expenses
+                  </Button>
+                </div>
+              </div>
+
+              <div className="col-span-2">
+                <label className="block uppercase tracking-wider text-slate-400 mb-1 text-[10px]">Client / Person Name (Printed)</label>
                 <Input
                   value={invoiceForm.clientName}
                   onChange={e => setInvoiceForm(prev => ({ ...prev, clientName: e.target.value }))}
@@ -1722,12 +1843,20 @@ const FinanceDashboard = () => {
 
           {/* POS Thermal live Preview */}
           <div className="lg:col-span-2 flex flex-col items-center">
-            <Button
-              onClick={handleDownloadReceiptJpg}
-              className="w-full max-w-[300px] mb-4 bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-10 gap-1.5"
-            >
-              <Download size={14} /> Download Receipt (JPG)
-            </Button>
+            <div className="col-span-12 flex gap-3 pt-3 mt-3 border-t">
+              <Button
+                onClick={handleDownloadReceiptJpg}
+                className="flex-1 bg-slate-900 text-white font-bold h-9 text-xs flex items-center gap-2"
+              >
+                <Download size={14} /> Download JPG POS Receipt
+              </Button>
+              <Button
+                onClick={handleSaveInvoiceToLedger}
+                className="flex-1 bg-indigo-600 text-white font-bold h-9 text-xs flex items-center gap-2"
+              >
+                <CheckCircle2 size={14} /> Save to CRM & Ledger
+              </Button>
+            </div>
 
             {/* Thermal Receipt Container */}
             <div
@@ -2032,6 +2161,15 @@ const FinanceDashboard = () => {
                 value={txForm.notes}
                 onChange={e => setTxForm(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="Details of the payment..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold uppercase text-slate-400 mb-1">Attachment (Receipt/Proof)</label>
+              <Input
+                type="file"
+                onChange={e => setTxForm(prev => ({ ...prev, attachment: e.target.files[0] }))}
+                className="file:mr-4 file:py-1 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-slate-50 file:text-slate-700 hover:file:bg-slate-100"
               />
             </div>
 

@@ -9,6 +9,7 @@ const incomeSchema = new mongoose.Schema({
   category: { type: String, required: true }, // e.g., 'Service Revenue', 'Retainer'
   payment_method: { type: String, enum: ['Cash', 'Bank Transfer', 'Credit Card', 'Online'], required: true },
   notes: { type: String },
+  attachment: { type: String },
   journalEntry: { type: mongoose.Schema.Types.ObjectId, ref: 'JournalEntry' }, // Link to ledger
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
 }, { timestamps: true });
