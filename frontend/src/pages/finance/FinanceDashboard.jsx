@@ -1414,6 +1414,13 @@ const FinanceDashboard = () => {
                     <Button
                       onClick={() => window.print()}
                       size="sm"
+                      variant="outline"
+                      className="gap-1.5 font-bold text-xs h-8 print:hidden"
+                    >
+                      <Printer size={12} /> Print Report
+                    </Button>
+                  </div>
+                </div>
                  {/* Profit & Loss report content */}
                 {selectedReport === 'pnl' && (
                   <div className="space-y-4 text-sm">
