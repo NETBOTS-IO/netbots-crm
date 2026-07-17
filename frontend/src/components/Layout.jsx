@@ -76,10 +76,15 @@ const tabGroups = [
             { to: '/email/audiences', label: 'Audiences', permission: 'view_dashboard', icon: Users },
             { to: '/email/lists', label: 'Mailing Lists', permission: 'view_dashboard', icon: ListCollapse },
             { to: '/email/accounts', label: 'SMTP Accounts', permission: 'view_dashboard', icon: KeyRound },
-            { icon: FileText, label: 'Analytics', path: '/analytics', permission: 'view_dashboard' },
-            { icon: LayoutDashboard, label: 'Finance ERP', path: '/finance', permission: 'view_dashboard' },
             { to: '/email/analytics', label: 'Analytics', permission: 'view_dashboard', icon: BarChart3 },
             { to: '/email/unsubscribes', label: 'Unsubscribes', permission: 'view_dashboard', icon: UserX2 },
+        ]
+    },
+    {
+        pattern: /^\/finance/,
+        tabs: [
+            { to: '/finance', label: 'Dashboard', permission: 'view_dashboard', icon: LayoutDashboard },
+            { to: '/finance/transactions', label: 'Transactions', permission: 'view_dashboard', icon: IndianRupee },
         ]
     },
     {
@@ -206,6 +211,12 @@ const Layout = () => {
             label: 'SALES PIPELINE',
             items: [
                 { to: '/leads', icon: ClipboardList, label: 'Sales Pipeline', permission: 'can_view_leads' },
+            ]
+        },
+        {
+            label: 'FINANCE & ACCOUNTS',
+            items: [
+                { to: '/finance', icon: IndianRupee, label: 'Finance ERP', permission: 'view_dashboard' },
             ]
         },
         {

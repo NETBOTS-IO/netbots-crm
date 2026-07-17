@@ -26,6 +26,10 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+skills-lock.json
+graphs/*
+
+.vscode/antigravity/project.settings.json
 
 graphify-out/*
 .agents/*
