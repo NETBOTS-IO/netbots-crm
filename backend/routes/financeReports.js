@@ -287,7 +287,81 @@ router.get('/expense-breakdown', auth, async (req, res) => {
         totalExpense,
         byCategory: Object.keys(byCategory).map(k => ({ label: k, amount: byCategory[k] })),
         byVendor: Object.keys(byVendor).map(k => ({ label: k, amount: byVendor[k] })),
-         amount: inv.amount,
+        byProject: Object.keys(byProject).map(k => ({ label: k, amount: byProject[k] }))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 6. Income Breakdown Report
+router.get('/income-breakdown', auth, async (req, res) => {
+  try {
+    const incomes = await Income.find().populate('project', 'name').populate('client', 'companyName contactName');
+    
+    const byCategory = {};
+    const byClient = {};
+    const byProject = {};
+    let totalIncome = 0;
+
+    incomes.forEach(i => {
+      totalIncome += i.amount;
+
+      // Group by Category
+      byCategory[i.category] = (byCategory[i.category] || 0) + i.amount;
+
+      // Group by Client
+      const clientName = i.client ? (i.client.companyName || i.client.contactName) : 'Unspecified';
+      byClient[clientName] = (byClient[clientName] || 0) + i.amount;
+
+      // Group by Project
+      const projectName = i.project ? i.project.name : 'No Project';
+      byProject[projectName] = (byProject[projectName] || 0) + i.amount;
+    });
+
+    res.json({
+      success: true,
+      data: {
+        totalIncome,
+        byCategory: Object.keys(byCategory).map(k => ({ label: k, amount: byCategory[k] })),
+        byClient: Object.keys(byClient).map(k => ({ label: k, amount: byClient[k] })),
+        byProject: Object.keys(byProject).map(k => ({ label: k, amount: byProject[k] }))
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// 7. Accounts Receivable (AR) Aging Report
+router.get('/ar-aging', auth, async (req, res) => {
+  try {
+    const invoices = await Invoice.find({ status: { $ne: 'Paid' } }).populate('client', 'companyName contactName');
+    
+    const now = new Date();
+    const brackets = {
+      '0-30 days': [],
+      '31-60 days': [],
+      '61-90 days': [],
+      '90+ days': []
+    };
+    
+    let totalOutstanding = 0;
+
+    invoices.forEach(inv => {
+      const outstanding = inv.amount - (inv.paidAmount || 0);
+      if (outstanding <= 0) return;
+
+      totalOutstanding += outstanding;
+      
+      const diffTime = Math.abs(now - new Date(inv.dueDate));
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+      const item = {
+        invoiceNumber: inv.invoiceNumber,
+        client: inv.client ? (inv.client.companyName || inv.client.contactName) : 'Unknown Client',
+        amount: inv.amount,
         outstanding,
         dueDate: inv.dueDate
       };
