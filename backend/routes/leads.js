@@ -279,26 +279,30 @@ router.get('/', auth, async (req, res) => {
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
 
-    // Sort: active claimed leads on top (have workingVerifier OR workingCloser),
-    // then by updatedAt desc so recently touched leads appear first
-    const sortStage = [
-        {
-            $addFields: {
-                _activePriority: {
-                    $cond: [
-                        { $or: [
-                            { $ne: ['$workingVerifier', null] },
-                            { $ne: ['$workingCloser', null] }
-                        ]},
-                        0, 1
-                    ]
+    // Sort: if sortBy is provided, skip addFields and sort directly (highly optimized via indexes).
+    // Otherwise, apply default sorting (active claimed leads on top, then by updatedAt desc).
+    const sortStage = [];
+    if (sortBy) {
+        sortStage.push({ $sort: { [sortBy]: sortOrder === 'asc' ? 1 : -1 } });
+    } else {
+        sortStage.push(
+            {
+                $addFields: {
+                    _activePriority: {
+                        $cond: [
+                            { $or: [
+                                { $ne: ['$workingVerifier', null] },
+                                { $ne: ['$workingCloser', null] }
+                            ]},
+                            0, 1
+                        ]
+                    }
                 }
-            }
-        },
-        { $sort: sortBy ? { [sortBy]: sortOrder === 'asc' ? 1 : -1 } : { _activePriority: 1, updatedAt: -1 } },
-        { $skip: skip },
-        { $limit: limitNum }
-    ];
+            },
+            { $sort: { _activePriority: 1, updatedAt: -1 } }
+        );
+    }
+    sortStage.push({ $skip: skip }, { $limit: limitNum });
 
     let leadsRaw = await Lead.aggregate([
         { $match: query },

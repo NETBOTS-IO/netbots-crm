@@ -43,14 +43,35 @@ const getChannelBadge = (channel) => {
 };
 
 const LeadsPipeline = () => {
-    const [leads, setLeads] = useState([]);
-    const [verifiedClosedLeads, setVerifiedClosedLeads] = useState([]);
+    const [leads, setLeads] = useState(() => {
+        try {
+            const cached = sessionStorage.getItem('leads_cache');
+            return cached ? JSON.parse(cached) : [];
+        } catch {
+            return [];
+        }
+    });
+    const [verifiedClosedLeads, setVerifiedClosedLeads] = useState(() => {
+        try {
+            const cached = sessionStorage.getItem('vc_leads_cache');
+            return cached ? JSON.parse(cached) : [];
+        } catch {
+            return [];
+        }
+    });
     const [verifiedClosedPagination, setVerifiedClosedPagination] = useState({ total: 0, page: 1, pages: 1 });
     const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('lead_active_tab') || 'pipeline');
     const [vcSearch, setVcSearch] = useState('');
     const [vcLoading, setVcLoading] = useState(false);
     // Closer Pipeline tab state
-    const [closerLeads, setCloserLeads] = useState([]);
+    const [closerLeads, setCloserLeads] = useState(() => {
+        try {
+            const cached = sessionStorage.getItem('closer_leads_cache');
+            return cached ? JSON.parse(cached) : [];
+        } catch {
+            return [];
+        }
+    });
     const [closerPagination, setCloserPagination] = useState({ total: 0, page: 1, pages: 1 });
     const [closerSearch, setCloserSearch] = useState('');
     const [closerFilterId, setCloserFilterId] = useState('all');
@@ -110,7 +131,14 @@ const LeadsPipeline = () => {
     const [verifiersList, setVerifiersList] = useState([]);
     const [closersList, setClosersList] = useState([]);
 
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(() => {
+        try {
+            const cached = sessionStorage.getItem('leads_cache');
+            return !cached; // only true if no cache exists
+        } catch {
+            return true;
+        }
+    });
     const [selectedLeads, setSelectedLeads] = useState([]);
 
     const navigate = useNavigate();
@@ -378,6 +406,11 @@ const LeadsPipeline = () => {
             const res = await api.get(`/leads?${params.toString()}`);
             if (res.success) {
                 setLeads(res.data);
+                try {
+                    sessionStorage.setItem('leads_cache', JSON.stringify(res.data));
+                } catch (e) {
+                    console.warn("Session storage quota exceeded for leads_cache", e);
+                }
                 if (res.stats) setStats(res.stats);
                 if (res.pagination) setPagination(res.pagination);
                 setSelectedLeads([]);
@@ -409,6 +442,11 @@ const LeadsPipeline = () => {
             const res = await api.get(`/leads/verified-closed?${params.toString()}`);
             if (res.success) {
                 setVerifiedClosedLeads(res.data);
+                try {
+                    sessionStorage.setItem('vc_leads_cache', JSON.stringify(res.data));
+                } catch (e) {
+                    console.warn("Session storage quota exceeded for vc_leads_cache", e);
+                }
                 if (res.pagination) setVerifiedClosedPagination(res.pagination);
             }
         } catch (err) {
@@ -437,6 +475,11 @@ const LeadsPipeline = () => {
             const res = await api.get(`/leads/closer-active?${params.toString()}`);
             if (res.success) {
                 setCloserLeads(res.data);
+                try {
+                    sessionStorage.setItem('closer_leads_cache', JSON.stringify(res.data));
+                } catch (e) {
+                    console.warn("Session storage quota exceeded for closer_leads_cache", e);
+                }
                 if (res.pagination) setCloserPagination(res.pagination);
             }
         } catch (err) {

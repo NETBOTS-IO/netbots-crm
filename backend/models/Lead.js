@@ -120,6 +120,10 @@ LeadSchema.index({ workingCloser: 1 });
 LeadSchema.index({ priority: 1 });
 LeadSchema.index({ stage: 1 });
 LeadSchema.index({ temperature: 1 });
+LeadSchema.index({ updatedAt: -1 });
+LeadSchema.index({ convertedToClient: 1, stage: 1, updatedAt: -1 });
+LeadSchema.index({ convertedToClient: 1, priority: 1, updatedAt: -1 });
+LeadSchema.index({ convertedToClient: 1, temperature: 1, updatedAt: -1 });
 
 LeadSchema.pre('save', async function() {
   const scoreMap = { cold: 1, warm: 3, sql: 7, closed: 20, retained: 30 };

@@ -33,6 +33,11 @@ const STATE_CITY_PACKAGES = [
         name: "Islamabad Capital (Pakistan)",
         state: "Islamabad Capital",
         cities: ["Islamabad"]
+    },
+    {
+        name: "Gilgit-Baltistan (Pakistan)",
+        state: "Gilgit-Baltistan",
+        cities: ["Gilgit", "Skardu", "Hunza", "Chilas", "Khaplu", "Nagar", "Gupis"]
     }
 ];
 
