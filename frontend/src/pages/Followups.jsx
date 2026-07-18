@@ -536,7 +536,7 @@ const Followups = () => {
                                                 <div className="flex gap-2 justify-end items-center">
                                                     <Button 
                                                         onClick={() => openActionDialog(lead)}
-                                                        className="h-7 text-[10px] font-semibold bg-blue-650 hover:bg-blue-700 text-white rounded-md transition-all duration-150 px-2"
+                                                        className="h-7 text-[10px] font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-all duration-150 px-2"
                                                     >
                                                         Update Outcome
                                                     </Button>
@@ -657,6 +657,7 @@ const Followups = () => {
                                 >
                                     <option value="spoke">Spoke to client (Bat ho gayi / Complete)</option>
                                     <option value="close">Deal Closed (Lead stage updated to Close)</option>
+                                    <option value="reject">Deal Rejected (Lead stage updated to Rejected)</option>
                                     <option value="postpone">Next time manga (Reschedule/Postpone)</option>
                                 </select>
                             </div>

@@ -663,6 +663,12 @@ router.post('/:id/followup-action', auth, async (req, res) => {
       lead.followUpReminderSent = false;
       activityType = 'stage_changed';
       descriptionText = 'Follow-up completed: Deal closed.';
+    } else if (action === 'reject') {
+      lead.stage = 'rejected';
+      lead.followUpDate = null;
+      lead.followUpReminderSent = false;
+      activityType = 'stage_changed';
+      descriptionText = 'Follow-up completed: Deal rejected.';
     } else if (action === 'postpone') {
       if (!nextFollowUpDate) {
         return res.status(400).json({ success: false, error: 'Next follow-up date is required for postpone action.' });
