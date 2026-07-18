@@ -634,6 +634,65 @@ router.get('/followups', auth, async (req, res) => {
   }
 });
 
+// POST /api/leads/:id/followup-action
+// Process follow-up outcome (spoke, close, postpone)
+router.post('/:id/followup-action', auth, async (req, res) => {
+  try {
+    const { action, notes = '', nextFollowUpDate } = req.body;
+    const lead = await Lead.findById(req.params.id);
+    if (!lead) return res.status(404).json({ success: false, error: 'Lead not found' });
+
+    // Validate permission or lock
+    const lockCheck = await checkLeadLock(lead._id, req.user);
+    if (!lockCheck.allowed) {
+      return res.status(lockCheck.status || 403).json({ success: false, error: lockCheck.error });
+    }
+
+    let descriptionText = '';
+    let activityType = 'note';
+
+    if (action === 'spoke') {
+      lead.followUpDate = null;
+      lead.followUpReminderSent = false;
+      activityType = 'call';
+      descriptionText = 'Follow-up marked as completed: Spoke with client.';
+    } else if (action === 'close') {
+      lead.stage = 'close';
+      lead.temperature = 'closed';
+      lead.followUpDate = null;
+      lead.followUpReminderSent = false;
+      activityType = 'stage_changed';
+      descriptionText = 'Follow-up completed: Deal closed.';
+    } else if (action === 'postpone') {
+      if (!nextFollowUpDate) {
+        return res.status(400).json({ success: false, error: 'Next follow-up date is required for postpone action.' });
+      }
+      lead.followUpDate = new Date(nextFollowUpDate);
+      lead.followUpReminderSent = false;
+      activityType = 'note';
+      descriptionText = `Follow-up postponed to ${new Date(nextFollowUpDate).toLocaleString()}`;
+    } else {
+      return res.status(400).json({ success: false, error: 'Invalid follow-up action.' });
+    }
+
+    await lead.save();
+
+    const activity = new Activity({
+      leadId: lead._id,
+      performedBy: req.user._id,
+      type: activityType,
+      description: descriptionText,
+      notes: notes
+    });
+    await activity.save();
+
+    res.json({ success: true, data: lead });
+  } catch (err) {
+    console.error("POST /api/leads/:id/followup-action error:", err);
+    res.status(500).json({ success: false, error: 'Server error during follow-up action.' });
+  }
+});
+
 // GET /api/leads/:id
 // get single lead + full activity timeline
 router.get('/:id', auth, async (req, res) => {

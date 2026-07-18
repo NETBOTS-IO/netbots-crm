@@ -3,6 +3,14 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { 
     Clock, 
     Search, 
@@ -37,6 +45,51 @@ const Followups = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [pageSize, setPageSize] = useState(10);
     const [sortBy, setSortBy] = useState('soonest');
+
+    // Dialog states for outcomes
+    const [actionDialogOpen, setActionDialogOpen] = useState(false);
+    const [selectedLead, setSelectedLead] = useState(null);
+    const [actionType, setActionType] = useState('spoke');
+    const [actionNotes, setActionNotes] = useState('');
+    const [nextFollowUpDate, setNextFollowUpDate] = useState('');
+    const [actionSubmitting, setActionSubmitting] = useState(false);
+
+    const openActionDialog = (lead) => {
+        setSelectedLead(lead);
+        setActionType('spoke');
+        setActionNotes('');
+        setNextFollowUpDate('');
+        setActionDialogOpen(true);
+    };
+
+    const handleActionSubmit = async () => {
+        if (!selectedLead) return;
+        if (actionType === 'postpone' && !nextFollowUpDate) {
+            alert('Please select a date and time for the next follow-up.');
+            return;
+        }
+
+        setActionSubmitting(true);
+        try {
+            const res = await api.post(`/leads/${selectedLead._id}/followup-action`, {
+                action: actionType,
+                notes: actionNotes,
+                nextFollowUpDate: actionType === 'postpone' ? nextFollowUpDate : undefined
+            });
+
+            if (res.success) {
+                setActionDialogOpen(false);
+                fetchFollowups(); // Refresh data
+            } else {
+                alert(res.error || 'Failed to process action');
+            }
+        } catch (err) {
+            console.error("Action error:", err);
+            alert('Connection failed');
+        } finally {
+            setActionSubmitting(false);
+        }
+    };
 
     // Stats
     const [stats, setStats] = useState({
@@ -393,12 +446,12 @@ const Followups = () => {
                         <table className="w-full text-left border-collapse table-auto">
                             <thead>
                                 <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[10px] font-semibold uppercase tracking-wider">
-                                    <th className="px-4 py-3 w-[30%]">Company Info</th>
+                                    <th className="px-4 py-3 w-[25%]">Company Info</th>
                                     <th className="px-4 py-3 w-[15%]">Remaining Time</th>
                                     <th className="px-4 py-3 w-[20%]">Due Date & Time</th>
-                                    <th className="px-4 py-3 w-[15%]">Badges</th>
-                                    <th className="px-4 py-3 w-[15%]">Claimed Closer</th>
-                                    <th className="px-4 py-3 text-right pr-6 w-[5%]">Link</th>
+                                    <th className="px-4 py-3 w-[12%]">Badges</th>
+                                    <th className="px-4 py-3 w-[13%]">Claimed Closer</th>
+                                    <th className="px-4 py-3 text-right pr-6 w-[15%]">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 text-[11px] text-slate-700">
@@ -480,16 +533,24 @@ const Followups = () => {
                                             </td>
 
                                             <td className="px-4 py-2.5 text-right pr-6">
-                                                <Link to={`/leads/details/${lead._id}`}>
+                                                <div className="flex gap-2 justify-end items-center">
                                                     <Button 
-                                                        variant="ghost" 
-                                                        size="sm" 
-                                                        className="h-7 text-[10px] font-semibold text-slate-900 hover:bg-slate-100 rounded-md transition-all duration-150 gap-1 border border-slate-200 px-2"
+                                                        onClick={() => openActionDialog(lead)}
+                                                        className="h-7 text-[10px] font-semibold bg-blue-650 hover:bg-blue-700 text-white rounded-md transition-all duration-150 px-2"
                                                     >
-                                                        <span>View</span>
-                                                        <ArrowRight size={10} />
+                                                        Update Outcome
                                                     </Button>
-                                                </Link>
+                                                    <Link to={`/leads/details/${lead._id}`}>
+                                                        <Button 
+                                                            variant="ghost" 
+                                                            size="sm" 
+                                                            className="h-7 text-[10px] font-semibold text-slate-900 hover:bg-slate-100 rounded-md transition-all duration-150 gap-1 border border-slate-200 px-2"
+                                                        >
+                                                            <span>View</span>
+                                                            <ArrowRight size={10} />
+                                                        </Button>
+                                                    </Link>
+                                                </div>
                                             </td>
                                         </tr>
                                     );
@@ -571,6 +632,77 @@ const Followups = () => {
                     </div>
                 </div>
             )}
+
+            {/* Follow-up Action Outcomes Dialog */}
+            <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+                <DialogContent className="max-w-md bg-white rounded-xl border border-slate-200 p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-base font-bold text-slate-900">
+                            Update Follow-up Outcome
+                        </DialogTitle>
+                    </DialogHeader>
+                    {selectedLead && (
+                        <div className="space-y-4 py-3">
+                            <div className="p-3 bg-slate-50 border border-slate-100 rounded-lg text-slate-700 text-xs">
+                                <span className="font-bold block text-slate-900">{selectedLead.companyName}</span>
+                                <span className="text-[10px] text-slate-500">{selectedLead.contactName || 'No Contact Person'}</span>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Select Outcome Action</Label>
+                                <select 
+                                    value={actionType} 
+                                    onChange={(e) => setActionType(e.target.value)}
+                                    className="w-full h-10 border border-slate-200 rounded-lg bg-white text-xs px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                                >
+                                    <option value="spoke">Spoke to client (Bat ho gayi / Complete)</option>
+                                    <option value="close">Deal Closed (Lead stage updated to Close)</option>
+                                    <option value="postpone">Next time manga (Reschedule/Postpone)</option>
+                                </select>
+                            </div>
+
+                            {actionType === 'postpone' && (
+                                <div className="space-y-2 animate-in fade-in duration-200">
+                                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">New Follow-up Date & Time</Label>
+                                    <Input 
+                                        type="datetime-local" 
+                                        value={nextFollowUpDate} 
+                                        onChange={(e) => setNextFollowUpDate(e.target.value)}
+                                        className="h-10 border-slate-200 bg-white text-xs"
+                                        required
+                                    />
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Outcome / Activity Notes</Label>
+                                <textarea
+                                    value={actionNotes}
+                                    onChange={(e) => setActionNotes(e.target.value)}
+                                    placeholder="Enter details of conversation or next steps..."
+                                    className="w-full min-h-[80px] p-3 text-xs border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                                />
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter className="flex gap-2 justify-end border-t border-slate-100 pt-4">
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setActionDialogOpen(false)} 
+                            className="border-slate-200 text-slate-700 hover:bg-slate-50 text-xs h-9 rounded-lg"
+                        >
+                            Cancel
+                        </Button>
+                        <Button 
+                            onClick={handleActionSubmit} 
+                            disabled={actionSubmitting}
+                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 px-4 rounded-lg font-semibold shadow-sm"
+                        >
+                            {actionSubmitting ? 'Saving...' : 'Save Outcome'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };
