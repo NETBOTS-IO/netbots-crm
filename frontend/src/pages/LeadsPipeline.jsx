@@ -63,6 +63,31 @@ const LeadsPipeline = () => {
     // Tour state
     const [runTour, setRunTour] = useState(false);
 
+    // Sorting states
+    const [pipelineSort, setPipelineSort] = useState({ sortBy: '', sortOrder: 'desc' });
+    const [vcSort, setVcSort] = useState({ sortBy: '', sortOrder: 'desc' });
+    const [closerSort, setCloserSort] = useState({ sortBy: '', sortOrder: 'desc' });
+
+    const renderSortableHeader = (label, field, currentSort, setSort) => {
+        const isSorted = currentSort.sortBy === field;
+        return (
+            <div 
+                className="flex items-center gap-1.5 cursor-pointer select-none hover:text-slate-800 transition-colors"
+                onClick={() => {
+                    setSort(prev => ({
+                        sortBy: field,
+                        sortOrder: prev.sortBy === field && prev.sortOrder === 'asc' ? 'desc' : 'asc'
+                    }));
+                }}
+            >
+                <span>{label}</span>
+                <span className="text-[10px] font-normal text-slate-400">
+                    {isSorted ? (currentSort.sortOrder === 'asc' ? '▲' : '▼') : '↕'}
+                </span>
+            </div>
+        );
+    };
+
     // Helper to get session storage filter or fallback
     const getSessionFilter = (key, defaultValue) => {
         const stored = sessionStorage.getItem(key);
@@ -346,7 +371,9 @@ const LeadsPipeline = () => {
                 contact: filterContact,
                 workingVerifier: filterVerifier,
                 workingCloser: filterCloser,
-                channel: filterChannel
+                channel: filterChannel,
+                sortBy: pipelineSort.sortBy,
+                sortOrder: pipelineSort.sortOrder
             });
             const res = await api.get(`/leads?${params.toString()}`);
             if (res.success) {
@@ -362,7 +389,7 @@ const LeadsPipeline = () => {
             setLoading(false);
             setIsFetching(false);
         }
-    }, [pagination.page, limit, searchTerm, period, cardFilter, filterPriority, filterStage, filterTemp, filterContact, filterVerifier, filterCloser, filterChannel]);
+    }, [pagination.page, limit, searchTerm, period, cardFilter, filterPriority, filterStage, filterTemp, filterContact, filterVerifier, filterCloser, filterChannel, pipelineSort.sortBy, pipelineSort.sortOrder]);
 
     useEffect(() => {
         fetchLeads();
@@ -372,7 +399,13 @@ const LeadsPipeline = () => {
     const fetchVerifiedClosed = useCallback(async () => {
         setVcLoading(true);
         try {
-            const params = new URLSearchParams({ page: verifiedClosedPagination.page, limit: 50, search: vcSearch });
+            const params = new URLSearchParams({ 
+                page: verifiedClosedPagination.page, 
+                limit: 50, 
+                search: vcSearch,
+                sortBy: vcSort.sortBy,
+                sortOrder: vcSort.sortOrder
+            });
             const res = await api.get(`/leads/verified-closed?${params.toString()}`);
             if (res.success) {
                 setVerifiedClosedLeads(res.data);
@@ -383,7 +416,7 @@ const LeadsPipeline = () => {
         } finally {
             setVcLoading(false);
         }
-    }, [verifiedClosedPagination.page, vcSearch]);
+    }, [verifiedClosedPagination.page, vcSearch, vcSort.sortBy, vcSort.sortOrder]);
 
     useEffect(() => {
         if (activeTab === 'verified_closed') fetchVerifiedClosed();
@@ -397,7 +430,9 @@ const LeadsPipeline = () => {
                 page: closerPagination.page,
                 limit: 50,
                 search: closerSearch,
-                closer: closerFilterId
+                closer: closerFilterId,
+                sortBy: closerSort.sortBy,
+                sortOrder: closerSort.sortOrder
             });
             const res = await api.get(`/leads/closer-active?${params.toString()}`);
             if (res.success) {
@@ -409,7 +444,7 @@ const LeadsPipeline = () => {
         } finally {
             setCloserLoading(false);
         }
-    }, [closerPagination.page, closerSearch, closerFilterId]);
+    }, [closerPagination.page, closerSearch, closerFilterId, closerSort.sortBy, closerSort.sortOrder]);
 
     useEffect(() => {
         if (activeTab === 'closer_pipeline') fetchCloserLeads();
@@ -661,12 +696,12 @@ const LeadsPipeline = () => {
                         <table className="w-full text-sm">
                             <thead className="bg-slate-50 border-b">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Company</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Contact</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Verified By</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Collector</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Verified At</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">Converted At</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">{renderSortableHeader("Company", "companyName", vcSort, setVcSort)}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">{renderSortableHeader("Contact", "contactName", vcSort, setVcSort)}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">{renderSortableHeader("Verified By", "leadVerifiedBy", vcSort, setVcSort)}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">{renderSortableHeader("Collector", "leadCollectedBy", vcSort, setVcSort)}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">{renderSortableHeader("Verified At", "verifiedAt", vcSort, setVcSort)}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-slate-600 uppercase">{renderSortableHeader("Converted At", "convertedAt", vcSort, setVcSort)}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -767,14 +802,14 @@ const LeadsPipeline = () => {
                         <table className="w-full text-sm">
                             <thead className="bg-purple-50 border-b">
                                 <tr>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Company</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Contact</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">{renderSortableHeader("Company", "companyName", closerSort, setCloserSort)}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">{renderSortableHeader("Contact", "contactName", closerSort, setCloserSort)}</th>
                                     <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Closer</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Priority</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Stage</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Temperature</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Last Contacted</th>
-                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">Follow Up</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">{renderSortableHeader("Priority", "priority", closerSort, setCloserSort)}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">{renderSortableHeader("Stage", "stage", closerSort, setCloserSort)}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">{renderSortableHeader("Temperature", "temperature", closerSort, setCloserSort)}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">{renderSortableHeader("Last Contacted", "lastContactedAt", closerSort, setCloserSort)}</th>
+                                    <th className="px-4 py-3 text-left text-xs font-bold text-purple-700 uppercase">{renderSortableHeader("Follow Up", "followUpDate", closerSort, setCloserSort)}</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -1076,13 +1111,13 @@ const LeadsPipeline = () => {
                                         className="w-4 h-4 text-blue-600 bg-slate-100 border-slate-300 rounded focus:ring-blue-500"
                                     />
                                 </TableHead>
-                                <TableHead>Company</TableHead>
-                                <TableHead>Contact</TableHead>
-                                <TableHead>Industry</TableHead>
-                                <TableHead>Priority</TableHead>
-                                <TableHead>Temp</TableHead>
-                                <TableHead>Stage</TableHead>
-                                <TableHead>Source</TableHead>
+                                <TableHead>{renderSortableHeader("Company", "companyName", pipelineSort, setPipelineSort)}</TableHead>
+                                <TableHead>{renderSortableHeader("Contact", "contactName", pipelineSort, setPipelineSort)}</TableHead>
+                                <TableHead>{renderSortableHeader("Industry", "industry", pipelineSort, setPipelineSort)}</TableHead>
+                                <TableHead>{renderSortableHeader("Priority", "priority", pipelineSort, setPipelineSort)}</TableHead>
+                                <TableHead>{renderSortableHeader("Temp", "temperature", pipelineSort, setPipelineSort)}</TableHead>
+                                <TableHead>{renderSortableHeader("Stage", "stage", pipelineSort, setPipelineSort)}</TableHead>
+                                <TableHead>{renderSortableHeader("Source", "channel", pipelineSort, setPipelineSort)}</TableHead>
                                 <TableHead id="tour-claim-section">Work Claim</TableHead>
                                 {isPrivileged && <TableHead>Researcher</TableHead>}
                                 <TableHead className="text-right">Actions</TableHead>

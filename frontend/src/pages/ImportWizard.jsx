@@ -8,16 +8,64 @@ import { Upload, FileType, CheckCircle2, AlertCircle, Download, FileJson } from 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 
+const STATE_CITY_PACKAGES = [
+    {
+        name: "Punjab (Pakistan)",
+        state: "Punjab",
+        cities: ["Lahore", "Faisalabad", "Rawalpindi", "Multan", "Gujranwala", "Sargodha", "Sialkot", "Bahawalpur"]
+    },
+    {
+        name: "Sindh (Pakistan)",
+        state: "Sindh",
+        cities: ["Karachi", "Hyderabad", "Sukkur", "Larkana", "Mirpur Khas", "Nawabshah"]
+    },
+    {
+        name: "Khyber Pakhtunkhwa (Pakistan)",
+        state: "Khyber Pakhtunkhwa",
+        cities: ["Peshawar", "Mardan", "Mingora", "Abbottabad", "Kohat", "Dera Ismail Khan"]
+    },
+    {
+        name: "Balochistan (Pakistan)",
+        state: "Balochistan",
+        cities: ["Quetta", "Turbat", "Khuzdar", "Hub", "Chaman", "Gwadar"]
+    },
+    {
+        name: "Islamabad Capital (Pakistan)",
+        state: "Islamabad Capital",
+        cities: ["Islamabad"]
+    }
+];
+
 const ImportWizard = () => {
     const [file, setFile] = useState(null);
     const [priority, setPriority] = useState('medium');
     const [loading, setLoading] = useState(false);
     const [result, setResult] = useState(null);
+    const [industry, setIndustry] = useState('');
+    const [selectedPackage, setSelectedPackage] = useState('custom');
+    const [state, setState] = useState('');
+    const [city, setCity] = useState('');
+    const [customCity, setCustomCity] = useState('');
+    
     const { toast } = useToast();
     const navigate = useNavigate();
 
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
+    };
+
+    const handlePackageChange = (val) => {
+        setSelectedPackage(val);
+        if (val === 'custom') {
+            setState('');
+            setCity('');
+        } else {
+            const pkg = STATE_CITY_PACKAGES.find(p => p.name === val);
+            if (pkg) {
+                setState(pkg.state);
+                setCity(pkg.cities[0] || '');
+            }
+        }
     };
 
     const downloadSample = (type) => {
@@ -26,7 +74,7 @@ const ImportWizard = () => {
         let mime = '';
 
         if (type === 'csv') {
-            content = 'Name,Phone,Email,Website,Category,ReviewCount,AverageRating,Notes\n"La Piazza Cafe","+923001234567","info@lapiazza.com","https://lapiazza.com","Italian Restaurant",125,4.5,"Needs Google Maps SEO"';
+            content = 'Name,Phone,Email,Website,Category,ReviewCount,AverageRating,Industry,State,City,Notes\n"La Piazza Cafe","+923001234567","info@lapiazza.com","https://lapiazza.com","Italian Restaurant",125,4.5,"Food & Beverage","Punjab","Lahore","Needs Google Maps SEO"';
             filename = 'leads_sample.csv';
             mime = 'text/csv';
         } else {
@@ -39,6 +87,9 @@ const ImportWizard = () => {
                     "category": "Italian Restaurant",
                     "reviewCount": 125,
                     "averageRating": 4.5,
+                    "industry": "Food & Beverage",
+                    "state": "Punjab",
+                    "city": "Lahore",
                     "notes": "Needs Google Maps SEO"
                 }
             ];
@@ -63,6 +114,13 @@ const ImportWizard = () => {
         const formData = new FormData();
         formData.append('priority', priority);
         formData.append('file', file);
+        if (industry.trim()) formData.append('industry', industry.trim());
+        if (state.trim()) formData.append('state', state.trim());
+        
+        const finalCity = city === 'custom' ? customCity : city;
+        if (finalCity && finalCity.trim()) {
+            formData.append('city', finalCity.trim());
+        }
 
         try {
             const token = localStorage.getItem('token');
@@ -91,6 +149,9 @@ const ImportWizard = () => {
         }
     };
 
+    // Get current package definition
+    const currentPkg = STATE_CITY_PACKAGES.find(p => p.name === selectedPackage);
+
     return (
         <div className="max-w-2xl mx-auto space-y-6">
             <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -112,7 +173,7 @@ const ImportWizard = () => {
                             className="max-w-xs mb-4 border-slate-200 bg-slate-50/50"
                         />
                         <p className="text-[11px] text-slate-500 max-w-lg text-center mt-2 leading-relaxed">
-                            Supported properties/columns: Name, Phone, Email, Website, Category, ReviewCount, AverageRating, Notes, and Address.
+                            Supported properties/columns: Name, Phone, Email, Website, Category, ReviewCount, AverageRating, Industry, State, City, Notes, and Address.
                         </p>
 
                         <div className="flex gap-3 mt-6">
@@ -137,18 +198,92 @@ const ImportWizard = () => {
                         </div>
                     </CardContent>
                     <CardContent className="border-t border-slate-100 px-6 py-6 bg-slate-50/30">
-                        <div className="flex flex-col gap-2 max-w-xs mx-auto">
-                            <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Default Lead Priority</Label>
-                            <Select value={priority} onValueChange={setPriority}>
-                                <SelectTrigger className="border-slate-200 bg-white"><SelectValue placeholder="Select priority" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="low">Low Priority</SelectItem>
-                                    <SelectItem value="medium">Medium Priority</SelectItem>
-                                    <SelectItem value="high">High Priority</SelectItem>
-                                    <SelectItem value="urgent">Urgent</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <p className="text-[10px] text-slate-400 mt-1">This priority will be applied to all imported leads.</p>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-xl mx-auto">
+                            <div className="flex flex-col gap-2">
+                                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Default Lead Priority</Label>
+                                <Select value={priority} onValueChange={setPriority}>
+                                    <SelectTrigger className="border-slate-200 bg-white"><SelectValue placeholder="Select priority" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="low">Low Priority</SelectItem>
+                                        <SelectItem value="medium">Medium Priority</SelectItem>
+                                        <SelectItem value="high">High Priority</SelectItem>
+                                        <SelectItem value="urgent">Urgent</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Industry (Manual Override)</Label>
+                                <Input 
+                                    type="text" 
+                                    placeholder="e.g. Real Estate, Retail (overrides CSV)"
+                                    value={industry}
+                                    onChange={(e) => setIndustry(e.target.value)}
+                                    className="border-slate-200 bg-white"
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">State & City Package</Label>
+                                <Select value={selectedPackage} onValueChange={handlePackageChange}>
+                                    <SelectTrigger className="border-slate-200 bg-white"><SelectValue placeholder="Select a package" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="custom">Custom / Manual Entry</SelectItem>
+                                        {STATE_CITY_PACKAGES.map(pkg => (
+                                            <SelectItem key={pkg.name} value={pkg.name}>{pkg.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="flex flex-col gap-2">
+                                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">State (Manual Override)</Label>
+                                <Input 
+                                    type="text" 
+                                    placeholder="e.g. Punjab"
+                                    value={state}
+                                    onChange={(e) => setState(e.target.value)}
+                                    className="border-slate-200 bg-white"
+                                    disabled={selectedPackage !== 'custom'}
+                                />
+                            </div>
+
+                            {selectedPackage !== 'custom' && currentPkg ? (
+                                <div className="flex flex-col gap-2 col-span-1 md:col-span-2">
+                                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">City Selector</Label>
+                                    <div className="flex gap-2">
+                                        <Select value={city} onValueChange={setCity} className="flex-1">
+                                            <SelectTrigger className="border-slate-200 bg-white"><SelectValue placeholder="Select a city" /></SelectTrigger>
+                                            <SelectContent>
+                                                {currentPkg.cities.map(c => (
+                                                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                                                ))}
+                                                <SelectItem value="custom">Custom City (Type below)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    {city === 'custom' && (
+                                        <Input
+                                            type="text"
+                                            placeholder="Type custom city name"
+                                            value={customCity}
+                                            onChange={(e) => setCustomCity(e.target.value)}
+                                            className="border-slate-200 bg-white mt-1"
+                                        />
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="flex flex-col gap-2">
+                                    <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">City (Manual Override)</Label>
+                                    <Input 
+                                        type="text" 
+                                        placeholder="e.g. Lahore"
+                                        value={city}
+                                        onChange={(e) => setCity(e.target.value)}
+                                        className="border-slate-200 bg-white"
+                                    />
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                     <CardFooter className="flex justify-end gap-3 border-t border-slate-100 pt-4 px-6 pb-6 bg-white">

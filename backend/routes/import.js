@@ -77,6 +77,9 @@ router.post('/leads', auth, upload.single('file'), async (req, res) => {
             targetService: getValue(['TargetService', 'targetService', 'target_service', 'service']),
             source: 'bulk_import',
             priority: req.body.priority || 'medium',
+            industry: (req.body.industry && req.body.industry.trim() !== '') ? req.body.industry.trim() : getValue(['Industry', 'industry', 'IndustryName', 'industry_name']),
+            state: (req.body.state && req.body.state.trim() !== '') ? req.body.state.trim() : getValue(['State', 'state', 'Region', 'region', 'Province', 'province']),
+            city: (req.body.city && req.body.city.trim() !== '') ? req.body.city.trim() : getValue(['City', 'city', 'Town', 'town']),
             notes: getValue(['Notes', 'notes']) || '',
           };
 
@@ -179,6 +182,9 @@ router.post('/leads', auth, upload.single('file'), async (req, res) => {
             targetService: getValue(['TargetService', 'targetService', 'target_service', 'service']),
             source: 'bulk_import',
             priority: req.body.priority || 'medium',
+            industry: (req.body.industry && req.body.industry.trim() !== '') ? req.body.industry.trim() : getValue(['Industry', 'industry', 'IndustryName', 'industry_name']),
+            state: (req.body.state && req.body.state.trim() !== '') ? req.body.state.trim() : getValue(['State', 'state', 'Region', 'region', 'Province', 'province']),
+            city: (req.body.city && req.body.city.trim() !== '') ? req.body.city.trim() : getValue(['City', 'city', 'Town', 'town']),
             notes: getValue(['Notes', 'notes']) || '',
           };
 

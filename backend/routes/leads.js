@@ -71,7 +71,9 @@ router.get('/', auth, async (req, res) => {
         contact = 'all',
         workingVerifier = 'all',
         workingCloser = 'all',
-        channel = 'all'
+        channel = 'all',
+        sortBy = '',
+        sortOrder = 'desc'
     } = req.query;
 
     let baseQuery = { 
@@ -293,7 +295,7 @@ router.get('/', auth, async (req, res) => {
                 }
             }
         },
-        { $sort: { _activePriority: 1, updatedAt: -1 } },
+        { $sort: sortBy ? { [sortBy]: sortOrder === 'asc' ? 1 : -1 } : { _activePriority: 1, updatedAt: -1 } },
         { $skip: skip },
         { $limit: limitNum }
     ];
@@ -333,7 +335,7 @@ router.get('/', auth, async (req, res) => {
 // Returns leads that are verified (isVerifiedByVerifier=true) and have been converted to clients
 router.get('/verified-closed', auth, async (req, res) => {
   try {
-    const { page = 1, limit = 50, search = '' } = req.query;
+    const { page = 1, limit = 50, search = '', sortBy = '', sortOrder = 'desc' } = req.query;
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
@@ -350,11 +352,13 @@ router.get('/verified-closed', auth, async (req, res) => {
         ];
     }
 
+    const sortOption = sortBy ? { [sortBy]: sortOrder === 'asc' ? 1 : -1 } : { convertedAt: -1, updatedAt: -1 };
+
     const leads = await Lead.find(query)
         .populate('submittedBy', 'name email')
         .populate('workingVerifier', 'name email')
         .populate('workingCloser', 'name email')
-        .sort('-convertedAt -updatedAt')
+        .sort(sortOption)
         .skip(skip)
         .limit(limitNum);
 
@@ -375,7 +379,7 @@ router.get('/verified-closed', auth, async (req, res) => {
 // Returns leads currently being worked by a closer (workingCloser set, not yet converted to client)
 router.get('/closer-active', auth, async (req, res) => {
   try {
-    const { page = 1, limit = 50, search = '', closer = 'all' } = req.query;
+    const { page = 1, limit = 50, search = '', closer = 'all', sortBy = '', sortOrder = 'desc' } = req.query;
     const pageNum = parseInt(page);
     const limitNum = parseInt(limit);
     const skip = (pageNum - 1) * limitNum;
@@ -408,11 +412,13 @@ router.get('/closer-active', auth, async (req, res) => {
         ];
     }
 
+    const sortOption = sortBy ? { [sortBy]: sortOrder === 'asc' ? 1 : -1 } : { priority: -1, updatedAt: -1 };
+
     const leads = await Lead.find(query)
         .populate('submittedBy', 'name email')
         .populate('workingVerifier', 'name email')
         .populate('workingCloser', 'name email')
-        .sort({ priority: -1, updatedAt: -1 })
+        .sort(sortOption)
         .skip(skip)
         .limit(limitNum);
 

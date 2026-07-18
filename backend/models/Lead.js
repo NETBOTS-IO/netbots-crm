@@ -17,6 +17,8 @@ const LeadSchema = new mongoose.Schema({
   secondaryPhone: { type: String },
   address: { type: String },
   industry: { type: String },
+  state: { type: String },
+  city: { type: String },
   temperature: {
     type: String,
     enum: ['cold', 'warm', 'sql', 'closed', 'retained'],
